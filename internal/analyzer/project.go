@@ -29,6 +29,7 @@ type ProjectAnalyzer struct {
 	dependencyAnalyzer   *DependencyAnalyzer
 	architectureAnalyzer *ArchitectureAnalyzer
 	gitAnalyzer          *GitAnalyzer
+	coverageAnalyzer     *CoverageAnalyzer
 }
 
 // NewProjectAnalyzer creates a new project analyzer with all sub-analyzers
@@ -39,6 +40,7 @@ func NewProjectAnalyzer() *ProjectAnalyzer {
 		dependencyAnalyzer:   NewDependencyAnalyzer(),
 		architectureAnalyzer: NewArchitectureAnalyzer(),
 		gitAnalyzer:          NewGitAnalyzer(),
+		coverageAnalyzer:     NewCoverageAnalyzer(),
 	}
 }
 
@@ -76,6 +78,14 @@ func (p *ProjectAnalyzer) Analyze(projectPath string) (*ProjectContext, error) {
 		gitStatus = "unknown"
 	}
 
+	// Get test coverage
+	testCoverage, err := p.coverageAnalyzer.Analyze(projectPath)
+	if err != nil {
+		// For now, we'll log the error but not fail the analysis
+		// In a real application, this might be handled more gracefully
+		testCoverage = 0.0
+	}
+
 	// Determine project type
 	projectType := determineProjectType(languages, frameworks)
 
@@ -87,7 +97,7 @@ func (p *ProjectAnalyzer) Analyze(projectPath string) (*ProjectContext, error) {
 		Frameworks:    frameworks,
 		Dependencies:  dependencies,
 		FileStructure: fileStructure,
-		TestCoverage:  0.0, // Coverage analysis can be added later
+		TestCoverage:  testCoverage,
 		Architecture:  architecture,
 		Complexity:    complexity,
 		LastModified:  time.Now(),
