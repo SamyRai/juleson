@@ -265,6 +265,6 @@ jobs:
           output-file: ./sbom.json
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: "dist/juleson-linux-amd64,dist/jules-mcp-linux-amd64"
