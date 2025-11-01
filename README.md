@@ -97,7 +97,7 @@ Juleson/
 
 - ✅ Official MCP Go SDK integration
 - ✅ Stdio transport (Claude, Cursor compatible)
-- ✅ 15+ MCP tools for project automation
+- ✅ 18+ MCP tools for project automation
 - ✅ Resource endpoints (server info, config templates)
 - ✅ Prompt templates for common workflows
 - ✅ Argument auto-completion
@@ -243,8 +243,11 @@ Add to Cursor settings JSON:
 | `list_sessions` | View all Jules coding sessions |
 | `get_session_status` | Detailed session status summary |
 | `approve_session_plan` | Approve Jules session plans |
-| `cancel_session` | Stop running sessions |
-| `delete_session` | Remove completed sessions |
+| `apply_session_patches` | Apply git patches from a session to working directory |
+| `preview_session_changes` | Preview changes before applying patches (dry-run) |
+
+**Note**: `cancel_session` and `delete_session` are not available in Jules API
+v1alpha. Use the [Jules web UI](https://jules.google.com) for these operations.
 
 See [MCP_SERVER_USAGE.md](docs/MCP_SERVER_USAGE.md) for detailed API documentation.
 
@@ -301,7 +304,29 @@ Claude will use the MCP tools to:
 3. Suggest the best template based on analysis
 4. Optionally execute the template with `execute_template`
 
-### **Example 5: Create Custom Template**
+### **Example 5: Apply Jules Session Patches**
+
+```bash
+# Preview what changes a Jules session would make (dry-run)
+./bin/juleson sessions preview session-123 ./my-project
+
+# Apply patches from Jules session to your project
+./bin/juleson sessions apply session-123 ./my-project
+
+# Apply with backup files (creates .backup files before modifying)
+./bin/juleson sessions apply session-123 ./my-project --backup
+```
+
+**Using MCP with Claude:**
+> "Get the changes from Jules session session-123 and apply them to my project"
+
+Claude will:
+
+1. Call `preview_session_changes` to show you what will be modified
+2. Call `apply_session_patches` to apply the git patches
+3. Report which files were modified
+
+### **Example 6: Create Custom Template**
 
 ```bash
 # Create a custom template
@@ -315,7 +340,7 @@ Claude will use the MCP tools to:
 ./bin/juleson execute template api-versioning ./my-api-project
 ```
 
-### **Example 6: Automated CI/CD Integration**
+### **Example 7: Automated CI/CD Integration**
 
 ```yaml
 # .github/workflows/Juleson.yml
@@ -489,11 +514,21 @@ session, err := client.GetSession(ctx, sessionID)
 // Approve session plan
 err := client.ApprovePlan(ctx, sessionID)
 
-// Cancel running session
-err := client.CancelSession(ctx, sessionID)
+// Send message to session
+err := client.SendMessage(ctx, sessionID, "Please add error handling")
 
-// Delete session
-err := client.DeleteSession(ctx, sessionID)
+// Apply patches from session to working directory
+result, err := client.ApplySessionPatches(ctx, sessionID, &jules.PatchApplicationOptions{
+    WorkingDir:   "./my-project",
+    DryRun:       false,
+    CreateBackup: true,
+})
+
+// Preview session changes (dry-run)
+changes, err := client.PreviewSessionPatches(ctx, sessionID, "./my-project")
+
+// Get session changes summary
+changes, err := client.GetSessionChanges(ctx, sessionID)
 
 // Activity monitoring
 activities, err := client.ListActivities(ctx, sessionID, 100)
@@ -624,7 +659,7 @@ copies of the Software...
   - [MCP Server Usage Guide](docs/MCP_SERVER_USAGE.md)
   - [Template System Documentation](docs/Y2Q2_TEMPLATE_SYSTEM.md)
   - [GitHub Actions Integration](docs/GITHUB_ACTIONS_GUIDE.md)
-- **Jules API**: [Google Jules Documentation](https://jules.googleapis.com/docs)
+- **Jules API**: [Google Jules API Documentation](https://developers.google.com/jules/api)
 - **MCP Protocol**: [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 - **Official MCP Go SDK**: [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk)
 

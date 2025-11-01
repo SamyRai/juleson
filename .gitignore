@@ -132,3 +132,20 @@ configs/juleson.yaml
 **/bash_output_*.txt
 **/*_output_*.txt
 **/test_output/
+
+# Personal cheat sheets and notes (not tracked)
+OPEN_SOURCE_CHECKLIST.md
+IMPLEMENTATION_SUMMARY.md
+RELEASE_SUMMARY.md
+
+# Tutorial/reference documentation (not project-specific)
+docs/GITHUB_ACTIONS_GUIDE.md
+docs/GITHUB_CONFIGURATION_GUIDE.md
+
+# Tutorial/reference guides (not project-specific)
+docs/GITHUB_ACTIONS_GUIDE.md
+docs/GITHUB_CONFIGURATION_GUIDE.md
+
+# Build artifacts that shouldn't be committed
+jules-mcp
+coverage.out

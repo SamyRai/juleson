@@ -53,7 +53,10 @@ func (c *Client) ListSessions(ctx context.Context, pageSize int) ([]Session, err
 // ListSessionsWithPagination lists all sessions with full pagination support
 func (c *Client) ListSessionsWithPagination(ctx context.Context, pageSize int, pageToken string) (*SessionsResponse, error) {
 	if pageSize <= 0 {
-		pageSize = 10 // default page size
+		pageSize = 30 // default page size per API docs
+	}
+	if pageSize > 100 {
+		pageSize = 100 // max page size per API docs
 	}
 
 	url := fmt.Sprintf("%s/sessions?pageSize=%d", c.BaseURL, pageSize)
@@ -102,32 +105,11 @@ func (c *Client) ApprovePlan(ctx context.Context, sessionID string) error {
 	return nil
 }
 
-// CancelSession cancels a running session
-func (c *Client) CancelSession(ctx context.Context, sessionID string) error {
-	if sessionID == "" {
-		return fmt.Errorf("session ID is required")
-	}
-
-	url := fmt.Sprintf("%s/sessions/%s:cancel", c.BaseURL, sessionID)
-
-	if err := c.doRequestWithJSON(ctx, "POST", url, nil, nil); err != nil {
-		return fmt.Errorf("failed to cancel session: %w", err)
-	}
-
-	return nil
-}
-
-// DeleteSession deletes a session and all its activities
-func (c *Client) DeleteSession(ctx context.Context, sessionID string) error {
-	if sessionID == "" {
-		return fmt.Errorf("session ID is required")
-	}
-
-	url := fmt.Sprintf("%s/sessions/%s", c.BaseURL, sessionID)
-
-	if err := c.doRequestWithJSON(ctx, "DELETE", url, nil, nil); err != nil {
-		return fmt.Errorf("failed to delete session: %w", err)
-	}
-
-	return nil
-}
+// NOTE: The Jules API v1alpha does NOT support cancel or delete operations.
+// These operations are only available through the Jules web UI.
+// See: https://developers.google.com/jules/api/reference/rest/v1alpha/sessions
+//
+// To manage sessions:
+// - Cancel: Use the web UI at the URL returned in session.URL
+// - Delete: Use the web UI
+// - Monitor state: Use GetSession to check if state is FAILED, COMPLETED, or PAUSED

@@ -22,7 +22,10 @@ func (c *Client) ListActivitiesWithPagination(ctx context.Context, sessionID str
 		return nil, fmt.Errorf("session ID is required")
 	}
 	if pageSize <= 0 {
-		pageSize = 10 // default page size
+		pageSize = 50 // default page size per API docs
+	}
+	if pageSize > 100 {
+		pageSize = 100 // max page size per API docs
 	}
 
 	url := fmt.Sprintf("%s/sessions/%s/activities?pageSize=%d", c.BaseURL, sessionID, pageSize)

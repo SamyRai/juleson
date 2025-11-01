@@ -8,22 +8,29 @@ import (
 // ListSources lists available code sources with pagination support
 // Deprecated: Use ListSourcesWithPagination for full pagination support
 func (c *Client) ListSources(ctx context.Context, pageSize int) ([]Source, error) {
-	response, err := c.ListSourcesWithPagination(ctx, pageSize, "")
+	response, err := c.ListSourcesWithPagination(ctx, pageSize, "", "")
 	if err != nil {
 		return nil, err
 	}
 	return response.Sources, nil
 }
 
-// ListSourcesWithPagination lists available code sources with full pagination support
-func (c *Client) ListSourcesWithPagination(ctx context.Context, pageSize int, pageToken string) (*SourcesResponse, error) {
+// ListSourcesWithPagination lists available code sources with full pagination and filtering support
+// filter: Optional AIP-160 filter expression (e.g., "name=sources/source1 OR name=sources/source2")
+func (c *Client) ListSourcesWithPagination(ctx context.Context, pageSize int, pageToken, filter string) (*SourcesResponse, error) {
 	if pageSize <= 0 {
-		pageSize = 10 // default page size
+		pageSize = 30 // default page size per API docs
+	}
+	if pageSize > 100 {
+		pageSize = 100 // max page size per API docs
 	}
 
 	url := fmt.Sprintf("%s/sources?pageSize=%d", c.BaseURL, pageSize)
 	if pageToken != "" {
 		url += fmt.Sprintf("&pageToken=%s", pageToken)
+	}
+	if filter != "" {
+		url += fmt.Sprintf("&filter=%s", filter)
 	}
 
 	var response SourcesResponse
