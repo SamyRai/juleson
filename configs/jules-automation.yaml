@@ -1,0 +1,55 @@
+# Jules Automation Configuration
+# Main configuration file for the Jules automation system
+
+# Jules API Configuration
+jules:
+  # API key - will be read from JULES_API_KEY environment variable
+  # Leave empty to use environment variable
+  api_key: "${JULES_API_KEY}"
+
+  # Jules API base URL
+  base_url: "https://jules.googleapis.com/v1alpha"
+
+  # Request timeout
+  timeout: "30s"
+
+  # Number of retry attempts for failed requests
+  retry_attempts: 3
+
+# MCP (Model Context Protocol) Configuration
+mcp:
+  server:
+    # Port for MCP server
+    port: 8080
+
+    # Host for MCP server
+    host: "localhost"
+
+  client:
+    # Client timeout for MCP requests
+    timeout: "10s"
+
+# Automation Engine Configuration
+automation:
+  # Available automation strategies
+  strategies:
+    - "modular"
+    - "layered"
+    - "microservices"
+
+  # Maximum number of concurrent tasks
+  max_concurrent_tasks: 5
+
+  # Timeout for individual tasks
+  task_timeout: "300s"
+
+# Project Management Configuration
+projects:
+  # Default path for projects
+  default_path: "./projects"
+
+  # Enable automatic backups before modifications
+  backup_enabled: true
+
+  # Enable Git integration
+  git_integration: true

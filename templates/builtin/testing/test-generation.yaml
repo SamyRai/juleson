@@ -1,0 +1,395 @@
+# Template metadata
+metadata:
+  name: "test-generation"
+  version: "1.0.0"
+  description: "Generate comprehensive test suite with high coverage"
+  author: "Jules Automation"
+  tags: ["testing", "coverage", "automation", "quality"]
+  category: "testing"
+
+# Template configuration
+config:
+  strategy: "comprehensive"
+  max_concurrent_tasks: 5
+  timeout: "900s"
+  requires_approval: false
+  backup_enabled: false
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_test_coverage"
+    - "identify_untested_code"
+    - "analyze_test_patterns"
+    - "detect_test_gaps"
+    - "analyze_testing_framework"
+  
+  file_patterns:
+    include:
+      - "**/*.go"
+      - "**/*.py"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.java"
+      - "**/*.rs"
+    exclude:
+      - "**/node_modules/**"
+      - "**/vendor/**"
+      - "**/.git/**"
+      - "**/dist/**"
+      - "**/build/**"
+      - "**/*_test.go"
+      - "**/*_test.py"
+      - "**/*.test.js"
+      - "**/*.test.ts"
+      - "**/*Test.java"
+
+# Task definition
+tasks:
+  - name: "analyze_test_coverage"
+    type: "analysis"
+    description: "Analyze current test coverage and identify gaps"
+    jules_prompt: |
+      Analyze the current test coverage for {{.ProjectPath}} and create a comprehensive assessment:
+      
+      **1. Current Test Analysis:**
+      - Identify all existing test files
+      - Analyze test coverage by module/package
+      - Identify tested vs untested code
+      - Assess test quality and patterns
+      - Check for test framework usage
+      
+      **2. Coverage Gap Analysis:**
+      - Identify critical untested code paths
+      - Find missing edge case tests
+      - Identify integration test gaps
+      - Assess error handling test coverage
+      - Find missing performance tests
+      
+      **3. Test Quality Assessment:**
+      - Evaluate test naming conventions
+      - Check test structure and organization
+      - Assess test maintainability
+      - Identify flaky or unreliable tests
+      - Check for test documentation
+      
+      **Focus Areas:** {{.FocusAreas}}
+      **Test Framework:** {{.TestFramework}}
+      
+      Output a structured analysis with:
+      - Current coverage percentage by module
+      - List of untested critical functions
+      - Test quality score (1-10)
+      - Recommendations for improvement
+      - Priority list for test generation
+    
+    context_vars:
+      ProjectPath: "{{.ProjectPath}}"
+      FocusAreas: "{{.FocusAreas}}"
+      TestFramework: "{{.TestFramework}}"
+
+  - name: "generate_unit_tests"
+    type: "generation"
+    description: "Generate comprehensive unit tests"
+    depends_on: ["analyze_test_coverage"]
+    jules_prompt: |
+      Generate comprehensive unit tests for {{.ProjectPath}} based on the coverage analysis:
+      
+      **Unit Test Generation Strategy:**
+      
+      1. **Core Business Logic Tests:**
+         - Test all public functions and methods
+         - Cover all code paths and branches
+         - Test edge cases and error conditions
+         - Validate input/output behavior
+         - Test boundary conditions
+      
+      2. **Test Structure:**
+         - Use proper test naming conventions
+         - Follow AAA pattern (Arrange, Act, Assert)
+         - Include descriptive test descriptions
+         - Use appropriate test data
+         - Implement proper setup/teardown
+      
+      3. **Test Framework Integration:**
+         - Use {{.TestFramework}} conventions
+         - Implement proper mocking where needed
+         - Use test utilities and helpers
+         - Follow project testing patterns
+      
+      **For Each Function/Method:**
+      1. Create test file if it doesn't exist
+      2. Generate tests for normal operation
+      3. Generate tests for error cases
+      4. Generate tests for edge cases
+      5. Add proper assertions and validations
+      
+      **Test Quality Requirements:**
+      - Clear, descriptive test names
+      - Comprehensive test coverage
+      - Proper error handling tests
+      - Performance considerations
+      - Documentation and comments
+      
+      Generate tests for all identified untested code, focusing on:
+      - Critical business logic functions
+      - Public API methods
+      - Error handling paths
+      - Edge cases and boundary conditions
+      
+      Show each test being generated and explain the testing strategy.
+
+  - name: "generate_integration_tests"
+    type: "generation"
+    description: "Generate integration tests for module interactions"
+    depends_on: ["generate_unit_tests"]
+    jules_prompt: |
+      Generate integration tests for {{.ProjectPath}} to test module interactions:
+      
+      **Integration Test Strategy:**
+      
+      1. **Module Integration Tests:**
+         - Test interactions between modules
+         - Validate data flow between components
+         - Test API integrations
+         - Validate database interactions
+         - Test external service integrations
+      
+      2. **End-to-End Scenarios:**
+         - Test complete user workflows
+         - Validate business process flows
+         - Test error propagation
+         - Validate rollback scenarios
+         - Test performance under load
+      
+      3. **Test Environment Setup:**
+         - Use test databases and services
+         - Implement proper test fixtures
+         - Use dependency injection for testing
+         - Implement test data factories
+         - Set up proper cleanup procedures
+      
+      **Integration Test Types:**
+      - **API Integration Tests**: Test HTTP endpoints and responses
+      - **Database Integration Tests**: Test data persistence and retrieval
+      - **Service Integration Tests**: Test external service interactions
+      - **Workflow Integration Tests**: Test complete business processes
+      - **Performance Integration Tests**: Test system performance
+      
+      **For Each Integration Point:**
+      1. Identify integration points
+      2. Create integration test scenarios
+      3. Implement proper test setup
+      4. Generate test data and fixtures
+      5. Add assertions and validations
+      
+      Generate comprehensive integration tests focusing on:
+      - Critical business workflows
+      - External service integrations
+      - Database operations
+      - API endpoint testing
+      - Error handling and recovery
+      
+      Show each integration test being generated and explain the testing approach.
+
+  - name: "generate_performance_tests"
+    type: "generation"
+    description: "Generate performance and load tests"
+    depends_on: ["generate_integration_tests"]
+    jules_prompt: |
+      Generate performance tests for {{.ProjectPath}} to ensure system performance:
+      
+      **Performance Test Strategy:**
+      
+      1. **Load Testing:**
+         - Test system under normal load
+         - Identify performance bottlenecks
+         - Test concurrent user scenarios
+         - Validate response times
+         - Test memory usage patterns
+      
+      2. **Stress Testing:**
+         - Test system under extreme load
+         - Identify breaking points
+         - Test resource exhaustion scenarios
+         - Validate error handling under stress
+         - Test recovery mechanisms
+      
+      3. **Performance Benchmarks:**
+         - Establish baseline performance metrics
+         - Test critical path performance
+         - Validate optimization effectiveness
+         - Monitor resource utilization
+         - Track performance regressions
+      
+      **Performance Test Types:**
+      - **Unit Performance Tests**: Test individual function performance
+      - **Integration Performance Tests**: Test module interaction performance
+      - **API Performance Tests**: Test endpoint response times
+      - **Database Performance Tests**: Test query and transaction performance
+      - **End-to-End Performance Tests**: Test complete workflow performance
+      
+      **Performance Metrics to Track:**
+      - Response time (p50, p95, p99)
+      - Throughput (requests per second)
+      - Memory usage and leaks
+      - CPU utilization
+      - Database query performance
+      
+      **For Each Performance Test:**
+      1. Identify performance-critical code paths
+      2. Create performance test scenarios
+      3. Implement proper benchmarking
+      4. Add performance assertions
+      5. Document performance expectations
+      
+      Generate performance tests focusing on:
+      - Critical business operations
+      - Database-intensive operations
+      - API endpoint performance
+      - Memory-intensive operations
+      - Concurrent operation handling
+      
+      Show each performance test being generated and explain the performance criteria.
+
+  - name: "generate_test_utilities"
+    type: "generation"
+    description: "Generate test utilities and helpers"
+    depends_on: ["generate_performance_tests"]
+    jules_prompt: |
+      Generate test utilities and helpers for {{.ProjectPath}} to improve test maintainability:
+      
+      **Test Utility Strategy:**
+      
+      1. **Test Data Factories:**
+         - Create test data generators
+         - Implement realistic test data
+         - Support various test scenarios
+         - Provide data validation helpers
+         - Implement data cleanup utilities
+      
+      2. **Test Helpers and Utilities:**
+         - Common test setup functions
+         - Assertion helpers and utilities
+         - Mock object generators
+         - Test environment setup
+         - Cleanup and teardown utilities
+      
+      3. **Test Configuration:**
+         - Test environment configuration
+         - Test database setup
+         - Mock service configuration
+         - Test data seeding
+         - Environment variable management
+      
+      **Test Utility Types:**
+      - **Data Factories**: Generate realistic test data
+      - **Mock Helpers**: Create and configure mocks
+      - **Assertion Helpers**: Custom assertion functions
+      - **Setup Helpers**: Test environment setup
+      - **Cleanup Helpers**: Test cleanup utilities
+      
+      **For Each Utility:**
+      1. Identify common test patterns
+      2. Create reusable utility functions
+      3. Implement proper error handling
+      4. Add comprehensive documentation
+      5. Include usage examples
+      
+      Generate test utilities focusing on:
+      - Common test data patterns
+      - Repeated setup/teardown operations
+      - Complex assertion logic
+      - Mock object creation
+      - Test environment management
+      
+      Show each utility being generated and explain its purpose and usage.
+
+  - name: "validate_test_suite"
+    type: "validation"
+    description: "Validate the complete test suite"
+    depends_on: ["generate_test_utilities"]
+    jules_prompt: |
+      Validate the complete test suite for {{.ProjectPath}} and ensure quality:
+      
+      **Test Suite Validation:**
+      
+      1. **Test Execution Validation:**
+         - Run all generated tests
+         - Verify all tests pass
+         - Check for flaky or unreliable tests
+         - Validate test performance
+         - Ensure proper test isolation
+      
+      2. **Coverage Validation:**
+         - Measure test coverage
+         - Verify coverage targets are met
+         - Identify remaining coverage gaps
+         - Validate critical path coverage
+         - Check for dead code
+      
+      3. **Test Quality Validation:**
+         - Review test naming and structure
+         - Validate test documentation
+         - Check for test duplication
+         - Ensure proper error handling
+         - Validate test maintainability
+      
+      **Validation Checklist:**
+      - [ ] All tests execute successfully
+      - [ ] Test coverage meets targets (>80%)
+      - [ ] No flaky or unreliable tests
+      - [ ] Proper test isolation
+      - [ ] Clear test documentation
+      - [ ] No test duplication
+      - [ ] Proper error handling
+      - [ ] Performance tests pass
+      - [ ] Integration tests work
+      - [ ] Test utilities are functional
+      
+      **Generate Final Report:**
+      - Test coverage report
+      - Test execution summary
+      - Quality assessment
+      - Recommendations for improvement
+      - Performance metrics
+      
+      **Output:**
+      - Comprehensive test coverage report
+      - List of all generated tests
+      - Test execution results
+      - Quality metrics and scores
+      - Recommendations for future testing
+      
+      Ensure the test suite is comprehensive, reliable, and maintainable.
+
+# Validation rules
+validation:
+  pre_execution:
+    - "check_git_status"
+    - "validate_project_structure"
+    - "check_test_framework"
+  
+  post_execution:
+    - "run_all_tests"
+    - "check_test_coverage"
+    - "validate_test_quality"
+    - "verify_test_performance"
+
+# Output configuration
+output:
+  format: "markdown"
+  include:
+    - "summary"
+    - "coverage_report"
+    - "test_results"
+    - "quality_metrics"
+    - "recommendations"
+  
+  files:
+    - path: "{{.ProjectPath}}/TEST_GENERATION_REPORT.md"
+      template: "test_generation_report.md"
+    - path: "{{.ProjectPath}}/COVERAGE_REPORT.md"
+      template: "coverage_report.md"
+    - path: "{{.ProjectPath}}/TESTING_GUIDE.md"
+      template: "testing_guide.md"

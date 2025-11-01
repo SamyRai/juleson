@@ -1,0 +1,264 @@
+# Template Registry
+
+# This file maintains metadata about all available templates in the Jules automation system.
+
+templates:
+  # Reorganization Templates
+  - name: "modular-restructure"
+    version: "1.0.0"
+    category: "reorganization"
+    description: "Convert project to modular architecture with clear separation of concerns"
+    author: "Jules Automation"
+    tags:
+      ["modular", "architecture", "reorganization", "separation-of-concerns"]
+    file: "builtin/reorganization/modular-restructure.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java", "rust"]
+      frameworks:
+        ["react", "vue", "angular", "express", "gin", "fastapi", "spring"]
+    features:
+      - "multi-phase-execution"
+      - "approval-workflow"
+      - "backup-enabled"
+      - "architecture-validation"
+    complexity: "high"
+    estimated_duration: "2-4 hours"
+
+  - name: "layered-architecture"
+    version: "1.0.0"
+    category: "reorganization"
+    description: "Implement layered architecture pattern"
+    author: "Jules Automation"
+    tags: ["layered", "architecture", "reorganization", "clean-architecture"]
+    file: "builtin/reorganization/layered-architecture.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java", "c#"]
+      frameworks: ["express", "gin", "fastapi", "spring", "asp.net"]
+    features:
+      - "multi-phase-execution"
+      - "approval-workflow"
+      - "backup-enabled"
+    complexity: "high"
+    estimated_duration: "2-3 hours"
+
+  - name: "microservices-split"
+    version: "1.0.0"
+    category: "reorganization"
+    description: "Split monolith into microservices"
+    author: "Jules Automation"
+    tags: ["microservices", "architecture", "reorganization", "distributed"]
+    file: "builtin/reorganization/microservices-split.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java"]
+      frameworks: ["gin", "fastapi", "express", "spring", "nest"]
+    features:
+      - "multi-phase-execution"
+      - "approval-workflow"
+      - "backup-enabled"
+      - "service-discovery"
+    complexity: "very-high"
+    estimated_duration: "4-6 hours"
+
+  # Testing Templates
+  - name: "test-generation"
+    version: "1.0.0"
+    category: "testing"
+    description: "Generate comprehensive test suite with high coverage"
+    author: "Jules Automation"
+    tags: ["testing", "coverage", "automation", "quality"]
+    file: "builtin/testing/test-generation.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java", "rust"]
+      frameworks: ["jest", "pytest", "testing", "junit", "testify"]
+    features:
+      - "coverage-analysis"
+      - "multi-test-types"
+      - "performance-testing"
+      - "test-utilities"
+    complexity: "medium"
+    estimated_duration: "1-2 hours"
+
+  - name: "test-coverage-improvement"
+    version: "1.0.0"
+    category: "testing"
+    description: "Improve existing test coverage"
+    author: "Jules Automation"
+    tags: ["testing", "coverage", "improvement", "quality"]
+    file: "builtin/testing/test-coverage-improvement.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java"]
+      frameworks: ["jest", "pytest", "testing", "junit"]
+    features:
+      - "coverage-analysis"
+      - "gap-identification"
+      - "priority-based-generation"
+    complexity: "low"
+    estimated_duration: "30-60 minutes"
+
+  - name: "integration-tests"
+    version: "1.0.0"
+    category: "testing"
+    description: "Generate integration tests for system components"
+    author: "Jules Automation"
+    tags: ["testing", "integration", "system", "quality"]
+    file: "builtin/testing/integration-tests.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java"]
+      frameworks: ["jest", "pytest", "testing", "junit"]
+    features:
+      - "system-testing"
+      - "api-testing"
+      - "database-testing"
+    complexity: "medium"
+    estimated_duration: "1-2 hours"
+
+  # Refactoring Templates
+  - name: "code-cleanup"
+    version: "1.0.0"
+    category: "refactoring"
+    description: "General code cleanup and optimization"
+    author: "Jules Automation"
+    tags: ["cleanup", "refactoring", "optimization", "quality"]
+    file: "builtin/refactoring/code-cleanup.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java", "rust"]
+      frameworks: ["all"]
+    features:
+      - "dead-code-removal"
+      - "import-optimization"
+      - "naming-improvement"
+      - "structure-cleanup"
+    complexity: "low"
+    estimated_duration: "30-60 minutes"
+
+  - name: "dependency-update"
+    version: "1.0.0"
+    category: "refactoring"
+    description: "Update and optimize project dependencies"
+    author: "Jules Automation"
+    tags: ["dependencies", "refactoring", "security", "updates"]
+    file: "builtin/refactoring/dependency-update.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java", "rust"]
+      frameworks: ["all"]
+    features:
+      - "dependency-analysis"
+      - "security-updates"
+      - "version-optimization"
+      - "breaking-change-handling"
+    complexity: "medium"
+    estimated_duration: "1-2 hours"
+
+  - name: "api-modernization"
+    version: "1.0.0"
+    category: "refactoring"
+    description: "Modernize API design and implementation"
+    author: "Jules Automation"
+    tags: ["api", "modernization", "refactoring", "rest"]
+    file: "builtin/refactoring/api-modernization.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java"]
+      frameworks: ["gin", "fastapi", "express", "spring", "nest"]
+    features:
+      - "api-design-improvement"
+      - "versioning-strategy"
+      - "documentation-generation"
+      - "error-handling"
+    complexity: "high"
+    estimated_duration: "2-3 hours"
+
+  # Documentation Templates
+  - name: "api-documentation"
+    version: "1.0.0"
+    category: "documentation"
+    description: "Generate comprehensive API documentation"
+    author: "Jules Automation"
+    tags: ["documentation", "api", "openapi", "swagger"]
+    file: "builtin/documentation/api-documentation.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["go", "python", "javascript", "typescript", "java"]
+      frameworks: ["gin", "fastapi", "express", "spring", "nest"]
+    features:
+      - "openapi-generation"
+      - "swagger-ui"
+      - "example-generation"
+      - "interactive-docs"
+    complexity: "medium"
+    estimated_duration: "1-2 hours"
+
+  - name: "readme-generation"
+    version: "1.0.0"
+    category: "documentation"
+    description: "Generate comprehensive project README"
+    author: "Jules Automation"
+    tags: ["documentation", "readme", "project", "overview"]
+    file: "builtin/documentation/readme-generation.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["all"]
+      frameworks: ["all"]
+    features:
+      - "project-analysis"
+      - "installation-guide"
+      - "usage-examples"
+      - "contribution-guide"
+    complexity: "low"
+    estimated_duration: "30-60 minutes"
+
+  - name: "architecture-docs"
+    version: "1.0.0"
+    category: "documentation"
+    description: "Generate architecture documentation"
+    author: "Jules Automation"
+    tags: ["documentation", "architecture", "design", "overview"]
+    file: "builtin/documentation/architecture-docs.yaml"
+    dependencies: []
+    compatibility:
+      languages: ["all"]
+      frameworks: ["all"]
+    features:
+      - "architecture-analysis"
+      - "diagram-generation"
+      - "design-patterns"
+      - "decision-records"
+    complexity: "medium"
+    estimated_duration: "1-2 hours"
+
+# Template Categories
+categories:
+  reorganization:
+    name: "Project Reorganization"
+    description: "Templates for restructuring and reorganizing projects"
+    icon: "🏗️"
+
+  testing:
+    name: "Testing & Quality"
+    description: "Templates for test generation and quality improvement"
+    icon: "🧪"
+
+  refactoring:
+    name: "Code Refactoring"
+    description: "Templates for code improvement and optimization"
+    icon: "🔧"
+
+  documentation:
+    name: "Documentation"
+    description: "Templates for generating project documentation"
+    icon: "📚"
+
+# Registry Metadata
+registry:
+  version: "1.0.0"
+  last_updated: "2024-10-29"
+  total_templates: 12
+  categories_count: 4

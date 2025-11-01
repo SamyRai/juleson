@@ -1,0 +1,474 @@
+# Template metadata
+metadata:
+  name: "modular-restructure"
+  version: "1.0.0"
+  description: "Convert project to modular architecture with clear separation of concerns"
+  author: "Jules Automation"
+  tags: ["reorganization", "architecture", "modular", "separation-of-concerns"]
+  category: "reorganization"
+
+# Template configuration
+config:
+  strategy: "modular"
+  max_concurrent_tasks: 3
+  timeout: "600s"
+  requires_approval: true
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_directory_structure"
+    - "identify_dependencies"
+    - "analyze_code_patterns"
+    - "detect_architectural_issues"
+    - "analyze_import_graph"
+  
+  file_patterns:
+    include:
+      - "**/*.go"
+      - "**/*.py"
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.java"
+      - "**/*.rs"
+    exclude:
+      - "**/node_modules/**"
+      - "**/vendor/**"
+      - "**/.git/**"
+      - "**/dist/**"
+      - "**/build/**"
+      - "**/*.min.js"
+      - "**/*.min.css"
+
+# Task definition
+tasks:
+  - name: "analyze_current_structure"
+    type: "analysis"
+    description: "Analyze current project structure and identify modularization opportunities"
+    jules_prompt: |
+      Analyze the current project structure in {{.ProjectPath}} and create a comprehensive assessment:
+      
+      **1. Current Architecture Analysis:**
+      - Identify the current architectural pattern
+      - Map all modules, packages, and components
+      - Analyze dependency relationships
+      - Identify circular dependencies
+      - Assess coupling and cohesion
+      
+      **2. Modularization Opportunities:**
+      - Identify logical boundaries for modules
+      - Suggest module separation strategies
+      - Identify shared utilities and common code
+      - Recommend interface definitions
+      
+      **3. Code Organization Issues:**
+      - Find misplaced files and functions
+      - Identify code duplication
+      - Assess naming conventions consistency
+      - Find unused or dead code
+      
+      **Focus Areas:** {{.FocusAreas}}
+      **Exclude Patterns:** {{.ExcludePatterns}}
+      
+      Output a structured analysis with:
+      - Current architecture diagram (text-based)
+      - Dependency graph
+      - Modularization recommendations
+      - Risk assessment
+      - Migration complexity score (1-10)
+    
+    context_vars:
+      ProjectPath: "{{.ProjectPath}}"
+      FocusAreas: "{{.FocusAreas}}"
+      ExcludePatterns: "{{.ExcludePatterns}}"
+
+  - name: "create_modular_plan"
+    type: "planning"
+    description: "Create detailed modular restructuring plan"
+    depends_on: ["analyze_current_structure"]
+    jules_prompt: |
+      Based on the analysis of {{.ProjectPath}}, create a detailed modular restructuring plan:
+      
+      **Target Modular Architecture:**
+      - **Core Module**: Essential business logic and domain models
+      - **Infrastructure Module**: External dependencies, databases, APIs
+      - **Application Module**: Use cases, services, application logic
+      - **Presentation Module**: UI, controllers, API endpoints
+      - **Shared Module**: Common utilities, constants, types
+      
+      **Migration Strategy:**
+      1. **Phase 1**: Create new module structure
+      2. **Phase 2**: Move core domain logic
+      3. **Phase 3**: Extract infrastructure concerns
+      4. **Phase 4**: Reorganize application layer
+      5. **Phase 5**: Update presentation layer
+      6. **Phase 6**: Consolidate shared utilities
+      
+      **For Each Phase:**
+      - List specific files to move
+      - Identify required interface changes
+      - Plan dependency updates
+      - Define testing strategy
+      - Estimate effort and risk
+      
+      **Considerations:**
+      - Maintain backward compatibility during transition
+      - Minimize breaking changes
+      - Ensure all tests pass after each phase
+      - Update documentation incrementally
+      - Plan rollback strategy for each phase
+      
+      Output a detailed plan with:
+      - Module structure diagram
+      - Phase-by-phase migration steps
+      - File movement mapping
+      - Interface definitions
+      - Testing checklist
+      - Risk mitigation strategies
+
+  - name: "execute_phase_1_structure"
+    type: "execution"
+    description: "Create new modular directory structure"
+    depends_on: ["create_modular_plan"]
+    requires_approval: true
+    jules_prompt: |
+      Execute Phase 1 of the modular restructuring plan for {{.ProjectPath}}:
+      
+      **Phase 1: Create New Module Structure**
+      
+      1. **Create Directory Structure:**
+         ```
+         {{.ProjectPath}}/
+         ├── core/           # Domain logic, entities, business rules
+         ├── infrastructure/ # External dependencies, databases, APIs
+         ├── application/    # Use cases, services, application logic
+         ├── presentation/   # UI, controllers, API endpoints
+         ├── shared/         # Common utilities, constants, types
+         └── tests/          # All tests organized by module
+         ```
+      
+      2. **Create Module Interfaces:**
+         - Define clear interfaces between modules
+         - Create dependency injection setup
+         - Define module boundaries and contracts
+      
+      3. **Update Configuration:**
+         - Update build configurations
+         - Update import paths
+         - Update test configurations
+      
+      **Execution Steps:**
+      1. Create the new directory structure
+      2. Create initial module files (README.md, interfaces)
+      3. Update build system to recognize new structure
+      4. Verify the structure is correct
+      5. Commit changes with message "Phase 1: Create modular structure"
+      
+      **Validation:**
+      - Ensure all directories are created
+      - Verify build system works with new structure
+      - Check that no existing functionality is broken
+      - Run existing tests to ensure they still pass
+      
+      Show each step clearly and explain what you're doing.
+
+  - name: "execute_phase_2_core"
+    type: "execution"
+    description: "Move core domain logic to core module"
+    depends_on: ["execute_phase_1_structure"]
+    requires_approval: true
+    jules_prompt: |
+      Execute Phase 2 of the modular restructuring plan for {{.ProjectPath}}:
+      
+      **Phase 2: Move Core Domain Logic**
+      
+      1. **Identify Core Components:**
+         - Domain entities and value objects
+         - Business logic and rules
+         - Domain services
+         - Core interfaces and contracts
+      
+      2. **Move to Core Module:**
+         - Move identified files to core/ directory
+         - Update import statements
+         - Ensure no external dependencies in core
+         - Maintain clean architecture principles
+      
+      3. **Update Dependencies:**
+         - Update all files that import moved components
+         - Fix import paths
+         - Ensure core module has no external dependencies
+      
+      **Execution Steps:**
+      1. Identify all core domain files
+      2. Move files to appropriate core/ subdirectories
+      3. Update import statements throughout the project
+      4. Run tests to ensure functionality is preserved
+      5. Commit changes with message "Phase 2: Move core domain logic"
+      
+      **Validation:**
+      - Core module has no external dependencies
+      - All imports are updated correctly
+      - Tests pass after the move
+      - No circular dependencies introduced
+      
+      Show each file being moved and explain the reasoning.
+
+  - name: "execute_phase_3_infrastructure"
+    type: "execution"
+    description: "Extract infrastructure concerns"
+    depends_on: ["execute_phase_2_core"]
+    requires_approval: true
+    jules_prompt: |
+      Execute Phase 3 of the modular restructuring plan for {{.ProjectPath}}:
+      
+      **Phase 3: Extract Infrastructure Concerns**
+      
+      1. **Identify Infrastructure Components:**
+         - Database access layers
+         - External API clients
+         - File system operations
+         - Configuration management
+         - Logging and monitoring
+         - Caching implementations
+      
+      2. **Move to Infrastructure Module:**
+         - Move infrastructure files to infrastructure/ directory
+         - Implement dependency injection for infrastructure
+         - Create interfaces for external dependencies
+         - Ensure infrastructure depends only on core
+      
+      3. **Update Dependencies:**
+         - Update application layer to use infrastructure interfaces
+         - Implement dependency injection
+         - Update configuration
+      
+      **Execution Steps:**
+      1. Identify all infrastructure-related files
+      2. Move files to infrastructure/ subdirectories
+      3. Create interfaces for external dependencies
+      4. Update dependency injection configuration
+      5. Update application layer to use interfaces
+      6. Run tests to ensure functionality is preserved
+      7. Commit changes with message "Phase 3: Extract infrastructure concerns"
+      
+      **Validation:**
+      - Infrastructure module depends only on core
+      - Application layer uses infrastructure interfaces
+      - Dependency injection is properly configured
+      - All tests pass
+      
+      Show each infrastructure component being moved and explain the interface design.
+
+  - name: "execute_phase_4_application"
+    type: "execution"
+    description: "Reorganize application layer"
+    depends_on: ["execute_phase_3_infrastructure"]
+    requires_approval: true
+    jules_prompt: |
+      Execute Phase 4 of the modular restructuring plan for {{.ProjectPath}}:
+      
+      **Phase 4: Reorganize Application Layer**
+      
+      1. **Identify Application Components:**
+         - Use cases and application services
+         - Command and query handlers
+         - Application-specific business logic
+         - Workflow orchestration
+         - Application events
+      
+      2. **Move to Application Module:**
+         - Move application files to application/ directory
+         - Organize by use cases or features
+         - Implement clean architecture patterns
+         - Ensure application depends on core and infrastructure
+      
+      3. **Update Dependencies:**
+         - Update presentation layer to use application services
+         - Implement proper dependency injection
+         - Update configuration
+      
+      **Execution Steps:**
+      1. Identify all application layer files
+      2. Move files to application/ subdirectories
+      3. Organize by use cases or features
+      4. Update presentation layer dependencies
+      5. Implement proper service interfaces
+      6. Run tests to ensure functionality is preserved
+      7. Commit changes with message "Phase 4: Reorganize application layer"
+      
+      **Validation:**
+      - Application layer depends on core and infrastructure
+      - Presentation layer uses application services
+      - Clean architecture principles are followed
+      - All tests pass
+      
+      Show each application component being moved and explain the organization.
+
+  - name: "execute_phase_5_presentation"
+    type: "execution"
+    description: "Update presentation layer"
+    depends_on: ["execute_phase_4_application"]
+    requires_approval: true
+    jules_prompt: |
+      Execute Phase 5 of the modular restructuring plan for {{.ProjectPath}}:
+      
+      **Phase 5: Update Presentation Layer**
+      
+      1. **Identify Presentation Components:**
+         - Controllers and handlers
+         - API endpoints
+         - UI components
+         - Request/response models
+         - Middleware
+      
+      2. **Move to Presentation Module:**
+         - Move presentation files to presentation/ directory
+         - Organize by API version or feature
+         - Implement proper separation of concerns
+         - Ensure presentation depends on application
+      
+      3. **Update Dependencies:**
+         - Update routing and middleware
+         - Implement proper error handling
+         - Update API documentation
+      
+      **Execution Steps:**
+      1. Identify all presentation layer files
+      2. Move files to presentation/ subdirectories
+      3. Organize by API version or feature
+      4. Update routing and middleware
+      5. Implement proper error handling
+      6. Update API documentation
+      7. Run tests to ensure functionality is preserved
+      8. Commit changes with message "Phase 5: Update presentation layer"
+      
+      **Validation:**
+      - Presentation layer depends only on application
+      - API endpoints work correctly
+      - Error handling is proper
+      - All tests pass
+      
+      Show each presentation component being moved and explain the organization.
+
+  - name: "execute_phase_6_shared"
+    type: "execution"
+    description: "Consolidate shared utilities"
+    depends_on: ["execute_phase_5_presentation"]
+    requires_approval: true
+    jules_prompt: |
+      Execute Phase 6 of the modular restructuring plan for {{.ProjectPath}}:
+      
+      **Phase 6: Consolidate Shared Utilities**
+      
+      1. **Identify Shared Components:**
+         - Common utilities and helpers
+         - Constants and enums
+         - Shared types and interfaces
+         - Common validation logic
+         - Shared configuration
+      
+      2. **Move to Shared Module:**
+         - Move shared files to shared/ directory
+         - Organize by functionality
+         - Ensure shared has no external dependencies
+         - Update all modules to use shared utilities
+      
+      3. **Final Cleanup:**
+         - Remove duplicate code
+         - Update all import statements
+         - Clean up unused files
+         - Update documentation
+      
+      **Execution Steps:**
+      1. Identify all shared utilities and common code
+      2. Move files to shared/ subdirectories
+      3. Remove duplicates across modules
+      4. Update all import statements
+      5. Clean up unused files
+      6. Update documentation
+      7. Run comprehensive tests
+      8. Commit changes with message "Phase 6: Consolidate shared utilities"
+      
+      **Validation:**
+      - Shared module has no external dependencies
+      - No duplicate code across modules
+      - All imports are correct
+      - All tests pass
+      - Documentation is updated
+      
+      Show each shared component being consolidated and explain the final structure.
+
+  - name: "final_validation"
+    type: "validation"
+    description: "Final validation and cleanup"
+    depends_on: ["execute_phase_6_shared"]
+    jules_prompt: |
+      Perform final validation of the modular restructuring for {{.ProjectPath}}:
+      
+      **1. Architecture Validation:**
+      - Verify clean architecture principles are followed
+      - Check dependency direction (core ← infrastructure, core ← application ← presentation)
+      - Ensure no circular dependencies
+      - Validate module boundaries
+      
+      **2. Functionality Validation:**
+      - Run all tests and ensure they pass
+      - Verify all features work as expected
+      - Check API endpoints are functional
+      - Validate build and deployment processes
+      
+      **3. Code Quality Validation:**
+      - Check for unused imports
+      - Verify naming conventions
+      - Ensure proper error handling
+      - Validate documentation completeness
+      
+      **4. Generate Final Report:**
+      - Create comprehensive restructuring report
+      - Document all changes made
+      - Provide recommendations for future improvements
+      - Include metrics and statistics
+      
+      **Output:**
+      - Architecture diagram showing final structure
+      - List of all files moved and changes made
+      - Test results and validation status
+      - Recommendations for future maintenance
+      - Final commit with message "Complete modular restructuring"
+      
+      Ensure the project is in a clean, working state with proper modular architecture.
+
+# Validation rules
+validation:
+  pre_execution:
+    - "check_git_status"
+    - "verify_backup"
+    - "validate_project_structure"
+    - "check_dependencies"
+  
+  post_execution:
+    - "run_all_tests"
+    - "check_build"
+    - "validate_imports"
+    - "verify_functionality"
+    - "check_architecture_compliance"
+
+# Output configuration
+output:
+  format: "markdown"
+  include:
+    - "summary"
+    - "detailed_changes"
+    - "test_results"
+    - "architecture_diagram"
+    - "recommendations"
+  
+  files:
+    - path: "{{.ProjectPath}}/MODULAR_RESTRUCTURE_REPORT.md"
+      template: "modular_restructure_report.md"
+    - path: "{{.ProjectPath}}/ARCHITECTURE.md"
+      template: "architecture_documentation.md"
+    - path: "{{.ProjectPath}}/CHANGELOG.md"
+      template: "changelog.md"
