@@ -13,10 +13,23 @@ import (
 )
 
 func TestServerE2EWithCommandTransport(t *testing.T) {
-	// Use the binary from go/bin
-	binaryPath := "/Users/damirmukimov/go/bin/juleson-mcp"
-	if _, err := os.Stat(binaryPath); err != nil {
-		t.Skip("juleson-mcp binary not found, run 'make build-mcp && make install-mcp' first")
+	// Use the binary from go/bin or current directory
+	binaryPath := os.Getenv("JULESON_MCP_BINARY")
+	if binaryPath == "" {
+		// Try common locations
+		for _, path := range []string{
+			"../../bin/juleson-mcp",
+			"./bin/juleson-mcp",
+			"juleson-mcp",
+		} {
+			if _, err := os.Stat(path); err == nil {
+				binaryPath = path
+				break
+			}
+		}
+	}
+	if binaryPath == "" || os.Getenv("SKIP_E2E") != "" {
+		t.Skip("juleson-mcp binary not found or E2E tests disabled, run 'make build-mcp' first")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

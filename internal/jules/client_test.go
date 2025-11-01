@@ -190,32 +190,13 @@ func (suite *ClientTestSuite) TestApprovePlan() {
 	require.NoError(suite.T(), err)
 }
 
-// TestCancelSession tests canceling a session
-func (suite *ClientTestSuite) TestCancelSession() {
-	httpmock.RegisterResponder("POST", "https://api.jules.ai/sessions/session-1:cancel",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(200, ""), nil
-		})
-
-	err := suite.client.CancelSession(context.Background(), "session-1")
-
-	require.NoError(suite.T(), err)
-}
-
-// TestDeleteSession tests deleting a session
-func (suite *ClientTestSuite) TestDeleteSession() {
-	httpmock.RegisterResponder("DELETE", "https://api.jules.ai/sessions/session-1",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(204, ""), nil
-		})
-
-	err := suite.client.DeleteSession(context.Background(), "session-1")
-
-	require.NoError(suite.T(), err)
-}
+// NOTE: TestCancelSession and TestDeleteSession removed
+// The Jules API v1alpha does not provide cancel or delete endpoints.
+// These operations are only available through the Jules web UI.
 
 // TestListActivities tests listing activities
 func (suite *ClientTestSuite) TestListActivities() {
+
 	mockResponse := ActivitiesResponse{
 		Activities: []Activity{
 			{

@@ -40,21 +40,25 @@ func RegisterSessionTools(server *mcp.Server, julesClient *jules.Client) {
 		return approveSessionPlan(ctx, req, input, julesClient)
 	})
 
-	// Cancel Session Tool
+	// Apply Session Patches Tool
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "cancel_session",
-		Description: "Cancel a running session",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input CancelSessionInput) (*mcp.CallToolResult, CancelSessionOutput, error) {
-		return cancelSession(ctx, req, input, julesClient)
+		Name:        "apply_session_patches",
+		Description: "Apply git patches from a session to the working directory (similar to 'jules remote pull --apply')",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input ApplySessionPatchesInput) (*mcp.CallToolResult, ApplySessionPatchesOutput, error) {
+		return applySessionPatches(ctx, req, input, julesClient)
 	})
 
-	// Delete Session Tool
+	// Preview Session Changes Tool
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "delete_session",
-		Description: "Delete a completed or failed session",
-	}, func(ctx context.Context, req *mcp.CallToolRequest, input DeleteSessionInput) (*mcp.CallToolResult, DeleteSessionOutput, error) {
-		return deleteSession(ctx, req, input, julesClient)
+		Name:        "preview_session_changes",
+		Description: "Preview what changes would be made if session patches were applied (dry-run)",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input PreviewSessionChangesInput) (*mcp.CallToolResult, PreviewSessionChangesOutput, error) {
+		return previewSessionChanges(ctx, req, input, julesClient)
 	})
+
+	// NOTE: cancel_session and delete_session tools are NOT available
+	// The Jules API v1alpha does not support these operations.
+	// Users must use the Jules web UI to cancel or delete sessions.
 }
 
 // ListSessionsInput represents input for list_sessions tool
@@ -91,10 +95,15 @@ func listSessions(ctx context.Context, req *mcp.CallToolRequest, input ListSessi
 		}, ListSessionsOutput{}, err
 	}
 
+	sessions := response.Sessions
+	if sessions == nil {
+		sessions = []jules.Session{}
+	}
+
 	output := ListSessionsOutput{
-		Sessions:   response.Sessions,
+		Sessions:   sessions,
 		NextCursor: response.NextPageToken,
-		TotalCount: len(response.Sessions),
+		TotalCount: len(sessions),
 	}
 
 	return nil, output, nil
@@ -136,6 +145,9 @@ func getSessionStatus(ctx context.Context, req *mcp.CallToolRequest, input GetSe
 	}
 
 	sessions := response.Sessions
+	if sessions == nil {
+		sessions = []jules.Session{}
+	}
 	totalSessions := len(sessions)
 
 	// Count sessions by state
@@ -205,75 +217,135 @@ func approveSessionPlan(ctx context.Context, req *mcp.CallToolRequest, input App
 	return nil, output, nil
 }
 
-// CancelSessionInput represents input for cancel_session tool
-type CancelSessionInput struct {
-	SessionID string `json:"session_id" jsonschema:"ID of the session to cancel"`
+// NOTE: CancelSession and DeleteSession functionality removed
+// The Jules API v1alpha does not provide these endpoints.
+// Cancel/Delete operations are only available via the Jules web UI.
+
+// ApplySessionPatchesInput represents input for apply_session_patches tool
+type ApplySessionPatchesInput struct {
+	SessionID    string `json:"session_id" jsonschema:"ID of the session to apply patches from"`
+	WorkingDir   string `json:"working_dir,omitempty" jsonschema:"Working directory where patches should be applied (default: current directory)"`
+	DryRun       bool   `json:"dry_run,omitempty" jsonschema:"Whether to perform a dry-run without actually applying changes (default: false)"`
+	Force        bool   `json:"force,omitempty" jsonschema:"Whether to force application even if some hunks fail (default: false)"`
+	CreateBackup bool   `json:"create_backup,omitempty" jsonschema:"Whether to create backup files before applying patches (default: false)"`
 }
 
-// CancelSessionOutput represents output for cancel_session tool
-type CancelSessionOutput struct {
-	SessionID string `json:"session_id"`
-	Status    string `json:"status"`
-	Message   string `json:"message"`
+// ApplySessionPatchesOutput represents output for apply_session_patches tool
+type ApplySessionPatchesOutput struct {
+	SessionID      string   `json:"session_id"`
+	PatchesApplied int      `json:"patches_applied"`
+	PatchesFailed  int      `json:"patches_failed"`
+	FilesModified  []string `json:"files_modified"`
+	Errors         []string `json:"errors,omitempty"`
+	DryRun         bool     `json:"dry_run"`
+	Message        string   `json:"message"`
 }
 
-// cancelSession cancels a running session
-func cancelSession(ctx context.Context, req *mcp.CallToolRequest, input CancelSessionInput, client *jules.Client) (
+// applySessionPatches applies git patches from a session to the working directory
+func applySessionPatches(ctx context.Context, req *mcp.CallToolRequest, input ApplySessionPatchesInput, client *jules.Client) (
 	*mcp.CallToolResult,
-	CancelSessionOutput,
+	ApplySessionPatchesOutput,
 	error,
 ) {
-	err := client.CancelSession(ctx, input.SessionID)
+	options := &jules.PatchApplicationOptions{
+		WorkingDir:   input.WorkingDir,
+		DryRun:       input.DryRun,
+		Force:        input.Force,
+		CreateBackup: input.CreateBackup,
+	}
+
+	result, err := client.ApplySessionPatches(ctx, input.SessionID, options)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Failed to cancel session: %v", err)},
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to apply session patches: %v", err)},
 			},
-		}, CancelSessionOutput{}, err
+		}, ApplySessionPatchesOutput{}, err
 	}
 
-	output := CancelSessionOutput{
-		SessionID: input.SessionID,
-		Status:    "cancelled",
-		Message:   "Session cancelled successfully",
+	message := fmt.Sprintf("Successfully applied %d patches", result.PatchesApplied)
+	if result.DryRun {
+		message = fmt.Sprintf("Dry-run: %d patches can be applied", result.PatchesApplied)
+	}
+	if result.PatchesFailed > 0 {
+		message += fmt.Sprintf(", %d patches failed", result.PatchesFailed)
+	}
+
+	output := ApplySessionPatchesOutput{
+		SessionID:      input.SessionID,
+		PatchesApplied: result.PatchesApplied,
+		PatchesFailed:  result.PatchesFailed,
+		FilesModified:  result.FilesModified,
+		Errors:         result.Errors,
+		DryRun:         result.DryRun,
+		Message:        message,
 	}
 
 	return nil, output, nil
 }
 
-// DeleteSessionInput represents input for delete_session tool
-type DeleteSessionInput struct {
-	SessionID string `json:"session_id" jsonschema:"ID of the session to delete"`
+// PreviewSessionChangesInput represents input for preview_session_changes tool
+type PreviewSessionChangesInput struct {
+	SessionID  string `json:"session_id" jsonschema:"ID of the session to preview changes for"`
+	WorkingDir string `json:"working_dir,omitempty" jsonschema:"Working directory (default: current directory)"`
 }
 
-// DeleteSessionOutput represents output for delete_session tool
-type DeleteSessionOutput struct {
-	SessionID string `json:"session_id"`
-	Status    string `json:"status"`
-	Message   string `json:"message"`
+// PreviewSessionChangesOutput represents output for preview_session_changes tool
+type PreviewSessionChangesOutput struct {
+	SessionID    string             `json:"session_id"`
+	TotalPatches int                `json:"total_patches"`
+	Files        []jules.FileChange `json:"files"`
+	CanApply     bool               `json:"can_apply"`
+	Errors       []string           `json:"errors,omitempty"`
+	Summary      string             `json:"summary"`
 }
 
-// deleteSession deletes a completed or failed session
-func deleteSession(ctx context.Context, req *mcp.CallToolRequest, input DeleteSessionInput, client *jules.Client) (
+// previewSessionChanges previews what changes would be made if patches were applied
+func previewSessionChanges(ctx context.Context, req *mcp.CallToolRequest, input PreviewSessionChangesInput, client *jules.Client) (
 	*mcp.CallToolResult,
-	DeleteSessionOutput,
+	PreviewSessionChangesOutput,
 	error,
 ) {
-	err := client.DeleteSession(ctx, input.SessionID)
+	changes, err := client.PreviewSessionPatches(ctx, input.SessionID, input.WorkingDir)
+
+	canApply := true
+	var errors []string
 	if err != nil {
+		canApply = false
+		errors = append(errors, err.Error())
+	}
+
+	if changes == nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Failed to delete session: %v", err)},
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to preview session changes: %v", err)},
 			},
-		}, DeleteSessionOutput{}, err
+		}, PreviewSessionChangesOutput{}, err
 	}
 
-	output := DeleteSessionOutput{
-		SessionID: input.SessionID,
-		Status:    "deleted",
-		Message:   "Session deleted successfully",
+	totalLinesAdded := 0
+	totalLinesRemoved := 0
+	for _, file := range changes.Files {
+		totalLinesAdded += file.LinesAdded
+		totalLinesRemoved += file.LinesRemoved
+	}
+
+	summary := fmt.Sprintf("%d patches affecting %d files (+%d -%d lines)",
+		changes.TotalPatches, len(changes.Files), totalLinesAdded, totalLinesRemoved)
+
+	if !canApply {
+		summary += " - WARNING: Some patches may fail to apply"
+	}
+
+	output := PreviewSessionChangesOutput{
+		SessionID:    input.SessionID,
+		TotalPatches: changes.TotalPatches,
+		Files:        changes.Files,
+		CanApply:     canApply,
+		Errors:       errors,
+		Summary:      summary,
 	}
 
 	return nil, output, nil
