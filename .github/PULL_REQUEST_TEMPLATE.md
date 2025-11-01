@@ -1,3 +1,4 @@
+---
 ## Description
 
 <!-- Provide a clear and concise description of your changes -->
@@ -14,6 +15,7 @@
 - [ ] ♻️ Code refactoring
 - [ ] ✅ Test addition or update
 - [ ] 🔨 Build/CI change
+- [ ] 🔄 Dependency update
 
 ## Related Issues
 
@@ -88,3 +90,4 @@ go test ./...
 - [ ] Performance impact acceptable (explain below)
 
 <!-- If there is a performance impact, explain here -->
+---

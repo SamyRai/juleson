@@ -1,10 +1,12 @@
 # Juleson Templates
 
-This directory contains YAML-based templates for Jules automation tasks. Templates use a structured format inspired by Y2Q2 (YAML-to-Query) patterns for easy task definition and context management.
+This directory contains YAML-based templates for Jules automation tasks. Templates use a
+structured format inspired by Y2Q2 (YAML-to-Query) patterns for easy task definition and
+context management.
 
 ## 📁 **Directory Structure**
 
-```
+```text
 templates/
 ├── builtin/           # Built-in templates (shipped with the tool)
 │   ├── reorganization/
@@ -43,7 +45,7 @@ context:
     - "identify_dependencies"
     - "analyze_code_patterns"
     - "detect_architectural_issues"
-  
+
   file_patterns:
     include:
       - "**/*.go"
@@ -67,10 +69,10 @@ tasks:
       2. Dependency problems
       3. Code organization problems
       4. Potential improvements
-      
+
       Focus on: {{.FocusAreas}}
       Exclude: {{.ExcludePatterns}}
-    
+
     context_vars:
       ProjectPath: "{{.ProjectPath}}"
       FocusAreas: "{{.FocusAreas}}"
@@ -82,18 +84,18 @@ tasks:
     depends_on: ["analyze_current_structure"]
     jules_prompt: |
       Based on the analysis of {{.ProjectPath}}, create a detailed reorganization plan:
-      
+
       1. **Target Architecture**: {{.TargetArchitecture}}
       2. **Migration Strategy**: Step-by-step approach
       3. **Risk Assessment**: Potential issues and mitigation
       4. **Timeline**: Estimated time for each phase
-      
+
       Consider:
       - Minimal disruption to existing functionality
       - Backward compatibility
       - Testing strategy
       - Documentation updates
-      
+
       Output format: Structured plan with phases and tasks
 
   - name: "execute_reorganization"
@@ -103,19 +105,19 @@ tasks:
     requires_approval: true
     jules_prompt: |
       Execute the reorganization plan for {{.ProjectPath}}:
-      
+
       **Phase 1**: Create new directory structure
       **Phase 2**: Move files according to plan
       **Phase 3**: Update imports and references
       **Phase 4**: Update configuration files
       **Phase 5**: Run tests and validate
-      
+
       For each change:
       1. Explain what you're doing
       2. Show the changes
       3. Verify the change works
       4. Update documentation if needed
-      
+
       Be careful to:
       - Maintain functionality
       - Update all references
@@ -128,7 +130,7 @@ validation:
     - "check_git_status"
     - "verify_backup"
     - "validate_project_structure"
-  
+
   post_execution:
     - "run_tests"
     - "check_build"
@@ -143,7 +145,7 @@ output:
     - "detailed_changes"
     - "test_results"
     - "recommendations"
-  
+
   files:
     - path: "{{.ProjectPath}}/REORGANIZATION_REPORT.md"
       template: "reorganization_report.md"
@@ -156,6 +158,7 @@ output:
 Templates support dynamic variables that are populated at runtime:
 
 ### **Built-in Variables**
+
 - `{{.ProjectPath}}` - Path to the project
 - `{{.ProjectName}}` - Name of the project
 - `{{.ProjectType}}` - Type of project (go, python, js, etc.)
@@ -163,6 +166,7 @@ Templates support dynamic variables that are populated at runtime:
 - `{{.User}}` - Current user
 
 ### **Context Variables**
+
 - `{{.FocusAreas}}` - Areas to focus on
 - `{{.ExcludePatterns}}` - Patterns to exclude
 - `{{.TargetArchitecture}}` - Target architecture
@@ -171,24 +175,28 @@ Templates support dynamic variables that are populated at runtime:
 ## 📋 **Template Categories**
 
 ### **Reorganization Templates**
+
 - `modular-restructure` - Convert to modular architecture
 - `layered-architecture` - Implement layered architecture
 - `microservices-split` - Split into microservices
 - `monorepo-organization` - Organize monorepo structure
 
 ### **Refactoring Templates**
+
 - `code-cleanup` - General code cleanup
 - `dependency-update` - Update dependencies
 - `api-modernization` - Modernize API design
 - `performance-optimization` - Optimize performance
 
 ### **Testing Templates**
+
 - `test-generation` - Generate comprehensive tests
 - `test-coverage` - Improve test coverage
 - `integration-tests` - Add integration tests
 - `e2e-tests` - Add end-to-end tests
 
 ### **Documentation Templates**
+
 - `api-documentation` - Generate API documentation
 - `readme-generation` - Create comprehensive README
 - `architecture-docs` - Document architecture
@@ -242,18 +250,21 @@ Templates support dynamic variables that are populated at runtime:
 Templates can automatically extract project context:
 
 ### **Project Analysis**
+
 - Directory structure analysis
 - Dependency mapping
 - Code pattern detection
 - Architectural assessment
 
 ### **File Analysis**
+
 - Language detection
 - Framework identification
 - Configuration analysis
 - Test coverage analysis
 
 ### **Git Integration**
+
 - Commit history analysis
 - Branch structure
 - Contributor analysis
@@ -276,7 +287,7 @@ templates:
     compatibility:
       languages: ["go", "python", "javascript", "typescript"]
       frameworks: ["react", "vue", "angular", "express", "gin", "fastapi"]
-    
+
   - name: "test-generation"
     version: "1.0.0"
     category: "testing"
@@ -293,6 +304,7 @@ templates:
 ## 🎯 **Best Practices**
 
 ### **Template Design**
+
 - Use clear, descriptive names
 - Include comprehensive metadata
 - Provide detailed descriptions
@@ -300,18 +312,21 @@ templates:
 - Include compatibility information
 
 ### **Context Extraction**
+
 - Be specific about file patterns
 - Include relevant analysis steps
 - Exclude unnecessary files
 - Consider performance implications
 
 ### **Task Definition**
+
 - Use clear, actionable prompts
 - Include validation steps
 - Provide rollback strategies
 - Consider approval workflows
 
 ### **Output Configuration**
+
 - Use structured output formats
 - Include comprehensive reports
 - Generate actionable recommendations
@@ -319,4 +334,4 @@ templates:
 
 ---
 
-*Template system designed for Jules automation with Y2Q2-inspired YAML patterns*
+Template system designed for Jules automation with Y2Q2-inspired YAML patterns

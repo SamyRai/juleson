@@ -66,12 +66,14 @@ Juleson/
 ### **Jules API Integration**
 
 - ✅ Full Jules API v1alpha support
-- ✅ Session lifecycle management (create, get, list, delete)
-- ✅ Message sending and plan approval
-- ✅ Activity and artifact monitoring
+- ✅ Session management (create, get, list, approve, send messages)
+- ✅ Activity and artifact monitoring with pagination
 - ✅ Pagination support for large datasets
 - ✅ Automatic retry with exponential backoff
 - ✅ Comprehensive error handling
+- ✅ Git patch application from sessions
+
+**Note**: Session cancel/delete are not available in API - use [Jules web UI](https://jules.google.com)
 
 ### **Automation Engine**
 
@@ -95,13 +97,11 @@ Juleson/
 
 ### **MCP Server**
 
-- ✅ Official MCP Go SDK integration
-- ✅ Stdio transport (Claude, Cursor compatible)
-- ✅ 18+ MCP tools for project automation
+- ✅ Official Model Context Protocol (MCP) Go SDK
+- ✅ Stdio transport (compatible with Claude Desktop, Cursor)
+- ✅ 19 MCP tools for project automation
 - ✅ Resource endpoints (server info, config templates)
-- ✅ Prompt templates for common workflows
-- ✅ Argument auto-completion
-- ✅ Streaming responses for long-running tasks
+- ✅ Comprehensive tool descriptions and schemas
 
 ## � **Quick Start**
 
@@ -235,16 +235,29 @@ Add to Cursor settings JSON:
 
 | Tool | Description |
 |------|-------------|
+| **Project Analysis** | |
 | `analyze_project` | Deep project analysis (languages, frameworks, architecture) |
+| `sync_project` | Sync project with remote Git repository |
+| **Templates** | |
 | `execute_template` | Run automation templates with custom parameters |
 | `list_templates` | Browse available templates by category |
 | `search_templates` | Find templates by keywords or tags |
 | `create_template` | Create custom automation templates |
+| **Session Management** | |
 | `list_sessions` | View all Jules coding sessions |
 | `get_session_status` | Detailed session status summary |
 | `approve_session_plan` | Approve Jules session plans |
 | `apply_session_patches` | Apply git patches from a session to working directory |
 | `preview_session_changes` | Preview changes before applying patches (dry-run) |
+| **Development Tools** | |
+| `build_project` | Build Juleson binaries (CLI and MCP server) |
+| `run_tests` | Execute tests with coverage and race detection |
+| `lint_code` | Run linters to check code quality |
+| `format_code` | Format Go code with gofmt/gofumpt |
+| `clean_artifacts` | Clean build artifacts and caches |
+| `quality_check` | Run all quality checks (format, lint, test) |
+| `module_maintenance` | Go module operations (tidy, download, verify) |
+| `build_release` | Build release binaries for all platforms |
 
 **Note**: `cancel_session` and `delete_session` are not available in Jules API
 v1alpha. Use the [Jules web UI](https://jules.google.com) for these operations.

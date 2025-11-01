@@ -1,6 +1,7 @@
 # Installation Guide
 
-Juleson provides multiple installation methods for Linux, macOS, and Windows. Choose the method that best fits your needs.
+Juleson provides multiple installation methods for Linux, macOS, and Windows. Choose the
+method that best fits your needs.
 
 ## Table of Contents
 
@@ -15,7 +16,7 @@ Juleson provides multiple installation methods for Linux, macOS, and Windows. Ch
 
 ## Quick Install
 
-### Linux/macOS
+### Linux/macOS (Quick Install)
 
 ```bash
 # Using pre-built binaries
@@ -26,7 +27,7 @@ go install github.com/SamyRai/juleson/cmd/juleson@latest
 go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
 
-### Windows
+### Windows (Quick Install)
 
 ```powershell
 # Using PowerShell
@@ -187,7 +188,7 @@ $goPath = go env GOPATH
 - Git
 - Make (Linux/macOS) or PowerShell (Windows)
 
-### Linux/macOS
+### Linux/macOS (Build from Source)
 
 ```bash
 # Clone the repository
@@ -211,7 +212,7 @@ juleson --version
 jules-mcp --version
 ```
 
-### Windows
+### Windows (Build from Source)
 
 ```powershell
 # Clone the repository
@@ -288,7 +289,7 @@ juleson --version
 
 After installation, configure your Jules API key:
 
-### Linux/macOS
+### Linux/macOS (Configuration)
 
 #### Environment Variable (Temporary)
 
@@ -296,7 +297,7 @@ After installation, configure your Jules API key:
 export JULES_API_KEY="your-jules-api-key-here"
 ```
 
-#### Environment Variable (Permanent)
+#### Environment Variable (Permanent - Linux/macOS)
 
 ```bash
 # Add to ~/.bashrc, ~/.zshrc, or ~/.profile
@@ -304,7 +305,7 @@ echo 'export JULES_API_KEY="your-jules-api-key-here"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-#### Configuration File
+#### Configuration File (Linux/macOS)
 
 ```bash
 # Create config directory
@@ -320,7 +321,7 @@ jules:
 EOF
 ```
 
-### Windows
+### Windows (Configuration)
 
 #### Environment Variable (PowerShell - Temporary)
 
@@ -506,7 +507,7 @@ echo $env:PROCESSOR_ARCHITECTURE
 - Intel (x86_64) and Apple Silicon (ARM64) binaries available
 - May require allowing the app in System Preferences → Security & Privacy on first run
 
-#### Windows
+#### Windows (Platform Notes)
 
 - Requires Windows 10 or later (Windows 11 recommended)
 - Works in PowerShell, Command Prompt, and Windows Terminal
@@ -531,7 +532,7 @@ After successful installation:
 
 ## Uninstallation
 
-### Linux/macOS
+### Linux/macOS (Uninstallation)
 
 ```bash
 # Remove binaries
@@ -546,7 +547,7 @@ rm $(go env GOPATH)/bin/juleson
 rm $(go env GOPATH)/bin/jules-mcp
 ```
 
-### Windows
+### Windows (Uninstallation)
 
 ```powershell
 # Remove binaries
