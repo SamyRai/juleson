@@ -1,6 +1,7 @@
 # Juleson MCP Server Usage
 
-The Juleson MCP Server uses the official Model Context Protocol Go SDK and runs over stdin/stdout transport, making it compatible with AI assistants and development tools.
+The Juleson MCP Server uses the official Model Context Protocol Go SDK and runs over
+stdin/stdout transport, making it compatible with AI assistants and development tools.
 
 ## 🚀 **Starting the MCP Server**
 
@@ -421,4 +422,4 @@ projects:
 
 ---
 
-*Juleson MCP Server - Native integration with AI assistants using official MCP Go SDK*
+Juleson MCP Server - Native integration with AI assistants using official MCP Go SDK

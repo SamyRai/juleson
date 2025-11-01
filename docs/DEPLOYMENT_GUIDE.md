@@ -475,9 +475,8 @@ echo $JULES_API_KEY
 ### Performance
 
 - ✅ Cache API responses when possible
-- ✅ Use connection pooling
-- ✅ Monitor API rate limits
-- ✅ Implement retry logic with backoff
+- ✅ Monitor API rate limits (Jules API enforces rate limiting)
+- ✅ Implement retry logic with backoff (already included)
 
 ### Monitoring
 

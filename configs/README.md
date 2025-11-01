@@ -1,6 +1,7 @@
 # Configuration Files
 
-This directory contains **actual YAML configuration files** for the Jules automation system.
+This directory contains **actual YAML configuration files** for the Jules
+automation system.
 
 ## Important Distinction
 
@@ -14,7 +15,8 @@ This directory contains **actual YAML configuration files** for the Jules automa
 
 ## Configuration Structure
 
-The configuration is loaded by `internal/config/config.go` which looks for files named `Juleson.yaml` in:
+The configuration is loaded by `internal/config/config.go` which looks for files
+named `Juleson.yaml` in:
 
 1. `./configs/` directory (this directory)
 2. Current working directory (`.`)
@@ -27,7 +29,8 @@ The configuration is loaded by `internal/config/config.go` which looks for files
 
 ## Environment Variables
 
-You can override any configuration value using environment variables with uppercase names and underscores. For example:
+You can override any configuration value using environment variables with uppercase
+names and underscores. For example:
 
 - `JULES_API_KEY` - Your Jules API key (required)
 - `JULES_BASE_URL` - Jules API base URL

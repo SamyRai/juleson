@@ -40,8 +40,11 @@ func NewServer(cfg *config.Config) *Server {
 Available capabilities:
 - Project Analysis: Analyze project structure, dependencies, and complexity
 - Template Management: List, search, create, and execute automation templates
-- Session Management: Monitor, approve, cancel, and delete Jules sessions
+- Session Management: Monitor, approve, and manage Jules sessions
 - Automation Execution: Run templates to automate project tasks
+
+Note: Session cancel and delete operations are not available via Jules API v1alpha.
+These operations must be performed through the Jules web UI.
 
 Use the available tools to help users with their automation needs. Always provide clear, actionable results.`,
 	}
@@ -188,8 +191,8 @@ Tools Available:
 - list_sessions: List all Jules sessions
 - get_session_status: Get detailed session status summary
 - approve_session_plan: Approve session plans for execution
-- cancel_session: Cancel running sessions
-- delete_session: Delete completed sessions
+
+Note: cancel_session and delete_session are NOT available - Jules API v1alpha does not support these operations.
 
 For more information, use the available tools or check the Jules documentation.`
 
@@ -348,8 +351,8 @@ Available actions:
 - list: Get all current sessions
 - status: Get detailed status summary
 - approve: Approve a session plan for execution
-- cancel: Cancel a running session
-- delete: Delete a completed session
+
+Note: Cancel and delete operations are NOT supported by Jules API v1alpha. Use the Jules web UI for these actions.
 
 Start by listing sessions to see what's available, then use status for detailed information.`
 	} else {
@@ -360,12 +363,10 @@ Start by listing sessions to see what's available, then use status for detailed 
 			content = "Use the get_session_status tool to get a comprehensive overview of all sessions, including counts by state and recent activity."
 		case "approve":
 			content = "Use the approve_session_plan tool with a session_id to approve a planned session for execution."
-		case "cancel":
-			content = "Use the cancel_session tool with a session_id to stop a currently running session."
-		case "delete":
-			content = "Use the delete_session tool with a session_id to remove a completed or failed session from the system."
+		case "cancel", "delete":
+			content = "Session cancel and delete are NOT available via API. These operations must be performed through the Jules web UI. Each session response includes a 'url' field that opens the session in the web interface."
 		default:
-			content = fmt.Sprintf("Unknown action: %s. Valid actions are: list, status, approve, cancel, delete.", action)
+			content = fmt.Sprintf("Unknown action: %s. Valid actions are: list, status, approve.", action)
 		}
 	}
 
