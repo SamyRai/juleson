@@ -1,0 +1,110 @@
+# Template metadata
+metadata:
+  name: "code-cleanup"
+  version: "1.0.0"
+  description: "General code cleanup and optimization"
+  author: "Juleson"
+  tags: ["cleanup", "refactoring", "optimization", "quality"]
+  category: "refactoring"
+
+# Template configuration
+config:
+  strategy: "code-cleanup"
+  max_concurrent_tasks: 5
+  timeout: "300s"
+  requires_approval: false
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_code_quality"
+    - "identify_code_issues"
+    - "analyze_code_patterns"
+
+  file_patterns:
+    include:
+      ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java", "**/*.rs"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/.git/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_code_quality"
+    type: "analysis"
+    description: "Analyze code quality and identify cleanup opportunities"
+    jules_prompt: |
+      Analyze code quality in {{.ProjectPath}} and identify cleanup opportunities:
+
+      **Code Quality Assessment:**
+      - Identify unused imports and variables
+      - Find dead code and unreachable paths
+      - Detect code duplication
+      - Analyze naming conventions
+      - Check code formatting consistency
+
+      **Optimization Opportunities:**
+      - Identify performance bottlenecks
+      - Find memory leaks or inefficiencies
+      - Analyze algorithm complexity
+      - Check resource management
+
+      **Maintainability Issues:**
+      - Identify complex functions to simplify
+      - Find tightly coupled components
+      - Analyze code documentation gaps
+      - Check error handling patterns
+
+  - name: "plan_code_improvements"
+    type: "planning"
+    description: "Plan code cleanup and optimization improvements"
+    depends_on: ["analyze_code_quality"]
+    jules_prompt: |
+      Create a plan for code cleanup and optimization in {{.ProjectPath}}:
+
+      **Cleanup Tasks:**
+      1. Remove unused imports and dead code
+      2. Fix naming inconsistencies
+      3. Improve code formatting
+      4. Simplify complex functions
+      5. Add missing documentation
+
+      **Optimization Tasks:**
+      1. Improve algorithm efficiency
+      2. Optimize resource usage
+      3. Reduce memory allocations
+      4. Improve error handling
+
+      **Risk Assessment:**
+      - Identify high-risk changes
+      - Plan testing strategy
+      - Define rollback procedures
+
+  - name: "implement_code_cleanup"
+    type: "execution"
+    description: "Implement code cleanup and optimizations"
+    depends_on: ["plan_code_improvements"]
+    jules_prompt: |
+      Implement code cleanup and optimization improvements for {{.ProjectPath}}:
+
+      **Safe Changes (Low Risk):**
+      - Remove unused imports
+      - Fix code formatting
+      - Improve variable naming
+      - Add missing documentation
+
+      **Optimization Changes (Medium Risk):**
+      - Simplify complex expressions
+      - Optimize loops and conditions
+      - Improve error handling
+      - Reduce code duplication
+
+      **Structural Changes (High Risk):**
+      - Refactor complex functions
+      - Optimize data structures
+      - Improve algorithm implementations
+
+      Ensure all changes maintain functionality and improve code quality.
+
+validation:
+  pre_execution: ["run_tests", "create_backup"]
+  post_execution: ["run_tests", "check_code_quality"]

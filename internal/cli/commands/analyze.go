@@ -3,13 +3,14 @@ package commands
 import (
 	"fmt"
 
-	"jules-automation/internal/automation"
+	"github.com/SamyRai/juleson/internal/analyzer"
+	"github.com/SamyRai/juleson/internal/automation"
 
 	"github.com/spf13/cobra"
 )
 
 // NewAnalyzeCommand creates the analyze command
-func NewAnalyzeCommand(initializeEngine func() (*automation.Engine, error), displayProjectAnalysis func(*automation.ProjectContext)) *cobra.Command {
+func NewAnalyzeCommand(initializeEngine func() (*automation.Engine, error), displayProjectAnalysis func(*analyzer.ProjectContext)) *cobra.Command {
 	return &cobra.Command{
 		Use:   "analyze [project-path]",
 		Short: "Analyze project structure and context",

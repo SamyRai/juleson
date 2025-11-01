@@ -1,0 +1,162 @@
+# Template metadata
+metadata:
+  name: "readme-generation"
+  version: "1.0.0"
+  description: "Generate comprehensive README documentation"
+  author: "Juleson"
+  tags: ["documentation", "readme", "getting-started", "examples"]
+  category: "documentation"
+
+# Template configuration
+config:
+  strategy: "readme-generation"
+  max_concurrent_tasks: 1
+  timeout: "300s"
+  requires_approval: false
+  backup_enabled: false
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_project_structure"
+    - "extract_project_metadata"
+    - "check_existing_readme"
+
+  file_patterns:
+    include:
+      ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java", "**/*.md"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/test/**", "**/build/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_project_for_readme"
+    type: "analysis"
+    description: "Analyze project structure and extract information for README"
+    jules_prompt: |
+      Analyze {{.ProjectPath}} to gather information for README generation:
+
+      **Project Analysis:**
+      - Extract project name and description
+      - Identify main programming language(s)
+      - Analyze project structure and key directories
+      - Review configuration files and dependencies
+      - Check for existing documentation
+
+      **Feature Extraction:**
+      - Identify main features and capabilities
+      - Review command-line interface options
+      - Analyze API endpoints (if applicable)
+      - Check for configuration options
+      - Review build and deployment processes
+
+      **Usage Patterns:**
+      - Analyze example usage in code
+      - Check for test files and examples
+      - Review installation requirements
+      - Identify common use cases
+      - Assess target audience
+
+  - name: "generate_comprehensive_readme"
+    type: "execution"
+    description: "Generate comprehensive README.md with all sections"
+    depends_on: ["analyze_project_for_readme"]
+    jules_prompt: |
+      Generate a comprehensive README.md for {{.ProjectPath}}:
+
+      **README Structure:**
+      1. **Project Title and Description**
+         - Clear project name
+         - Brief description (1-2 sentences)
+         - Key features bullet points
+
+      2. **Table of Contents**
+         - Link to all major sections
+
+      3. **Installation**
+         - Prerequisites and requirements
+         - Step-by-step installation instructions
+         - Platform-specific notes
+
+      4. **Quick Start**
+         - Basic usage examples
+         - Hello world example
+         - Configuration setup
+
+      5. **Usage**
+         - Detailed usage instructions
+         - Command-line options
+         - Configuration examples
+         - API usage (if applicable)
+
+      6. **Features**
+         - Comprehensive feature list
+         - Code examples for key features
+         - Screenshots/diagrams if applicable
+
+      7. **Configuration**
+         - Configuration file format
+         - All available options
+         - Environment variables
+
+      8. **Development**
+         - Development setup
+         - Building from source
+         - Testing instructions
+         - Contributing guidelines
+
+      9. **API Documentation**
+         - Endpoint documentation (if applicable)
+         - Authentication details
+         - Request/response examples
+
+      10. **Contributing**
+          - How to contribute
+          - Development workflow
+          - Code standards
+
+      11. **License**
+          - License information
+          - Copyright notice
+
+      **Content Guidelines:**
+      - Use clear, concise language
+      - Include code examples with syntax highlighting
+      - Add badges for build status, version, license
+      - Include table of contents for long READMEs
+      - Provide troubleshooting section
+      - Add contact information and links
+
+  - name: "validate_readme_quality"
+    type: "validation"
+    description: "Validate README completeness and quality"
+    depends_on: ["generate_comprehensive_readme"]
+    jules_prompt: |
+      Validate the generated README.md for {{.ProjectPath}}:
+
+      **Content Validation:**
+      - Check all required sections are present
+      - Verify installation instructions work
+      - Test code examples for accuracy
+      - Validate links and references
+      - Check for typos and grammar
+
+      **Structure Assessment:**
+      - Review table of contents accuracy
+      - Check heading hierarchy
+      - Validate badge functionality
+      - Assess readability and flow
+
+      **Completeness Check:**
+      - Ensure all features are documented
+      - Verify configuration options coverage
+      - Check API documentation (if applicable)
+      - Review development instructions
+
+validation:
+  pre_execution: ["analyze_project_files"]
+  post_execution:
+    [
+      "validate_markdown_syntax",
+      "check_links",
+      "test_installation_instructions",
+    ]

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"jules-automation/internal/automation"
-	"jules-automation/internal/templates"
+	"github.com/SamyRai/juleson/internal/analyzer"
+	"github.com/SamyRai/juleson/internal/automation"
+	"github.com/SamyRai/juleson/internal/templates"
 )
 
-// DisplayProjectAnalysis displays project analysis results
-func DisplayProjectAnalysis(context *automation.ProjectContext) {
+// DisplayProjectAnalysis displays the project analysis results
+func DisplayProjectAnalysis(context *analyzer.ProjectContext) {
 	fmt.Println("📊 Project Analysis Results")
 	fmt.Println("==========================")
 	fmt.Printf("Project Name: %s\n", context.ProjectName)

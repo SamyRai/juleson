@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"jules-automation/internal/cli"
-	"jules-automation/internal/config"
+	"github.com/SamyRai/juleson/internal/cli"
+	"github.com/SamyRai/juleson/internal/config"
 )
 
 func main() {

@@ -1,0 +1,95 @@
+# Template metadata
+metadata:
+  name: "test-coverage-improvement"
+  version: "1.0.0"
+  description: "Improve existing test coverage"
+  author: "Juleson"
+  tags: ["testing", "coverage", "improvement", "quality"]
+  category: "testing"
+
+# Template configuration
+config:
+  strategy: "coverage-improvement"
+  max_concurrent_tasks: 3
+  timeout: "300s"
+  requires_approval: false
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_test_coverage"
+    - "identify_uncovered_code"
+    - "analyze_test_patterns"
+
+  file_patterns:
+    include: ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/.git/**", "**/test*/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_current_coverage"
+    type: "analysis"
+    description: "Analyze current test coverage and identify gaps"
+    jules_prompt: |
+      Analyze the test coverage in {{.ProjectPath}}:
+
+      **Coverage Analysis:**
+      - Generate coverage reports
+      - Identify uncovered functions and branches
+      - Analyze test quality and effectiveness
+      - Find redundant or ineffective tests
+
+      **Gap Identification:**
+      - List high-risk uncovered code
+      - Identify critical paths without tests
+      - Assess error handling coverage
+      - Evaluate edge case coverage
+
+      Provide a prioritized list of coverage improvements.
+
+  - name: "prioritize_coverage_gaps"
+    type: "planning"
+    description: "Prioritize coverage gaps by risk and impact"
+    depends_on: ["analyze_current_coverage"]
+    jules_prompt: |
+      Prioritize test coverage gaps for {{.ProjectPath}}:
+
+      **Risk Assessment:**
+      - Critical business logic without tests
+      - Error-prone code paths
+      - Complex algorithms and calculations
+      - External API integrations
+
+      **Impact Analysis:**
+      - Code that affects multiple components
+      - Frequently modified code
+      - Customer-facing functionality
+      - Security-sensitive operations
+
+      Create a prioritized improvement plan with effort estimates.
+
+  - name: "implement_coverage_improvements"
+    type: "execution"
+    description: "Implement test coverage improvements"
+    depends_on: ["prioritize_coverage_gaps"]
+    jules_prompt: |
+      Implement prioritized test coverage improvements for {{.ProjectPath}}:
+
+      **Test Implementation:**
+      1. Write unit tests for uncovered functions
+      2. Add integration tests for critical paths
+      3. Create tests for error conditions
+      4. Add edge case and boundary tests
+
+      **Test Quality:**
+      - Ensure tests are maintainable
+      - Use descriptive test names
+      - Include assertions for all code paths
+      - Add test documentation
+
+      Focus on the highest priority gaps first.
+
+validation:
+  pre_execution: ["check_test_setup"]
+  post_execution: ["run_coverage_analysis", "validate_improved_coverage"]

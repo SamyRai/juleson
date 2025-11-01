@@ -1,0 +1,89 @@
+# Template metadata
+metadata:
+  name: "layered-architecture"
+  version: "1.0.0"
+  description: "Implement layered architecture pattern"
+  author: "Juleson"
+  tags: ["layered", "architecture", "reorganization", "clean-architecture"]
+  category: "reorganization"
+
+# Template configuration
+config:
+  strategy: "layered"
+  max_concurrent_tasks: 3
+  timeout: "600s"
+  requires_approval: true
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_directory_structure"
+    - "identify_dependencies"
+    - "analyze_code_patterns"
+
+  file_patterns:
+    include: ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/.git/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_current_architecture"
+    type: "analysis"
+    description: "Analyze current architecture and identify layering opportunities"
+    jules_prompt: |
+      Analyze the current project structure in {{.ProjectPath}} and assess the suitability for layered architecture.
+
+      **Current State Analysis:**
+      - Identify existing architectural patterns
+      - Map data flow and dependencies
+      - Assess separation of concerns
+
+      **Layered Architecture Assessment:**
+      - Presentation Layer suitability
+      - Business Logic Layer requirements
+      - Data Access Layer identification
+      - Cross-cutting concerns analysis
+
+      Provide recommendations for implementing clean layered architecture.
+
+  - name: "design_layered_structure"
+    type: "planning"
+    description: "Design the layered architecture structure"
+    depends_on: ["analyze_current_architecture"]
+    jules_prompt: |
+      Design a clean layered architecture for {{.ProjectPath}}:
+
+      **Proposed Layers:**
+      1. **Presentation Layer**: Controllers, views, API endpoints
+      2. **Application Layer**: Use cases, application services
+      3. **Domain Layer**: Business logic, domain models, entities
+      4. **Infrastructure Layer**: Data access, external services, frameworks
+
+      Create a detailed implementation plan with:
+      - Layer boundaries and responsibilities
+      - Interface definitions between layers
+      - Dependency injection strategy
+      - Migration steps
+
+  - name: "implement_layered_architecture"
+    type: "execution"
+    description: "Implement the layered architecture"
+    depends_on: ["design_layered_structure"]
+    requires_approval: true
+    jules_prompt: |
+      Implement the layered architecture design for {{.ProjectPath}}:
+
+      **Implementation Tasks:**
+      1. Create layer directories and packages
+      2. Move existing code to appropriate layers
+      3. Define interfaces between layers
+      4. Implement dependency injection
+      5. Update imports and references
+      6. Add layer validation
+
+      Ensure each layer has clear responsibilities and proper separation of concerns.
+
+validation:
+  pre_execution: ["check_git_status", "create_backup"]
+  post_execution: ["run_tests", "validate_layer_separation"]

@@ -126,3 +126,9 @@ config.local.*
 configs/local.*
 *.local.yaml
 *.local.json
+configs/juleson.yaml
+
+# Test artifacts and temporary files
+**/bash_output_*.txt
+**/*_output_*.txt
+**/test_output/

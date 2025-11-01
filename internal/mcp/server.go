@@ -5,44 +5,37 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"strings"
 
-	"jules-automation/internal/automation"
-	"jules-automation/internal/config"
-	"jules-automation/internal/jules"
-	"jules-automation/internal/mcp/tools"
-	"jules-automation/internal/templates"
+	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/mcp/tools"
+	"github.com/SamyRai/juleson/internal/services"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// init configures the default logger to write to stderr to avoid corrupting stdio transport
+func init() {
+	log.SetOutput(os.Stderr)
+}
+
 // Server represents the MCP server using the official SDK
 type Server struct {
-	config           *config.Config
-	julesClient      *jules.Client
-	templateManager  *templates.Manager
-	automationEngine *automation.Engine
-	server           *mcp.Server
-	logger           *slog.Logger
+	container *services.Container
+	server    *mcp.Server
+	logger    *slog.Logger
 }
 
 // NewServer creates a new MCP server using the official SDK
 func NewServer(cfg *config.Config) *Server {
-	return &Server{
-		config: cfg,
-	}
-}
+	log.Println("Initializing MCP server...")
 
-// Start starts the MCP server using stdio transport
-func (s *Server) Start() error {
-	// Initialize components
-	if err := s.initializeComponents(); err != nil {
-		return fmt.Errorf("failed to initialize components: %w", err)
-	}
+	container := services.NewContainer(cfg)
 
 	// Create MCP server with options
 	opts := &mcp.ServerOptions{
-		Instructions: `You are Jules Automation MCP Server, a powerful tool for project analysis, automation, and session management.
+		Instructions: `You are Juleson MCP Server, a powerful tool for project analysis, automation, and session management.
 
 Available capabilities:
 - Project Analysis: Analyze project structure, dependencies, and complexity
@@ -51,75 +44,80 @@ Available capabilities:
 - Automation Execution: Run templates to automate project tasks
 
 Use the available tools to help users with their automation needs. Always provide clear, actionable results.`,
-		CompletionHandler: s.handleCompletion,
 	}
 
-	s.server = mcp.NewServer(&mcp.Implementation{
-		Name:    "jules-automation",
+	server := &Server{
+		container: container,
+		logger:    slog.Default(),
+	}
+
+	// Create the MCP server instance
+	server.server = mcp.NewServer(&mcp.Implementation{
+		Name:    "github.com/SamyRai/juleson",
 		Version: "1.0.0",
 	}, opts)
 
-	// Add tools
-	s.addTools()
+	// Register all tools, resources, and prompts BEFORE running
+	log.Println("Registering tools...")
+	server.addTools()
 
-	// Add resources
-	s.addResources()
+	log.Println("Registering resources...")
+	server.addResources()
 
-	// Add prompts
-	s.addPrompts()
+	log.Println("Registering prompts...")
+	server.addPrompts()
 
-	// Run server over stdin/stdout with logging transport
-	log.Println("Starting Jules Automation MCP Server...")
-	loggingTransport := &mcp.LoggingTransport{
+	log.Println("MCP server created successfully")
+	return server
+}
+
+// Start starts the MCP server
+func (s *Server) Start() error {
+	log.Println("Starting Juleson MCP Server on stdio transport...")
+
+	// Use LoggingTransport to write transport logs to stderr, keeping stdout clean for JSON-RPC
+	transport := &mcp.LoggingTransport{
 		Transport: &mcp.StdioTransport{},
-		Writer:    log.Writer(),
+		Writer:    os.Stderr,
 	}
 
-	return s.server.Run(context.Background(), loggingTransport)
+	log.Println("Server ready, waiting for client connection...")
+
+	// Run the server on stdio transport with logging
+	// The Run method handles connection, initialization, and serving
+	return s.server.Run(context.Background(), transport)
 }
 
 // Shutdown gracefully shuts down the MCP server
 func (s *Server) Shutdown(ctx context.Context) error {
-	// The stdio transport handles shutdown automatically
-	return nil
+	// Cleanup container resources
+	return s.container.Close()
 }
 
-// initializeComponents initializes all server components
-func (s *Server) initializeComponents() error {
-	// Initialize Jules client
-	s.julesClient = jules.NewClient(
-		s.config.Jules.APIKey,
-		s.config.Jules.BaseURL,
-		s.config.Jules.Timeout,
-		s.config.Jules.RetryAttempts,
-	)
-
-	// Initialize template manager
-	templateManager, err := templates.NewManager("./templates")
-	if err != nil {
-		return fmt.Errorf("failed to initialize template manager: %w", err)
-	}
-	s.templateManager = templateManager
-
-	// Initialize automation engine
-	s.automationEngine = automation.NewEngine(s.julesClient, templateManager)
-
-	// Initialize logger
-	s.logger = slog.Default()
-
-	return nil
-}
-
-// addTools adds all MCP tools to the server
+// addTools adds all MCP tools to the server using shared services
 func (s *Server) addTools() {
-	// Register project-related tools
-	tools.RegisterProjectTools(s.server, s.automationEngine)
+	// Register developer tools (always available - no external dependencies)
+	log.Println("Registering developer tools...")
+	tools.RegisterDevTools(s.server)
 
-	// Register template-related tools
-	tools.RegisterTemplateTools(s.server, s.templateManager, s.automationEngine)
+	// Register project-related tools (lazy initialization)
+	log.Println("Registering project tools...")
+	tools.RegisterProjectTools(s.server, s.container)
 
-	// Register session-related tools
-	tools.RegisterSessionTools(s.server, s.julesClient)
+	// Register template-related tools (lazy initialization)
+	log.Println("Registering template tools...")
+	tools.RegisterTemplateTools(s.server, s.container)
+
+	// Register session-related tools (only if Jules client is available)
+	julesClient := s.container.JulesClient()
+	if julesClient != nil {
+		log.Println("Registering session tools...")
+		tools.RegisterSessionTools(s.server, julesClient)
+	} else {
+		s.logger.Warn("Jules client not available - session tools will not be registered")
+	}
+
+	log.Println("All tools registered successfully")
 }
 
 // addResources adds MCP resources to the server
@@ -129,7 +127,7 @@ func (s *Server) addResources() {
 		Name:        "server-info",
 		MIMEType:    "text/plain",
 		URI:         "jules://server/info",
-		Description: "Information about the Jules Automation MCP Server capabilities",
+		Description: "Information about the Juleson MCP Server capabilities",
 	}, s.handleServerInfoResource)
 
 	// Add a resource for configuration template
@@ -172,7 +170,7 @@ func (s *Server) addPrompts() {
 
 // handleServerInfoResource provides server information
 func (s *Server) handleServerInfoResource(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
-	info := `Jules Automation MCP Server
+	info := `Juleson MCP Server
 
 Capabilities:
 - Project Analysis: Analyze project structure, languages, frameworks, and complexity
@@ -239,11 +237,13 @@ func (s *Server) handleToolCompletion(req *mcp.CompleteRequest) (*mcp.CompleteRe
 		}
 	case "execute_template":
 		if argName == "template_name" {
-			// Suggest template names based on available templates
-			templates := s.templateManager.ListTemplates()
-			for _, tmpl := range templates {
-				if len(argValue) == 0 || strings.Contains(strings.ToLower(tmpl.Name), strings.ToLower(argValue)) {
-					suggestions = append(suggestions, tmpl.Name)
+			// Suggest template names based on available templates (lazy initialization)
+			if templateManager, err := s.container.TemplateManager(); err == nil {
+				templates := templateManager.ListTemplates()
+				for _, tmpl := range templates {
+					if len(argValue) == 0 || strings.Contains(strings.ToLower(tmpl.Name), strings.ToLower(argValue)) {
+						suggestions = append(suggestions, tmpl.Name)
+					}
 				}
 			}
 		}

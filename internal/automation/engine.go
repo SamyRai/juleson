@@ -3,37 +3,22 @@ package automation
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"os"
 	"strings"
 	"time"
 
-	"jules-automation/internal/jules"
-	"jules-automation/internal/templates"
+	"github.com/SamyRai/juleson/internal/analyzer"
+	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/internal/templates"
 )
 
 // Engine represents the automation engine
 type Engine struct {
 	julesClient     *jules.Client
 	templateManager *templates.Manager
+	projectAnalyzer *analyzer.ProjectAnalyzer
 	projectPath     string
-	context         *ProjectContext
-}
-
-// ProjectContext contains project analysis context
-type ProjectContext struct {
-	ProjectPath   string            `json:"project_path"`
-	ProjectName   string            `json:"project_name"`
-	ProjectType   string            `json:"project_type"`
-	Languages     []string          `json:"languages"`
-	Frameworks    []string          `json:"frameworks"`
-	Dependencies  map[string]string `json:"dependencies"`
-	FileStructure map[string]int    `json:"file_structure"`
-	TestCoverage  float64           `json:"test_coverage"`
-	Architecture  string            `json:"architecture"`
-	Complexity    string            `json:"complexity"`
-	LastModified  time.Time         `json:"last_modified"`
-	GitStatus     string            `json:"git_status"`
-	CustomParams  map[string]string `json:"custom_params"`
+	context         *analyzer.ProjectContext
 }
 
 // ExecutionResult represents the result of template execution
@@ -71,58 +56,15 @@ func NewEngine(julesClient *jules.Client, templateManager *templates.Manager) *E
 	return &Engine{
 		julesClient:     julesClient,
 		templateManager: templateManager,
+		projectAnalyzer: analyzer.NewProjectAnalyzer(),
 	}
 }
 
 // AnalyzeProject analyzes the project and creates context
-func (e *Engine) AnalyzeProject(projectPath string) (*ProjectContext, error) {
-	// Extract project name from path
-	projectName := filepath.Base(projectPath)
-
-	// Analyze project structure
-	fileStructure, err := e.analyzeFileStructure(projectPath)
+func (e *Engine) AnalyzeProject(projectPath string) (*analyzer.ProjectContext, error) {
+	context, err := e.projectAnalyzer.Analyze(projectPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to analyze file structure: %w", err)
-	}
-
-	// Detect languages and frameworks
-	languages, frameworks, err := e.detectLanguagesAndFrameworks(projectPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to detect languages and frameworks: %w", err)
-	}
-
-	// Analyze dependencies
-	dependencies, err := e.analyzeDependencies(projectPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to analyze dependencies: %w", err)
-	}
-
-	// Detect project type
-	projectType := e.detectProjectType(languages, frameworks)
-
-	// Analyze architecture
-	architecture := e.analyzeArchitecture(projectPath, fileStructure)
-
-	// Calculate complexity
-	complexity := e.calculateComplexity(fileStructure, dependencies)
-
-	// Get git status
-	gitStatus := e.getGitStatus(projectPath)
-
-	context := &ProjectContext{
-		ProjectPath:   projectPath,
-		ProjectName:   projectName,
-		ProjectType:   projectType,
-		Languages:     languages,
-		Frameworks:    frameworks,
-		Dependencies:  dependencies,
-		FileStructure: fileStructure,
-		TestCoverage:  0.0, // TODO: Calculate actual test coverage
-		Architecture:  architecture,
-		Complexity:    complexity,
-		LastModified:  time.Now(),
-		GitStatus:     gitStatus,
-		CustomParams:  make(map[string]string),
+		return nil, fmt.Errorf("failed to analyze project: %w", err)
 	}
 
 	e.projectPath = projectPath
@@ -369,54 +311,8 @@ func (e *Engine) generateOutputFiles(template *templates.Template, result *Execu
 	return nil
 }
 
-// Helper methods for project analysis (simplified implementations)
-
-func (e *Engine) analyzeFileStructure(projectPath string) (map[string]int, error) {
-	// Simplified implementation - count files by extension
-	structure := make(map[string]int)
-	// TODO: Implement actual file structure analysis
-	return structure, nil
-}
-
-func (e *Engine) detectLanguagesAndFrameworks(projectPath string) ([]string, []string, error) {
-	// Simplified implementation
-	languages := []string{"go"} // Default to Go for now
-	frameworks := []string{}
-	// TODO: Implement actual language and framework detection
-	return languages, frameworks, nil
-}
-
-func (e *Engine) analyzeDependencies(projectPath string) (map[string]string, error) {
-	// Simplified implementation
-	dependencies := make(map[string]string)
-	// TODO: Implement actual dependency analysis
-	return dependencies, nil
-}
-
-func (e *Engine) detectProjectType(languages []string, frameworks []string) string {
-	if len(languages) == 0 {
-		return "unknown"
-	}
-	return languages[0] // Simplified - use first language
-}
-
-func (e *Engine) analyzeArchitecture(projectPath string, fileStructure map[string]int) string {
-	// Simplified implementation
-	return "monolithic" // Default architecture
-}
-
-func (e *Engine) calculateComplexity(fileStructure map[string]int, dependencies map[string]string) string {
-	// Simplified implementation
-	return "medium" // Default complexity
-}
-
-func (e *Engine) getGitStatus(projectPath string) string {
-	// Simplified implementation
-	return "clean" // Default git status
-}
-
+// generateFileContent generates markdown report content
 func (e *Engine) generateFileContent(templateName string, result *ExecutionResult) (string, error) {
-	// Simplified implementation - generate basic markdown report
 	content := fmt.Sprintf(`# %s Execution Report
 
 ## Summary
@@ -435,7 +331,7 @@ func (e *Engine) generateFileContent(templateName string, result *ExecutionResul
 	return content, nil
 }
 
+// writeFile writes content to a file
 func (e *Engine) writeFile(filePath string, content string) error {
-	// TODO: Implement file writing with proper error handling
-	return nil
+	return os.WriteFile(filePath, []byte(content), 0644)
 }

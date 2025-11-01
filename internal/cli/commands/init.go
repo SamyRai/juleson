@@ -24,7 +24,7 @@ func NewInitCommand(generateConfig func(string) string) *cobra.Command {
 			}
 
 			// Create Jules automation config
-			configPath := filepath.Join(projectPath, "jules-automation.yaml")
+			configPath := filepath.Join(projectPath, "github.com/SamyRai/juleson.yaml")
 			configContent := generateConfig(projectPath)
 
 			if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {

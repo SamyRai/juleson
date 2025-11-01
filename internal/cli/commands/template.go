@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"jules-automation/internal/templates"
+	"github.com/SamyRai/juleson/internal/templates"
 
 	"github.com/spf13/cobra"
 )

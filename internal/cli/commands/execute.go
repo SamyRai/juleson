@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"jules-automation/internal/automation"
+	"github.com/SamyRai/juleson/internal/automation"
 
 	"github.com/spf13/cobra"
 )

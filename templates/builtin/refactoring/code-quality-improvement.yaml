@@ -1,0 +1,169 @@
+# Template metadata
+metadata:
+  name: "code-quality-improvement"
+  version: "1.0.0"
+  description: "Improve code quality using SOLID principles and best practices"
+  author: "Juleson"
+  tags:
+    [
+      "solid",
+      "best-practices",
+      "refactoring",
+      "code-quality",
+      "design-patterns",
+    ]
+  category: "refactoring"
+
+# Template configuration
+config:
+  strategy: "code-quality-improvement"
+  max_concurrent_tasks: 3
+  timeout: "1200s"
+  requires_approval: true
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_code_structure"
+    - "identify_code_smells"
+    - "assess_design_patterns"
+
+  file_patterns:
+    include: ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/test/**", "**/build/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_code_quality"
+    type: "analysis"
+    description: "Analyze code for SOLID principles violations and best practices issues"
+    jules_prompt: |
+      Analyze code quality in {{.ProjectPath}} focusing on SOLID principles and best practices:
+
+      **SOLID Principles Assessment:**
+      - **Single Responsibility Principle (SRP)**: Check if classes/functions have single responsibilities
+      - **Open-Closed Principle (OCP)**: Identify code that should be open for extension, closed for modification
+      - **Liskov Substitution Principle (LSP)**: Find inheritance hierarchies that violate substitutability
+      - **Interface Segregation Principle (ISP)**: Check for interfaces that are too broad
+      - **Dependency Inversion Principle (DIP)**: Identify tight coupling to concrete implementations
+
+      **Code Smell Detection:**
+      - Large classes/methods (violating SRP)
+      - Long parameter lists
+      - Duplicate code (DRY violations)
+      - Feature envy (objects accessing other objects' data excessively)
+      - Data clumps (groups of data that should be objects)
+      - Primitive obsession (overuse of primitives instead of objects)
+      - Switch statements that should be polymorphism
+      - Temporary fields (classes with fields only used in some scenarios)
+
+      **Best Practices Violations:**
+      - Magic numbers and strings
+      - Inconsistent naming conventions
+      - Missing error handling
+      - Poor separation of concerns
+      - Tight coupling between modules
+      - Lack of abstraction
+
+      **Quality Metrics:**
+      - Cyclomatic complexity analysis
+      - Code duplication percentage
+      - Test coverage assessment
+      - Maintainability index
+
+  - name: "design_quality_improvements"
+    type: "planning"
+    description: "Design refactoring plan to address identified quality issues"
+    depends_on: ["analyze_code_quality"]
+    jules_prompt: |
+      Design a comprehensive code quality improvement plan for {{.ProjectPath}}:
+
+      **SOLID Refactoring Plan:**
+      1. **SRP Violations**: Break down large classes into smaller, focused classes
+      2. **OCP Improvements**: Introduce abstractions and extension points
+      3. **LSP Fixes**: Restructure inheritance to ensure substitutability
+      4. **ISP Refactoring**: Split large interfaces into smaller, specific ones
+      5. **DIP Implementation**: Introduce dependency injection and abstractions
+
+      **Code Smell Remediation:**
+      - Extract methods/classes for large code blocks
+      - Introduce parameter objects for long parameter lists
+      - Extract common code to eliminate duplication
+      - Move methods to appropriate classes to fix feature envy
+      - Create data classes for data clumps
+      - Replace primitives with meaningful objects
+      - Implement polymorphism instead of switch statements
+      - Remove or properly handle temporary fields
+
+      **Best Practices Implementation:**
+      - Replace magic numbers with named constants
+      - Standardize naming conventions
+      - Add comprehensive error handling
+      - Improve separation of concerns
+      - Reduce coupling through interfaces
+      - Increase abstraction levels
+
+      **Implementation Strategy:**
+      - Prioritize high-impact changes
+      - Plan changes in small, testable increments
+      - Ensure backward compatibility
+      - Update tests for each change
+      - Document design decisions
+
+  - name: "implement_quality_improvements"
+    type: "execution"
+    description: "Implement code quality improvements following SOLID and best practices"
+    depends_on: ["design_quality_improvements"]
+    requires_approval: true
+    jules_prompt: |
+      Implement code quality improvements for {{.ProjectPath}}:
+
+      **SOLID Implementation:**
+      - **SRP**: Extract classes for single responsibilities
+      - **OCP**: Add extension points through interfaces and abstract classes
+      - **LSP**: Refactor inheritance hierarchies for proper substitution
+      - **ISP**: Split interfaces into smaller, focused contracts
+      - **DIP**: Implement dependency injection and abstraction layers
+
+      **Code Quality Fixes:**
+      1. Break down large methods into smaller, focused methods
+      2. Extract constants for magic numbers and strings
+      3. Eliminate code duplication through extraction and abstraction
+      4. Improve naming conventions throughout the codebase
+      5. Add proper error handling and validation
+      6. Reduce coupling through dependency injection
+      7. Increase cohesion within modules
+      8. Implement proper abstraction layers
+
+      **Refactoring Techniques:**
+      - Extract Method: Break down large methods
+      - Extract Class: Create new classes for responsibilities
+      - Move Method: Relocate methods to appropriate classes
+      - Introduce Parameter Object: Group related parameters
+      - Replace Conditional with Polymorphism: Use inheritance/polymorphism
+      - Extract Interface: Define contracts for dependencies
+      - Dependency Injection: Remove tight coupling
+
+      **Quality Assurance:**
+      - Run tests after each change
+      - Ensure no functionality regression
+      - Validate SOLID principle compliance
+      - Check code metrics improvement
+      - Update documentation
+
+      **Documentation Updates:**
+      - Update class and method documentation
+      - Document design decisions and patterns used
+      - Update architecture documentation
+      - Create code quality guidelines
+
+validation:
+  pre_execution: ["run_tests", "create_backup", "analyze_code_metrics"]
+  post_execution:
+    [
+      "run_tests",
+      "validate_solid_principles",
+      "check_code_metrics",
+      "assess_maintainability",
+    ]

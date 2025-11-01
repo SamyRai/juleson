@@ -1,11 +1,10 @@
-# Jules Automation Configuration
-# Main configuration file for the Jules automation system
+# Juleson Configuration
+# This is an example configuration file. Copy this to juleson.yaml and customize.
 
 # Jules API Configuration
 jules:
-  # API key - will be read from JULES_API_KEY environment variable
-  # Leave empty to use environment variable
-  api_key: "${JULES_API_KEY}"
+  # API key for Jules service (use environment variable JULES_API_KEY)
+  api_key: "" # Will be read from JULES_API_KEY env var if empty
 
   # Jules API base URL
   base_url: "https://jules.googleapis.com/v1alpha"

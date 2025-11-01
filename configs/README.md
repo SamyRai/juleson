@@ -9,19 +9,19 @@ This directory contains **actual YAML configuration files** for the Jules automa
 
 ## Files
 
-- `jules-automation.yaml` - Main application configuration (create this file)
+- `Juleson.yaml` - Main application configuration (create this file)
 - `.env` - Environment variables (in project root, not tracked in git)
 
 ## Configuration Structure
 
-The configuration is loaded by `internal/config/config.go` which looks for files named `jules-automation.yaml` in:
+The configuration is loaded by `internal/config/config.go` which looks for files named `Juleson.yaml` in:
 
 1. `./configs/` directory (this directory)
 2. Current working directory (`.`)
 
 ## Quick Start
 
-1. Copy `jules-automation.example.yaml` to `jules-automation.yaml`
+1. Copy `Juleson.example.yaml` to `Juleson.yaml`
 2. Set your `JULES_API_KEY` environment variable or in `.env` file
 3. Adjust other settings as needed
 

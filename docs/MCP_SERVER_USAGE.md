@@ -1,6 +1,6 @@
-# Jules Automation MCP Server Usage
+# Juleson MCP Server Usage
 
-The Jules Automation MCP Server uses the official Model Context Protocol Go SDK and runs over stdin/stdout transport, making it compatible with AI assistants and development tools.
+The Juleson MCP Server uses the official Model Context Protocol Go SDK and runs over stdin/stdout transport, making it compatible with AI assistants and development tools.
 
 ## 🚀 **Starting the MCP Server**
 
@@ -253,7 +253,7 @@ Sync project with remote repository.
       "tools": {}
     },
     "clientInfo": {
-      "name": "jules-automation-client",
+      "name": "Juleson-client",
       "version": "1.0.0"
     }
   }
@@ -295,8 +295,8 @@ Add to your Claude Desktop configuration:
 ```json
 {
   "mcpServers": {
-    "jules-automation": {
-      "command": "/path/to/jules-automation/bin/jules-mcp",
+    "Juleson": {
+      "command": "/path/to/Juleson/bin/jules-mcp",
       "env": {
         "JULES_API_KEY": "your-jules-api-key"
       }
@@ -312,8 +312,8 @@ Configure in Cursor settings:
 ```json
 {
   "mcp.servers": {
-    "jules-automation": {
-      "command": "/path/to/jules-automation/bin/jules-mcp",
+    "Juleson": {
+      "command": "/path/to/Juleson/bin/jules-mcp",
       "env": {
         "JULES_API_KEY": "your-jules-api-key"
       }
@@ -340,13 +340,13 @@ func main() {
 
     // Create MCP client
     client := mcp.NewClient(&mcp.Implementation{
-        Name:    "jules-automation-client",
+        Name:    "Juleson-client",
         Version: "1.0.0",
     }, nil)
 
     // Connect to Jules automation server
     transport := &mcp.CommandTransport{
-        Command: exec.Command("/path/to/jules-automation/bin/jules-mcp"),
+        Command: exec.Command("/path/to/Juleson/bin/jules-mcp"),
     }
 
     session, err := client.Connect(ctx, transport, nil)
@@ -387,7 +387,7 @@ export JULES_TIMEOUT="30s"
 export JULES_RETRY_ATTEMPTS="3"
 ```
 
-Or create a `configs/jules-automation.yaml` file:
+Or create a `configs/Juleson.yaml` file:
 
 ```yaml
 jules:
@@ -421,4 +421,4 @@ projects:
 
 ---
 
-*Jules Automation MCP Server - Native integration with AI assistants using official MCP Go SDK*
+*Juleson MCP Server - Native integration with AI assistants using official MCP Go SDK*

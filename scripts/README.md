@@ -20,8 +20,8 @@ Scripts should be executable and documented with comments explaining their purpo
 #!/bin/bash
 # Build all binaries
 
-echo "Building jules-cli..."
-go build -o bin/jules-cli ./cmd/jules-cli
+echo "Building juleson..."
+go build -o bin/juleson ./cmd/juleson
 
 echo "Building jules-mcp..."
 go build -o bin/jules-mcp ./cmd/jules-mcp

@@ -1,0 +1,101 @@
+# Template metadata
+metadata:
+  name: "microservices-split"
+  version: "1.0.0"
+  description: "Split monolith into microservices"
+  author: "Juleson"
+  tags: ["microservices", "architecture", "reorganization", "distributed"]
+  category: "reorganization"
+
+# Template configuration
+config:
+  strategy: "microservices"
+  max_concurrent_tasks: 2
+  timeout: "1200s"
+  requires_approval: true
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_directory_structure"
+    - "identify_dependencies"
+    - "analyze_code_patterns"
+    - "detect_service_boundaries"
+
+  file_patterns:
+    include: ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/.git/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_service_boundaries"
+    type: "analysis"
+    description: "Analyze codebase to identify microservice boundaries"
+    jules_prompt: |
+      Analyze {{.ProjectPath}} to identify potential microservice boundaries:
+
+      **Domain Analysis:**
+      - Identify bounded contexts
+      - Map business capabilities
+      - Analyze data ownership
+      - Assess coupling between components
+
+      **Technical Analysis:**
+      - Identify database sharing patterns
+      - Analyze API coupling
+      - Assess deployment independence
+      - Evaluate scalability requirements
+
+      **Service Identification:**
+      - Propose microservice candidates
+      - Define service boundaries
+      - Identify shared libraries
+      - Plan data migration strategy
+
+  - name: "design_microservices_architecture"
+    type: "planning"
+    description: "Design the microservices architecture"
+    depends_on: ["analyze_service_boundaries"]
+    jules_prompt: |
+      Design a microservices architecture for {{.ProjectPath}}:
+
+      **Service Design:**
+      - Define service responsibilities
+      - Design APIs and contracts
+      - Plan data ownership and sharing
+      - Design communication patterns
+
+      **Infrastructure Planning:**
+      - API Gateway design
+      - Service discovery strategy
+      - Database per service approach
+      - Cross-cutting concerns (logging, monitoring, security)
+
+      **Migration Strategy:**
+      - Incremental migration plan
+      - Strangler pattern implementation
+      - Data migration approach
+      - Rollback strategy
+
+  - name: "implement_microservices_split"
+    type: "execution"
+    description: "Implement the microservices split"
+    depends_on: ["design_microservices_architecture"]
+    requires_approval: true
+    jules_prompt: |
+      Implement the microservices split for {{.ProjectPath}}:
+
+      **Implementation Steps:**
+      1. Create service repositories and structures
+      2. Extract domain logic to appropriate services
+      3. Implement service APIs and contracts
+      4. Set up inter-service communication
+      5. Migrate data and shared state
+      6. Update deployment configurations
+
+      Ensure each microservice is independently deployable and scalable.
+
+validation:
+  pre_execution: ["check_git_status", "create_backup"]
+  post_execution: ["run_integration_tests", "validate_service_boundaries"]

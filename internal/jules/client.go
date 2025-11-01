@@ -1,8 +1,8 @@
 package jules
 
 import (
-"net/http"
-"time"
+	"net/http"
+	"time"
 )
 
 // Client represents a Jules API client

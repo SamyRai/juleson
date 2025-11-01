@@ -1,0 +1,125 @@
+# Template metadata
+metadata:
+  name: "api-documentation"
+  version: "1.0.0"
+  description: "Generate comprehensive API documentation"
+  author: "Juleson"
+  tags: ["documentation", "api", "openapi", "swagger"]
+  category: "documentation"
+
+# Template configuration
+config:
+  strategy: "api-documentation"
+  max_concurrent_tasks: 2
+  timeout: "600s"
+  requires_approval: false
+  backup_enabled: false
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_api_endpoints"
+    - "extract_api_metadata"
+    - "check_existing_docs"
+
+  file_patterns:
+    include:
+      ["**/api/**", "**/routes/**", "**/controllers/**", "**/handlers/**"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/test/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_api_structure"
+    type: "analysis"
+    description: "Analyze API structure and extract documentation requirements"
+    jules_prompt: |
+      Analyze the API structure in {{.ProjectPath}} for documentation:
+
+      **API Inventory:**
+      - List all API endpoints by category
+      - Extract HTTP methods and paths
+      - Identify request/response schemas
+      - Document authentication requirements
+      - Note rate limiting and pagination
+
+      **Documentation Gaps:**
+      - Check for missing endpoint documentation
+      - Identify unclear parameter descriptions
+      - Find undocumented error responses
+      - Review example requests/responses
+      - Assess API versioning documentation
+
+      **Standards Compliance:**
+      - Check OpenAPI/Swagger compliance
+      - Review RESTful design documentation
+      - Validate parameter naming conventions
+      - Assess response format consistency
+
+  - name: "generate_api_documentation"
+    type: "execution"
+    description: "Generate comprehensive API documentation"
+    depends_on: ["analyze_api_structure"]
+    jules_prompt: |
+      Generate comprehensive API documentation for {{.ProjectPath}}:
+
+      **OpenAPI Specification:**
+      - Create OpenAPI 3.0 specification
+      - Define all endpoints with paths and methods
+      - Document request/response schemas
+      - Include authentication and security schemes
+      - Add examples for all endpoints
+
+      **Documentation Structure:**
+      - API overview and getting started
+      - Authentication guide
+      - Endpoint reference with examples
+      - Error handling documentation
+      - SDK/client library guides
+
+      **Interactive Documentation:**
+      - Generate Swagger UI interface
+      - Create Postman collection
+      - Add curl examples for each endpoint
+      - Include response examples
+
+      **Additional Documentation:**
+      - API versioning guide
+      - Rate limiting documentation
+      - Changelog for API changes
+      - Migration guides for breaking changes
+
+  - name: "validate_documentation"
+    type: "validation"
+    description: "Validate generated documentation accuracy and completeness"
+    depends_on: ["generate_api_documentation"]
+    jules_prompt: |
+      Validate the generated API documentation for {{.ProjectPath}}:
+
+      **Accuracy Check:**
+      - Verify all endpoints are documented
+      - Cross-reference code with documentation
+      - Validate request/response examples
+      - Check parameter descriptions match code
+      - Confirm error responses are documented
+
+      **Completeness Assessment:**
+      - Ensure all HTTP methods are covered
+      - Check for authentication documentation
+      - Validate security scheme definitions
+      - Review example coverage
+      - Assess interactive documentation
+
+      **Quality Review:**
+      - Check documentation clarity
+      - Validate formatting and structure
+      - Test interactive documentation
+      - Review for typos and inconsistencies
+
+validation:
+  pre_execution: ["check_api_code"]
+  post_execution:
+    [
+      "validate_openapi_spec",
+      "test_documentation_examples",
+      "check_documentation_coverage",
+    ]

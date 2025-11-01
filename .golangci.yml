@@ -1,0 +1,79 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  default: none
+  enable:
+    - errcheck # Check for unchecked errors
+    - staticcheck # Advanced Go linter (includes gosimple)
+    - govet # Reports suspicious constructs
+    - ineffassign # Detect ineffectual assignments
+    - unused # Check for unused constants, variables, functions and types
+    - gofmt # Check code formatting
+    - goimports # Check import formatting
+    - misspell # Finds commonly misspelled English words
+    - gocritic # Highly extensible Go linter
+    - godot # Check if comments end with a period
+    - gocyclo # Compute cyclomatic complexities
+    - dupl # Code clone detection
+    - gosec # Security checker
+    - unconvert # Remove unnecessary type conversions
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+
+    govet:
+      enable-all: true
+      disable:
+        - shadow
+
+    gocyclo:
+      min-complexity: 15
+
+    dupl:
+      threshold: 100
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+
+    misspell:
+      locale: US
+
+  exclusions:
+    rules:
+      # Exclude some linters from running on tests files
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - errcheck
+          - dupl
+          - gosec
+
+      # Exclude TODO/FIXME comments from godot
+      - linters:
+          - godot
+        text: "^\\s*// (TODO|FIXME)"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+      colors: true

@@ -15,6 +15,7 @@ type Config struct {
 	MCP        MCPConfig        `mapstructure:"mcp"`
 	Automation AutomationConfig `mapstructure:"automation"`
 	Projects   ProjectsConfig   `mapstructure:"projects"`
+	Templates  TemplatesConfig  `mapstructure:"templates"`
 }
 
 // JulesConfig contains Jules API configuration
@@ -56,15 +57,24 @@ type ProjectsConfig struct {
 	GitIntegration bool   `mapstructure:"git_integration"`
 }
 
+// TemplatesConfig contains template settings
+type TemplatesConfig struct {
+	BuiltinPath  string `mapstructure:"builtin_path"`
+	CustomPath   string `mapstructure:"custom_path"`
+	EnableCustom bool   `mapstructure:"enable_custom"`
+}
+
 // Load loads configuration from file and environment variables
 func Load() (*Config, error) {
-	// Load .env file if it exists
-	gotenv.Load(".env")
+	// Load .env file from multiple possible locations
+	loadEnvFiles()
 
-	viper.SetConfigName("jules-automation")
+	viper.SetConfigName("juleson")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./configs")
 	viper.AddConfigPath(".")
+	viper.AddConfigPath(os.Getenv("HOME")) // User's home directory
+	viper.AddConfigPath("/etc/juleson")    // System-wide config
 
 	// Set default values
 	setDefaults()
@@ -85,12 +95,34 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)
 	}
 
+	// Expand environment variables in paths
+	config.Templates.CustomPath = os.ExpandEnv(config.Templates.CustomPath)
+	config.Templates.BuiltinPath = os.ExpandEnv(config.Templates.BuiltinPath)
+
 	// Validate configuration
 	if err := validate(&config); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
 	return &config, nil
+}
+
+// loadEnvFiles loads .env files from multiple possible locations
+func loadEnvFiles() {
+	// Possible locations for .env files (in order of priority)
+	envPaths := []string{
+		".env",                              // Current working directory
+		os.Getenv("HOME") + "/.env",         // User's home directory
+		os.Getenv("HOME") + "/.juleson.env", // Juleson-specific config
+		"/etc/juleson/.env",                 // System-wide config
+	}
+
+	for _, path := range envPaths {
+		if _, err := os.Stat(path); err == nil {
+			// File exists, load it
+			gotenv.Load(path)
+		}
+	}
 }
 
 // setDefaults sets default configuration values
@@ -111,16 +143,20 @@ func setDefaults() {
 	viper.SetDefault("projects.default_path", "./projects")
 	viper.SetDefault("projects.backup_enabled", true)
 	viper.SetDefault("projects.git_integration", true)
+
+	viper.SetDefault("templates.builtin_path", "./templates/builtin")
+	viper.SetDefault("templates.custom_path", "${JULES_TEMPLATES_CUSTOM_PATH:-./templates/custom}")
+	viper.SetDefault("templates.enable_custom", true)
 }
 
 // validate validates the configuration
 func validate(config *Config) error {
 	if config.Jules.APIKey == "" {
-		// Try to get from environment
+		// Try to get from environment variable as fallback
 		if apiKey := os.Getenv("JULES_API_KEY"); apiKey != "" {
 			config.Jules.APIKey = apiKey
 		} else {
-			return fmt.Errorf("Jules API key is required")
+			return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
 		}
 	}
 

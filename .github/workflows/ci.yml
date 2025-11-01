@@ -1,0 +1,214 @@
+name: CI
+
+on:
+    push:
+        branches: [main, develop]
+        paths-ignore:
+            - "**.md"
+            - "docs/**"
+            - "LICENSE"
+    pull_request:
+        branches: [main, develop]
+    workflow_dispatch:
+
+# Set minimal permissions by default
+permissions:
+    contents: read
+
+# Cancel in-progress runs for the same PR/branch
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    GO_VERSION: "1.23.x"
+
+jobs:
+    test:
+        name: Test
+        runs-on: ${{ matrix.os }}
+        permissions:
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: ${{ env.GO_VERSION }}
+                  cache: true # Built-in caching in v5
+
+            - name: Download dependencies
+              run: go mod download
+
+            - name: Verify dependencies
+              run: go mod verify
+
+            - name: Run tests
+              run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+            - name: Upload coverage to Codecov
+              if: matrix.os == 'ubuntu-latest'
+              uses: codecov/codecov-action@v4
+              with:
+                  files: ./coverage.out
+                  flags: unittests
+                  name: codecov-${{ matrix.os }}
+                  token: ${{ secrets.CODECOV_TOKEN }}
+                  fail_ci_if_error: false
+
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: read # For golangci-lint-action
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: ${{ env.GO_VERSION }}
+                  cache: false # golangci-lint has its own cache
+
+            - name: Run golangci-lint
+              uses: golangci/golangci-lint-action@v6
+              with:
+                  version: latest
+                  args: --timeout=5m
+
+    markdown-lint:
+        name: Markdown Lint
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Run markdownlint
+              uses: DavidAnson/markdownlint-cli2-action@v16
+              with:
+                  globs: "**/*.md"
+
+    build:
+        name: Build
+        runs-on: ${{ matrix.os }}
+        permissions:
+            contents: read
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: ${{ env.GO_VERSION }}
+                  cache: true
+
+            - name: Build juleson
+              run: go build -v -ldflags="-s -w" -o bin/juleson ./cmd/juleson
+
+            - name: Build jules-mcp
+              run: go build -v -ldflags="-s -w" -o bin/jules-mcp ./cmd/jules-mcp
+
+            - name: Test binaries (Unix)
+              if: runner.os != 'Windows'
+              run: |
+                  ./bin/juleson --version || echo "Version flag not implemented yet"
+                  ./bin/jules-mcp --help || echo "Help flag not implemented yet"
+
+            - name: Test binaries (Windows)
+              if: runner.os == 'Windows'
+              run: |
+                  .\bin\juleson.exe --version || echo "Version flag not implemented yet"
+                  .\bin\jules-mcp.exe --help || echo "Help flag not implemented yet"
+
+            - name: Upload artifacts
+              if: matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v4
+              with:
+                  name: jules-binaries-${{ runner.os }}
+                  path: bin/
+                  retention-days: 7
+
+    security:
+        name: Security Scan
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            security-events: write # For uploading SARIF results
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: ${{ env.GO_VERSION }}
+                  cache: true
+
+            - name: Run Gosec Security Scanner
+              uses: securego/gosec@master
+              with:
+                  args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
+
+            - name: Upload SARIF file
+              if: always()
+              uses: github/codeql-action/upload-sarif@v3
+              with:
+                  sarif_file: gosec-results.sarif
+
+    dependency-review:
+        name: Dependency Review
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
+        permissions:
+            contents: read
+            pull-requests: write
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Dependency Review
+              uses: actions/dependency-review-action@v4
+              with:
+                  fail-on-severity: moderate
+
+    all-checks-pass:
+        name: All Checks Pass
+        if: always()
+        needs: [test, lint, markdown-lint, build, security]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+
+        steps:
+            - name: Check all job statuses
+              run: |
+                  if [[ "${{ needs.test.result }}" != "success" ]] || \
+                     [[ "${{ needs.lint.result }}" != "success" ]] || \
+                     [[ "${{ needs.markdown-lint.result }}" != "success" ]] || \
+                     [[ "${{ needs.build.result }}" != "success" ]] || \
+                     [[ "${{ needs.security.result }}" != "success" ]]; then
+                    echo "One or more required jobs failed"
+                    exit 1
+                  fi
+                  echo "All required jobs passed successfully!"

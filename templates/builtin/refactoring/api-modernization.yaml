@@ -1,0 +1,126 @@
+# Template metadata
+metadata:
+  name: "api-modernization"
+  version: "1.0.0"
+  description: "Modernize API endpoints and improve API design"
+  author: "Juleson"
+  tags: ["api", "refactoring", "modernization", "rest"]
+  category: "refactoring"
+
+# Template configuration
+config:
+  strategy: "api-modernization"
+  max_concurrent_tasks: 3
+  timeout: "900s"
+  requires_approval: true
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_api_endpoints"
+    - "check_api_design"
+    - "analyze_api_usage"
+
+  file_patterns:
+    include:
+      ["**/api/**", "**/routes/**", "**/controllers/**", "**/handlers/**"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/test/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_current_api"
+    type: "analysis"
+    description: "Analyze current API structure and identify modernization opportunities"
+    jules_prompt: |
+      Analyze the API structure in {{.ProjectPath}}:
+
+      **API Analysis:**
+      - Map all API endpoints and their purposes
+      - Review API design patterns (REST, GraphQL, etc.)
+      - Check for deprecated endpoints or methods
+      - Analyze request/response formats
+      - Review error handling patterns
+      - Assess API versioning strategy
+
+      **Modernization Opportunities:**
+      - Identify outdated design patterns
+      - Find inconsistent naming conventions
+      - Check for missing API documentation
+      - Analyze security implementations
+      - Review performance bottlenecks
+
+      **Improvement Areas:**
+      - RESTful design compliance
+      - API versioning strategy
+      - Error response standardization
+      - Request validation improvements
+      - Response format consistency
+
+  - name: "design_modern_api"
+    type: "planning"
+    description: "Design modern API structure and migration plan"
+    depends_on: ["analyze_current_api"]
+    jules_prompt: |
+      Design a modern API structure for {{.ProjectPath}}:
+
+      **Modern API Design:**
+      - Implement RESTful conventions
+      - Standardize resource naming
+      - Design consistent URL patterns
+      - Define proper HTTP status codes
+      - Plan API versioning strategy
+      - Design error response format
+
+      **Migration Strategy:**
+      1. **Phase 1**: Deprecate old endpoints
+      2. **Phase 2**: Implement new endpoints alongside old ones
+      3. **Phase 3**: Update clients and remove deprecated endpoints
+
+      **Implementation Plan:**
+      - Update route definitions
+      - Modify request/response handlers
+      - Implement proper validation
+      - Add comprehensive error handling
+      - Update API documentation
+
+  - name: "implement_api_modernization"
+    type: "execution"
+    description: "Implement modern API design and improvements"
+    depends_on: ["design_modern_api"]
+    requires_approval: true
+    jules_prompt: |
+      Implement API modernization for {{.ProjectPath}}:
+
+      **Implementation Steps:**
+      1. Update route definitions with modern patterns
+      2. Implement proper request validation
+      3. Standardize response formats
+      4. Improve error handling and responses
+      5. Add API versioning support
+      6. Update middleware and authentication
+
+      **Code Changes:**
+      - Refactor controller/handler methods
+      - Update data models and serializers
+      - Implement proper HTTP status codes
+      - Add request/response logging
+      - Update configuration files
+
+      **Testing & Validation:**
+      - Test all API endpoints
+      - Validate request/response formats
+      - Check error handling
+      - Test API versioning
+      - Update integration tests
+
+      **Documentation:**
+      - Update API documentation
+      - Create migration guide
+      - Document breaking changes
+      - Update client integration guides
+
+validation:
+  pre_execution: ["run_api_tests", "create_backup"]
+  post_execution:
+    ["run_api_tests", "validate_api_endpoints", "check_api_documentation"]

@@ -1,0 +1,116 @@
+# Template metadata
+metadata:
+  name: "dependency-update"
+  version: "1.0.0"
+  description: "Update and optimize project dependencies"
+  author: "Juleson"
+  tags: ["dependencies", "refactoring", "security", "updates"]
+  category: "refactoring"
+
+# Template configuration
+config:
+  strategy: "dependency-management"
+  max_concurrent_tasks: 2
+  timeout: "600s"
+  requires_approval: true
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_dependencies"
+    - "check_vulnerabilities"
+    - "analyze_compatibility"
+
+  file_patterns:
+    include:
+      [
+        "**/go.mod",
+        "**/requirements.txt",
+        "**/package.json",
+        "**/pom.xml",
+        "**/build.gradle",
+      ]
+    exclude: ["**/node_modules/**", "**/vendor/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_current_dependencies"
+    type: "analysis"
+    description: "Analyze current dependencies and identify update opportunities"
+    jules_prompt: |
+      Analyze dependencies in {{.ProjectPath}}:
+
+      **Dependency Analysis:**
+      - List all project dependencies
+      - Check for outdated packages
+      - Identify security vulnerabilities
+      - Analyze dependency compatibility
+      - Assess maintenance status of dependencies
+
+      **Update Opportunities:**
+      - Identify major version updates available
+      - Find deprecated packages
+      - Check for better alternatives
+      - Analyze breaking changes
+
+      **Risk Assessment:**
+      - Evaluate update complexity
+      - Identify potential breaking changes
+      - Assess testing requirements
+      - Plan rollback strategies
+
+  - name: "plan_dependency_updates"
+    type: "planning"
+    description: "Plan dependency updates with risk mitigation"
+    depends_on: ["analyze_current_dependencies"]
+    jules_prompt: |
+      Create a dependency update plan for {{.ProjectPath}}:
+
+      **Update Strategy:**
+      1. **Patch Updates**: Low-risk security and bug fixes
+      2. **Minor Updates**: New features, backward compatible
+      3. **Major Updates**: Breaking changes, significant updates
+
+      **Update Plan:**
+      - Prioritize security updates
+      - Group compatible updates
+      - Plan testing for each update batch
+      - Define rollback procedures
+
+      **Migration Strategy:**
+      - Update one dependency at a time
+      - Test thoroughly after each update
+      - Update documentation and examples
+      - Communicate changes to team
+
+  - name: "implement_dependency_updates"
+    type: "execution"
+    description: "Implement dependency updates safely"
+    depends_on: ["plan_dependency_updates"]
+    requires_approval: true
+    jules_prompt: |
+      Implement dependency updates for {{.ProjectPath}}:
+
+      **Update Process:**
+      1. Update dependency management files (go.mod, package.json, etc.)
+      2. Resolve any conflicts or compatibility issues
+      3. Update import statements if needed
+      4. Fix any breaking changes
+      5. Update configuration files
+      6. Update documentation and examples
+
+      **Quality Assurance:**
+      - Run full test suite after each update
+      - Check for runtime errors
+      - Validate functionality
+      - Update CI/CD configurations
+
+      **Documentation:**
+      - Update changelog with dependency changes
+      - Document any required configuration changes
+      - Update migration guides if needed
+
+validation:
+  pre_execution: ["run_tests", "create_backup"]
+  post_execution: ["run_tests", "check_dependencies", "validate_functionality"]

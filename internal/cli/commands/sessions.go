@@ -4,11 +4,39 @@ import (
 	"context"
 	"fmt"
 
-	"jules-automation/internal/config"
-	"jules-automation/internal/jules"
+	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/jules"
 
 	"github.com/spf13/cobra"
 )
+
+// getSessionStatusIcon returns the appropriate icon for a session state
+func getSessionStatusIcon(state string) string {
+	switch state {
+	case "IN_PROGRESS", "PLANNING":
+		return "⚡"
+	case "COMPLETED":
+		return "✅"
+	case "FAILED":
+		return "❌"
+	default:
+		return "📋"
+	}
+}
+
+// getSessionStatusText returns the status text for a session state
+func getSessionStatusText(state string) string {
+	switch state {
+	case "IN_PROGRESS", "PLANNING":
+		return "ACTIVE"
+	case "COMPLETED":
+		return "COMPLETED"
+	case "FAILED":
+		return "FAILED"
+	default:
+		return state
+	}
+}
 
 // NewSessionsCommand creates the sessions command
 func NewSessionsCommand(cfg *config.Config) *cobra.Command {
@@ -89,13 +117,9 @@ func listSessions(cfg *config.Config) error {
 		}
 
 		// Status indicators
-		if session.State == "IN_PROGRESS" || session.State == "PLANNING" {
-			fmt.Printf("   ⚡ ACTIVE\n")
-		} else if session.State == "COMPLETED" {
-			fmt.Printf("   ✅ COMPLETED\n")
-		} else if session.State == "FAILED" {
-			fmt.Printf("   ❌ FAILED\n")
-		}
+		statusText := getSessionStatusText(session.State)
+		statusIcon := getSessionStatusIcon(session.State)
+		fmt.Printf("   %s %s\n", statusIcon, statusText)
 		fmt.Println()
 	}
 
@@ -140,17 +164,7 @@ func showSessionStatus(cfg *config.Config) error {
 	fmt.Println("Session States:")
 	for state, count := range stateCounts {
 		percentage := float64(count) / float64(totalSessions) * 100
-		var icon string
-		switch state {
-		case "IN_PROGRESS", "PLANNING":
-			icon = "⚡"
-		case "COMPLETED":
-			icon = "✅"
-		case "FAILED":
-			icon = "❌"
-		default:
-			icon = "📋"
-		}
+		icon := getSessionStatusIcon(state)
 		fmt.Printf("  %s %s: %d (%.1f%%)\n", icon, state, count, percentage)
 	}
 
@@ -172,17 +186,7 @@ func showSessionStatus(cfg *config.Config) error {
 
 		for i := 0; i < recentCount; i++ {
 			session := sessions[i]
-			var statusIcon string
-			switch session.State {
-			case "IN_PROGRESS", "PLANNING":
-				statusIcon = "⚡"
-			case "COMPLETED":
-				statusIcon = "✅"
-			case "FAILED":
-				statusIcon = "❌"
-			default:
-				statusIcon = "📋"
-			}
+			statusIcon := getSessionStatusIcon(session.State)
 			fmt.Printf("  %s %s - %s (%s)\n", statusIcon, session.ID[:12], session.Title, session.State)
 		}
 	}

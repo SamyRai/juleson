@@ -4,13 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"jules-automation/internal/jules"
+	"github.com/SamyRai/juleson/internal/jules"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // RegisterSessionTools registers all session-related MCP tools
 func RegisterSessionTools(server *mcp.Server, julesClient *jules.Client) {
+	// Don't register session tools if client is not available
+	if julesClient == nil {
+		return
+	}
+
 	// List Sessions Tool
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_sessions",

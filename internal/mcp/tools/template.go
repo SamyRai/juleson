@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"jules-automation/internal/automation"
-	"jules-automation/internal/templates"
+	"github.com/SamyRai/juleson/internal/services"
+	"github.com/SamyRai/juleson/internal/templates"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // RegisterTemplateTools registers all template-related MCP tools
-func RegisterTemplateTools(server *mcp.Server, templateManager *templates.Manager, automationEngine *automation.Engine) {
+func RegisterTemplateTools(server *mcp.Server, container *services.Container) {
 	// Execute Template Tool
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "execute_template",
 		Description: "Execute a template on a project",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ExecuteTemplateInput) (*mcp.CallToolResult, ExecuteTemplateOutput, error) {
-		return executeTemplate(ctx, req, input, automationEngine)
+		return executeTemplate(ctx, req, input, container)
 	})
 
 	// List Templates Tool
@@ -25,7 +25,7 @@ func RegisterTemplateTools(server *mcp.Server, templateManager *templates.Manage
 		Name:        "list_templates",
 		Description: "List available automation templates",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListTemplatesInput) (*mcp.CallToolResult, ListTemplatesOutput, error) {
-		return listTemplates(ctx, req, input, templateManager)
+		return listTemplates(ctx, req, input, container)
 	})
 
 	// Search Templates Tool
@@ -33,7 +33,7 @@ func RegisterTemplateTools(server *mcp.Server, templateManager *templates.Manage
 		Name:        "search_templates",
 		Description: "Search templates by query",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input SearchTemplatesInput) (*mcp.CallToolResult, SearchTemplatesOutput, error) {
-		return searchTemplates(ctx, req, input, templateManager)
+		return searchTemplates(ctx, req, input, container)
 	})
 
 	// Create Template Tool
@@ -41,7 +41,7 @@ func RegisterTemplateTools(server *mcp.Server, templateManager *templates.Manage
 		Name:        "create_template",
 		Description: "Create a new custom template",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input CreateTemplateInput) (*mcp.CallToolResult, CreateTemplateOutput, error) {
-		return createTemplate(ctx, req, input, templateManager)
+		return createTemplate(ctx, req, input, container)
 	})
 }
 
@@ -64,11 +64,21 @@ type ExecuteTemplateOutput struct {
 }
 
 // executeTemplate executes a template on a project
-func executeTemplate(ctx context.Context, req *mcp.CallToolRequest, input ExecuteTemplateInput, engine *automation.Engine) (
+func executeTemplate(ctx context.Context, req *mcp.CallToolRequest, input ExecuteTemplateInput, container *services.Container) (
 	*mcp.CallToolResult,
 	ExecuteTemplateOutput,
 	error,
 ) {
+	engine, err := container.AutomationEngine()
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize automation engine: %v", err)},
+			},
+		}, ExecuteTemplateOutput{}, err
+	}
+
 	result, err := engine.ExecuteTemplate(ctx, input.TemplateName, input.CustomParams)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -103,11 +113,21 @@ type ListTemplatesOutput struct {
 }
 
 // listTemplates lists available templates
-func listTemplates(ctx context.Context, req *mcp.CallToolRequest, input ListTemplatesInput, manager *templates.Manager) (
+func listTemplates(ctx context.Context, req *mcp.CallToolRequest, input ListTemplatesInput, container *services.Container) (
 	*mcp.CallToolResult,
 	ListTemplatesOutput,
 	error,
 ) {
+	manager, err := container.TemplateManager()
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize template manager: %v", err)},
+			},
+		}, ListTemplatesOutput{}, err
+	}
+
 	var templateList []templates.RegistryTemplate
 
 	if input.Category != "" {
@@ -134,11 +154,21 @@ type SearchTemplatesOutput struct {
 }
 
 // searchTemplates searches templates by query
-func searchTemplates(ctx context.Context, req *mcp.CallToolRequest, input SearchTemplatesInput, manager *templates.Manager) (
+func searchTemplates(ctx context.Context, req *mcp.CallToolRequest, input SearchTemplatesInput, container *services.Container) (
 	*mcp.CallToolResult,
 	SearchTemplatesOutput,
 	error,
 ) {
+	manager, err := container.TemplateManager()
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize template manager: %v", err)},
+			},
+		}, SearchTemplatesOutput{}, err
+	}
+
 	templateList := manager.SearchTemplates(input.Query)
 
 	output := SearchTemplatesOutput{
@@ -164,11 +194,21 @@ type CreateTemplateOutput struct {
 }
 
 // createTemplate creates a new custom template
-func createTemplate(ctx context.Context, req *mcp.CallToolRequest, input CreateTemplateInput, manager *templates.Manager) (
+func createTemplate(ctx context.Context, req *mcp.CallToolRequest, input CreateTemplateInput, container *services.Container) (
 	*mcp.CallToolResult,
 	CreateTemplateOutput,
 	error,
 ) {
+	manager, err := container.TemplateManager()
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize template manager: %v", err)},
+			},
+		}, CreateTemplateOutput{}, err
+	}
+
 	template, err := manager.CreateTemplate(input.Name, input.Category, input.Description)
 	if err != nil {
 		return &mcp.CallToolResult{

@@ -1,0 +1,104 @@
+# Template metadata
+metadata:
+  name: "integration-tests"
+  version: "1.0.0"
+  description: "Generate integration tests for system components"
+  author: "Juleson"
+  tags: ["testing", "integration", "system", "quality"]
+  category: "testing"
+
+# Template configuration
+config:
+  strategy: "integration-testing"
+  max_concurrent_tasks: 2
+  timeout: "600s"
+  requires_approval: false
+  backup_enabled: true
+
+# Context extraction rules
+context:
+  project_analysis:
+    - "analyze_system_components"
+    - "identify_integration_points"
+    - "analyze_data_flow"
+
+  file_patterns:
+    include: ["**/*.go", "**/*.py", "**/*.js", "**/*.ts", "**/*.java"]
+    exclude: ["**/node_modules/**", "**/vendor/**", "**/.git/**"]
+
+# Task definition
+tasks:
+  - name: "analyze_system_integration"
+    type: "analysis"
+    description: "Analyze system components and integration points"
+    jules_prompt: |
+      Analyze {{.ProjectPath}} to identify integration test opportunities:
+
+      **Component Analysis:**
+      - Identify system components and services
+      - Map component interactions and dependencies
+      - Analyze data flow between components
+      - Identify external system integrations
+
+      **Integration Points:**
+      - API endpoints and contracts
+      - Database interactions
+      - External service calls
+      - Message queue communications
+      - File system operations
+
+      **Test Scenarios:**
+      - End-to-end user workflows
+      - Component interaction scenarios
+      - Failure and recovery scenarios
+      - Performance and load scenarios
+
+  - name: "design_integration_tests"
+    type: "planning"
+    description: "Design comprehensive integration test suite"
+    depends_on: ["analyze_system_integration"]
+    jules_prompt: |
+      Design integration tests for {{.ProjectPath}}:
+
+      **Test Architecture:**
+      - Test environment setup (containers, mocks, test databases)
+      - Test data management and fixtures
+      - Test execution orchestration
+      - Result collection and reporting
+
+      **Test Categories:**
+      1. **API Integration Tests**: Test API endpoints and contracts
+      2. **Database Integration Tests**: Test data persistence and queries
+      3. **External Service Tests**: Test third-party integrations
+      4. **End-to-End Tests**: Test complete user workflows
+
+      **Test Strategy:**
+      - Define test isolation levels
+      - Plan test data management
+      - Design test utilities and helpers
+      - Establish test execution pipeline
+
+  - name: "implement_integration_tests"
+    type: "execution"
+    description: "Implement the integration test suite"
+    depends_on: ["design_integration_tests"]
+    jules_prompt: |
+      Implement integration tests for {{.ProjectPath}}:
+
+      **Implementation Tasks:**
+      1. Set up test infrastructure and environments
+      2. Create test data fixtures and factories
+      3. Implement API integration tests
+      4. Add database integration tests
+      5. Create external service integration tests
+      6. Develop end-to-end workflow tests
+
+      **Test Quality:**
+      - Ensure tests are reliable and maintainable
+      - Include proper setup and teardown
+      - Add comprehensive assertions
+      - Document test scenarios and expectations
+
+validation:
+  pre_execution: ["check_test_infrastructure"]
+  post_execution: ["run_integration_tests", "validate_test_coverage"]

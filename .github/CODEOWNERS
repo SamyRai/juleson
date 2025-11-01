@@ -1,0 +1,27 @@
+# Code Owners for Juleson
+
+# Default owners for everything in the repo
+
+* @SamyRai
+
+# Workflow files
+
+/.github/workflows/ @SamyRai
+
+# Configuration files
+
+/configs/ @SamyRai
+
+# Security-related files
+
+SECURITY.md @SamyRai
+/.github/dependabot.yml @SamyRai
+
+# Core automation engine
+
+/internal/automation/ @SamyRai
+
+# Templates
+
+/templates/ @SamyRai
+/internal/templates/ @SamyRai

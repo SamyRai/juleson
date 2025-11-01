@@ -1,0 +1,270 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write # For creating releases and tags
+  packages: write # For publishing Docker images
+  id-token: write # For Go module publishing and attestations
+
+env:
+  GO_VERSION: "1.23"
+
+jobs:
+  # Pre-release validation
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Verify Go version
+        run: go version
+
+      - name: Tidy modules
+        run: go mod tidy
+
+      - name: Verify modules
+        run: go mod verify
+
+      - name: Check for module changes
+        run: |
+          if [ -n "$(git status --porcelain go.mod go.sum)" ]; then
+              echo "go.mod or go.sum has uncommitted changes"
+              git status --porcelain go.mod go.sum
+              exit 1
+          fi
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Check test coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Test coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+              echo "Coverage is below 80%: $COVERAGE%"
+              exit 1
+          fi
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Check if tag exists
+        id: tag_check
+        run: |
+          if git show-ref --tags | grep -q "refs/tags/${{ github.event.inputs.version || github.ref_name }}"; then
+              echo "Tag already exists"
+              exit 1
+          fi
+
+      - name: Determine version and prerelease status
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [[ $VERSION == *"beta"* || $VERSION == *"alpha"* || $VERSION == *"rc"* ]]; then
+              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+              echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Build release artifacts
+  build:
+    name: Build Release Artifacts
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build juleson
+        run: |
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+              EXT=".exe"
+          fi
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+            -ldflags="-s -w -X main.version=${{ needs.validate.outputs.version }}" \
+            -o dist/juleson-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
+            ./cmd/juleson
+
+      - name: Build jules-mcp
+        run: |
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+              EXT=".exe"
+          fi
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+            -ldflags="-s -w -X main.version=${{ needs.validate.outputs.version }}" \
+            -o dist/jules-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
+            ./cmd/jules-mcp
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/
+          retention-days: 1
+
+  # Publish Go module
+  publish-module:
+    name: Publish Go Module
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    if: needs.validate.outputs.is_prerelease == 'false'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Publish to Go Module Proxy
+        run: |
+          # Set GOPROXY to ensure we publish to the official proxy
+          GOPROXY=proxy.golang.org go list -m juleson@${{ needs.validate.outputs.version }}
+
+      - name: Verify module is published
+        run: |
+          # Wait a moment for indexing
+          sleep 30
+          # Verify the module is available
+          go list -m -versions juleson | grep "${{ needs.validate.outputs.version }}"
+
+  # Create GitHub release
+  release:
+    name: Create GitHub Release
+    needs: [validate, build, publish-module]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: dist/
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          find . -type f -exec sha256sum {} \; > checksums.txt
+          cd ..
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+              PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          # Generate changelog
+          if command -v git-cliff &> /dev/null; then
+              git-cliff $PREVIOUS_TAG..HEAD --latest --strip header > changelog.md
+          else
+              # Fallback to git log
+              echo "## Changes" > changelog.md
+              echo "" >> changelog.md
+              git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> changelog.md
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          name: Release ${{ needs.validate.outputs.version }}
+          body_path: changelog.md
+          files: dist/**/*
+          generate_release_notes: false
+          draft: false
+          prerelease: ${{ needs.validate.outputs.is_prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Generate and attest SBOM
+  attest:
+    name: Generate SBOM and Attest
+    needs: [validate, release]
+    runs-on: ubuntu-latest
+    if: needs.validate.outputs.is_prerelease == 'false'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: sbom-${{ needs.validate.outputs.version }}
+          output-file: ./sbom.json
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "dist/juleson-linux-amd64,dist/jules-mcp-linux-amd64"

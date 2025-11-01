@@ -3,20 +3,23 @@ package tools
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 
-	"jules-automation/internal/automation"
+	"github.com/SamyRai/juleson/internal/services"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // RegisterProjectTools registers all project-related MCP tools
-func RegisterProjectTools(server *mcp.Server, automationEngine *automation.Engine) {
+func RegisterProjectTools(server *mcp.Server, container *services.Container) {
 	// Analyze Project Tool
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "analyze_project",
 		Description: "Analyze project structure and create context for automation",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeProjectInput) (*mcp.CallToolResult, AnalyzeProjectOutput, error) {
-		return analyzeProject(ctx, req, input, automationEngine)
+		return analyzeProject(ctx, req, input, container)
 	})
 
 	// Sync Project Tool
@@ -48,11 +51,21 @@ type AnalyzeProjectOutput struct {
 }
 
 // analyzeProject analyzes a project and returns context
-func analyzeProject(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeProjectInput, engine *automation.Engine) (
+func analyzeProject(ctx context.Context, req *mcp.CallToolRequest, input AnalyzeProjectInput, container *services.Container) (
 	*mcp.CallToolResult,
 	AnalyzeProjectOutput,
 	error,
 ) {
+	engine, err := container.AutomationEngine()
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize automation engine: %v", err)},
+			},
+		}, AnalyzeProjectOutput{}, err
+	}
+
 	context, err := engine.AnalyzeProject(input.ProjectPath)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -99,7 +112,27 @@ func syncProject(ctx context.Context, req *mcp.CallToolRequest, input SyncProjec
 	SyncProjectOutput,
 	error,
 ) {
-	// TODO: Implement actual Git sync functionality
+	// Validate project path exists
+	if _, err := os.Stat(input.ProjectPath); os.IsNotExist(err) {
+		return nil, SyncProjectOutput{}, fmt.Errorf("project path does not exist: %s", input.ProjectPath)
+	}
+
+	// Check if it's a git repository
+	gitDir := filepath.Join(input.ProjectPath, ".git")
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		return nil, SyncProjectOutput{}, fmt.Errorf("not a git repository: %s", input.ProjectPath)
+	}
+
+	// Fetch from remote
+	fetchCmd := exec.Command("git", "fetch", input.Remote)
+	fetchCmd.Dir = input.ProjectPath
+	fetchCmd.Stdout = os.Stdout
+	fetchCmd.Stderr = os.Stderr
+
+	if err := fetchCmd.Run(); err != nil {
+		return nil, SyncProjectOutput{}, fmt.Errorf("failed to fetch from remote: %w", err)
+	}
+
 	output := SyncProjectOutput{
 		ProjectPath: input.ProjectPath,
 		Remote:      input.Remote,
