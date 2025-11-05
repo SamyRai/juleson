@@ -201,9 +201,9 @@ Create a new custom template.
 }
 ```
 
-### **6. sync_project**
+### **7. docker_build**
 
-Sync project with remote repository.
+Build a Docker image from a Dockerfile.
 
 **Input Schema:**
 
@@ -211,16 +211,27 @@ Sync project with remote repository.
 {
   "type": "object",
   "properties": {
-    "project_path": {
+    "path": {
       "type": "string",
-      "description": "Path to the project directory"
+      "description": "Path to the directory containing the Dockerfile (default: .)"
     },
-    "remote": {
+    "tag": {
       "type": "string",
-      "description": "Remote repository name"
+      "description": "Image tag (default: latest)"
+    },
+    "dockerfile": {
+      "type": "string",
+      "description": "Path to Dockerfile (default: Dockerfile)"
+    },
+    "build_args": {
+      "type": "object",
+      "description": "Build arguments as key-value pairs"
+    },
+    "no_cache": {
+      "type": "boolean",
+      "description": "Do not use cache when building the image (default: false)"
     }
-  },
-  "required": ["project_path", "remote"]
+  }
 }
 ```
 
@@ -230,10 +241,397 @@ Sync project with remote repository.
 {
   "method": "tools/call",
   "params": {
-    "name": "sync_project",
+    "name": "docker_build",
     "arguments": {
-      "project_path": "./my-project",
-      "remote": "origin/main"
+      "path": "./my-app",
+      "tag": "my-app:v1.0",
+      "build_args": {
+        "VERSION": "1.0.0"
+      }
+    }
+  }
+}
+```
+
+### **8. docker_run**
+
+Run a Docker container.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "string",
+      "description": "Docker image to run"
+    },
+    "name": {
+      "type": "string",
+      "description": "Container name (optional)"
+    },
+    "command": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Command to run in the container (optional)"
+    },
+    "environment": {
+      "type": "object",
+      "description": "Environment variables as key-value pairs"
+    },
+    "ports": {
+      "type": "object",
+      "description": "Port mappings as host:container"
+    },
+    "volumes": {
+      "type": "object",
+      "description": "Volume mappings as host:container"
+    },
+    "detach": {
+      "type": "boolean",
+      "description": "Run container in background (default: false)"
+    },
+    "remove": {
+      "type": "boolean",
+      "description": "Automatically remove the container when it exits (default: false)"
+    },
+    "interactive": {
+      "type": "boolean",
+      "description": "Keep STDIN open even if not attached (default: false)"
+    },
+    "tty": {
+      "type": "boolean",
+      "description": "Allocate a pseudo-TTY (default: false)"
+    }
+  },
+  "required": ["image"]
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_run",
+    "arguments": {
+      "image": "nginx:latest",
+      "name": "my-nginx",
+      "ports": {
+        "8080": "80"
+      },
+      "detach": true
+    }
+  }
+}
+```
+
+### **9. docker_images**
+
+List Docker images.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Show all images (default: false)"
+    },
+    "filter": {
+      "type": "string",
+      "description": "Filter output based on conditions provided"
+    },
+    "format": {
+      "type": "string",
+      "description": "Pretty-print images using a Go template"
+    },
+    "quiet": {
+      "type": "boolean",
+      "description": "Only show image IDs (default: false)"
+    }
+  }
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_images",
+    "arguments": {
+      "all": true
+    }
+  }
+}
+```
+
+### **10. docker_containers**
+
+List Docker containers.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Show all containers (default: false)"
+    },
+    "filter": {
+      "type": "string",
+      "description": "Filter output based on conditions provided"
+    },
+    "format": {
+      "type": "string",
+      "description": "Pretty-print containers using a Go template"
+    },
+    "quiet": {
+      "type": "boolean",
+      "description": "Only show container IDs (default: false)"
+    },
+    "latest": {
+      "type": "boolean",
+      "description": "Show the latest created container (includes all states) (default: false)"
+    }
+  }
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_containers",
+    "arguments": {
+      "all": true
+    }
+  }
+}
+```
+
+### **11. docker_stop**
+
+Stop a running Docker container.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "container": {
+      "type": "string",
+      "description": "Container ID or name to stop"
+    },
+    "time": {
+      "type": "integer",
+      "description": "Seconds to wait before killing the container (default: 10)"
+    }
+  },
+  "required": ["container"]
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_stop",
+    "arguments": {
+      "container": "my-container"
+    }
+  }
+}
+```
+
+### **12. docker_remove**
+
+Remove a Docker container.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "container": {
+      "type": "string",
+      "description": "Container ID or name to remove"
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Force the removal of a running container (uses SIGKILL) (default: false)"
+    },
+    "volumes": {
+      "type": "boolean",
+      "description": "Remove anonymous volumes associated with the container (default: false)"
+    }
+  },
+  "required": ["container"]
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_remove",
+    "arguments": {
+      "container": "my-container",
+      "force": true
+    }
+  }
+}
+```
+
+### **13. docker_rmi**
+
+Remove a Docker image.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "string",
+      "description": "Image ID or name to remove"
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Force removal of the image (default: false)"
+    }
+  },
+  "required": ["image"]
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_rmi",
+    "arguments": {
+      "image": "my-image:latest"
+    }
+  }
+}
+```
+
+### **14. docker_prune**
+
+Clean up Docker system (remove unused containers, networks, images).
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Remove all unused images not just dangling ones (default: false)"
+    },
+    "volumes": {
+      "type": "boolean",
+      "description": "Prune volumes (default: false)"
+    }
+  }
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_prune",
+    "arguments": {
+      "all": true,
+      "volumes": true
+    }
+  }
+}
+```
+
+### **15. docker_exec**
+
+Execute a command in a running Docker container.
+
+**Input Schema:**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "container": {
+      "type": "string",
+      "description": "Container ID or name"
+    },
+    "command": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Command to execute"
+    },
+    "user": {
+      "type": "string",
+      "description": "Username or UID (format: <name|uid>[:<group|gid>])"
+    },
+    "workdir": {
+      "type": "string",
+      "description": "Working directory inside the container"
+    },
+    "detach": {
+      "type": "boolean",
+      "description": "Detached mode: run command in the background (default: false)"
+    },
+    "tty": {
+      "type": "boolean",
+      "description": "Allocate a pseudo-TTY (default: false)"
+    },
+    "interactive": {
+      "type": "boolean",
+      "description": "Pass stdin to the container (default: false)"
+    }
+  },
+  "required": ["container", "command"]
+}
+```
+
+**Example Usage:**
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "docker_exec",
+    "arguments": {
+      "container": "my-container",
+      "command": ["ls", "-la"],
+      "workdir": "/app"
     }
   }
 }

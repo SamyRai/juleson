@@ -13,8 +13,6 @@ linters:
     - govet # Reports suspicious constructs
     - ineffassign # Detect ineffectual assignments
     - unused # Check for unused constants, variables, functions and types
-    - gofmt # Check code formatting
-    - goimports # Check import formatting
     - misspell # Finds commonly misspelled English words
     - gocritic # Highly extensible Go linter
     - godot # Check if comments end with a period

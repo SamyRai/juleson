@@ -50,8 +50,8 @@ func TestTemplateManager(t *testing.T) {
 	t.Run("successful initialization", func(t *testing.T) {
 		cfg := &config.Config{
 			Templates: config.TemplatesConfig{
-				BuiltinPath:  "./templates/builtin",
-				CustomPath:   "./templates/custom",
+				BuiltinPath:  "../../templates/builtin",
+				CustomPath:   "../../templates/custom",
 				EnableCustom: false,
 			},
 		}
@@ -77,8 +77,8 @@ func TestAutomationEngine(t *testing.T) {
 	t.Run("successful initialization", func(t *testing.T) {
 		cfg := &config.Config{
 			Templates: config.TemplatesConfig{
-				BuiltinPath:  "./templates/builtin",
-				CustomPath:   "./templates/custom",
+				BuiltinPath:  "../../templates/builtin",
+				CustomPath:   "../../templates/custom",
 				EnableCustom: false,
 			},
 		}

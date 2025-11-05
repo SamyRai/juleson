@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // Template represents a Jules automation template
@@ -156,6 +156,10 @@ func NewManager(templatesDir string, customPath string, enableCustom bool) (*Man
 	return manager, nil
 } // LoadTemplate loads a template by name
 func (m *Manager) LoadTemplate(name string) (*Template, error) {
+	if name == "" {
+		return nil, fmt.Errorf("template name cannot be empty")
+	}
+
 	// Find template in registry
 	var registryTemplate *RegistryTemplate
 	for _, t := range m.registry.Templates {
@@ -166,17 +170,31 @@ func (m *Manager) LoadTemplate(name string) (*Template, error) {
 	}
 
 	if registryTemplate == nil {
-		return nil, fmt.Errorf("template '%s' not found", name)
+		return nil, fmt.Errorf("template '%s' not found in registry", name)
 	}
 
 	// Check if it's an embedded template (relative path) or custom template (absolute path)
+	var template *Template
+	var err error
+
 	if strings.HasPrefix(registryTemplate.File, "builtin/") {
 		// Embedded template
-		return m.loadEmbeddedTemplate(registryTemplate.File)
+		template, err = m.loadEmbeddedTemplate(registryTemplate.File)
 	} else {
 		// Custom template
-		return m.loadCustomTemplate(registryTemplate.File)
+		template, err = m.loadCustomTemplate(registryTemplate.File)
 	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to load template '%s': %w", name, err)
+	}
+
+	// Validate loaded template
+	if err := m.ValidateTemplate(template); err != nil {
+		return nil, fmt.Errorf("template '%s' validation failed: %w", name, err)
+	}
+
+	return template, nil
 }
 
 // ListTemplates returns all available templates

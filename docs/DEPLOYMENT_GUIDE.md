@@ -26,15 +26,31 @@ This guide covers different deployment scenarios for Juleson, from local develop
 git clone https://github.com/SamyRai/Juleson.git
 cd Juleson
 
-# Install dependencies
+# Download dependencies
 go mod download
 
-# Build binaries
-make build
+# Build orchestrator first
+go build -o bin/orchestrator ./cmd/orchestrator
+
+# Build binaries using orchestrator
+./bin/orchestrator build
 
 # Binaries will be in ./bin/
 ./bin/juleson --version
 ./bin/jules-mcp --version
+```
+
+### Install Locally
+
+```bash
+# Install to $GOPATH/bin
+./bin/orchestrator install
+
+# Or install specific command
+go install ./cmd/juleson
+go install ./cmd/jules-mcp
+```
+
 ```
 
 ### Install Locally
@@ -68,10 +84,9 @@ vim configs/Juleson.yaml
 ### Build for Multiple Platforms
 
 ```bash
-# Build for all platforms
-make build-all
-
-# Or build for specific platform
+# Build for all platforms (using orchestrator)
+./bin/orchestrator build  # This builds for current platform
+# For cross-platform builds, use Go directly:
 GOOS=linux GOARCH=amd64 go build -o juleson-linux-amd64 ./cmd/juleson
 GOOS=darwin GOARCH=arm64 go build -o juleson-darwin-arm64 ./cmd/juleson
 GOOS=windows GOARCH=amd64 go build -o juleson-windows-amd64.exe ./cmd/juleson
@@ -125,7 +140,8 @@ class JulesAutomation < Formula
   depends_on "go" => :build
 
   def install
-    system "make", "build"
+    system "go", "build", "-o", "bin/orchestrator", "./cmd/orchestrator"
+    system "./bin/orchestrator", "build"
     bin.install "bin/juleson"
     bin.install "bin/jules-mcp"
   end
@@ -393,7 +409,8 @@ C:\ProgramData\JulesAutomation\config.yaml
 1. **Build MCP Server**:
 
    ```bash
-   make build
+   go build -o bin/orchestrator ./cmd/orchestrator
+   ./bin/orchestrator build-mcp
    ```
 
 2. **Configure Claude Desktop**:

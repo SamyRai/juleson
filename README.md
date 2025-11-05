@@ -15,11 +15,15 @@ enables seamless AI-assisted project analysis, refactoring, testing, and documen
 Juleson bridges your development workflow with Google's Jules AI agent, providing:
 
 - **🔍 Project Analysis**: Deep codebase inspection with language, framework, and architecture detection
-- **🤖 AI-Powered Automation**: Execute complex refactoring and restructuring tasks via Jules AI
+- **� Code Intelligence**: Advanced code analysis with call graphs, symbol references, and complexity metrics
+- **�🤖 AI-Powered Automation**: Execute complex refactoring and restructuring tasks via Jules AI
+- **🎯 High-Level Orchestration**: AI-driven project planning and workflow orchestration
 - **📋 Template System**: 12+ built-in templates for reorganization, testing, refactoring, and documentation
 - **💬 Session Management**: Full control over Jules coding sessions (list, monitor, approve, cancel)
 - **🔌 MCP Integration**: Native Model Context Protocol server for AI assistants (Claude, Cursor, etc.)
+- **🐙 GitHub Integration**: Repository management, PR workflows, and git-aware session creation
 - **⚙️ CLI Tools**: Comprehensive command-line interface for all automation tasks
+- **📡 Event System**: Real-time event-driven architecture with persistence and monitoring
 
 ## 🏗️ **Architecture**
 
@@ -35,6 +39,14 @@ Juleson/
 │   │   ├── activities.go       # Activity monitoring
 │   │   ├── artifacts.go        # Artifact handling
 │   │   └── monitor.go          # Real-time session monitoring
+│   ├── events/                  # Event-driven architecture
+│   │   ├── bus.go             # Pub/sub event bus with middleware
+│   │   ├── queue.go           # Asynchronous message queues
+│   │   ├── store.go           # Event persistence and replay
+│   │   ├── coordinator.go     # Unified event system interface
+│   │   ├── circuit_breaker.go # Fault tolerance for external services
+│   │   ├── middleware.go      # Event processing middleware
+│   │   └── types.go           # Event definitions and data structures
 │   ├── mcp/                     # MCP server implementation
 │   │   ├── server.go           # Official SDK integration
 │   │   └── tools/              # MCP tool implementations
@@ -48,6 +60,8 @@ Juleson/
 │   ├── cli/                     # CLI implementation
 │   │   ├── app.go              # Main CLI app structure
 │   │   └── commands/           # Command implementations
+│   ├── services/                # Service container and dependency injection
+│   │   └── container.go        # Application services management
 │   └── config/                  # Configuration management
 │       └── config.go           # YAML config + env vars
 ├── templates/
@@ -94,6 +108,15 @@ Juleson/
 | **Testing** | Test Generation, Coverage Improvement, Integration Tests | Medium |
 | **Refactoring** | Code Cleanup, Dependency Update, API Modernization | Medium |
 | **Documentation** | API Docs, README Generation, Architecture Docs | Low |
+
+### **Event-Driven Architecture**
+
+- ✅ **Event Bus**: Pub/sub system with topic-based routing and middleware
+- ✅ **Message Queues**: Asynchronous task processing with priority levels
+- ✅ **Event Store**: Event persistence for audit trails and replay capabilities
+- ✅ **Circuit Breakers**: Fault tolerance for external API calls
+- ✅ **Automatic Event Emission**: All Jules API calls emit structured events
+- ✅ **Event Monitoring**: Real-time logging, metrics, and error aggregation
 
 ### **MCP Server**
 
@@ -146,8 +169,11 @@ go mod download
 # Configure your API key
 export JULES_API_KEY="your-jules-api-key-here"
 
-# Build binaries using Makefile
-make build
+# Build the orchestrator first
+go build -o bin/orchestrator ./cmd/orchestrator
+
+# Build binaries using orchestrator
+./bin/orchestrator build
 
 # Install to system
 ./bin/juleson dev install
@@ -159,34 +185,56 @@ jules-mcp --version
 
 ## 📖 **Usage**
 
+### **Quick Start**
+
+```bash
+# First-time setup (recommended)
+juleson setup
+
+# Or configure manually
+export JULES_API_KEY="your-jules-api-key"
+export GITHUB_TOKEN="ghp_your_github_token"  # Optional, for GitHub integration
+
+# Verify setup
+juleson github status
+juleson sessions list
+```
+
 ### **CLI Commands**
+
+For complete command reference, see [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md)
+
+**Common Commands:**
 
 ```bash
 # Initialize a new project configuration
-./bin/juleson init ./my-project
+juleson init ./my-project
 
 # Analyze project structure
-./bin/juleson analyze ./my-project
+juleson analyze ./my-project
 
 # List available templates
-./bin/juleson template list
-./bin/juleson template list reorganization  # Filter by category
-
-# Show template details
-./bin/juleson template show modular-restructure
+juleson template list
+juleson template list reorganization  # Filter by category
 
 # Execute a template
-./bin/juleson execute template modular-restructure ./my-project
+juleson execute template modular-restructure ./my-project
 
 # Session management
-./bin/juleson sessions list           # List all Jules sessions
-./bin/juleson sessions status         # Show session summary
+juleson sessions list           # List all Jules sessions
+juleson sessions status         # Show session summary
+
+# GitHub integration
+juleson github repos            # List your repositories
+juleson github current          # Show current repo
+juleson pr list                # List pull requests
+juleson pr merge session-123   # Merge a PR
 
 # Search templates
-./bin/juleson template search "test coverage"
+juleson template search "test coverage"
 
 # Create custom template
-./bin/juleson template create my-template refactoring "Custom refactoring workflow"
+juleson template create my-template refactoring "Custom refactoring workflow"
 ```
 
 ### **MCP Server Usage**
@@ -238,6 +286,12 @@ Add to Cursor settings JSON:
 | **Project Analysis** | |
 | `analyze_project` | Deep project analysis (languages, frameworks, architecture) |
 | `sync_project` | Sync project with remote Git repository |
+| **Code Intelligence** | |
+| `analyze_code_graph` | Build and analyze call graphs with cycle detection |
+| `analyze_code_context` | Extract symbols, imports, and code structure |
+| `find_symbol_references` | Find all references to a symbol across the project |
+| `run_static_analysis` | Run static analysis checks (unused vars, complexity, etc.) |
+| `analyze_complexity` | Calculate cyclomatic and cognitive complexity metrics |
 | **Templates** | |
 | `execute_template` | Run automation templates with custom parameters |
 | `list_templates` | Browse available templates by category |
@@ -258,6 +312,21 @@ Add to Cursor settings JSON:
 | `quality_check` | Run all quality checks (format, lint, test) |
 | `module_maintenance` | Go module operations (tidy, download, verify) |
 | `build_release` | Build release binaries for all platforms |
+| **Docker Management** | |
+| `docker_build` | Build Docker images from Dockerfiles |
+| `docker_run` | Run Docker containers with custom options |
+| `docker_images` | List Docker images |
+| `docker_containers` | List Docker containers |
+| `docker_stop` | Stop running containers |
+| `docker_remove` | Remove containers |
+| `docker_rmi` | Remove Docker images |
+| `docker_prune` | Clean up Docker system |
+| `docker_exec` | Execute commands in running containers |
+| **AI-Powered Orchestration** *(requires GEMINI_API_KEY)* | |
+| `plan_project_automation` | AI-powered project analysis and comprehensive automation planning |
+| `orchestrate_workflow` | Multi-step workflow execution with dependency management |
+| `manage_github_project` | Natural language GitHub project management (issues, milestones, projects) |
+| `synthesize_session_results` | Jules session analysis with actionable insights and recommendations |
 
 **Note**: `cancel_session` and `delete_session` are not available in Jules API
 v1alpha. Use the [Jules web UI](https://jules.google.com) for these operations.
@@ -389,7 +458,8 @@ jobs:
           run: |
           git clone https://github.com/SamyRai/Juleson.git
           cd Juleson
-          make build
+          go build -o bin/orchestrator ./cmd/orchestrator
+          ./bin/orchestrator build
 
       - name: Execute Template
         env:
@@ -452,47 +522,50 @@ configuration options.
 ### **Running Tests**
 
 ```bash
+# Build orchestrator first
+go build -o bin/orchestrator ./cmd/orchestrator
+
 # Run all tests
-make test
+./bin/orchestrator test
 
 # Run with coverage
-make coverage
+./bin/orchestrator coverage
 
 # Run specific package tests
 go test -v ./internal/jules/...
 go test -v ./internal/mcp/...
 
 # Short tests only (exclude integration tests)
-make test-short
+./bin/orchestrator test-short
 ```
 
 ### **Code Quality**
 
 ```bash
 # Format code
-make fmt
+./bin/orchestrator fmt
 
 # Run linters
-make lint
+./bin/orchestrator lint
 
 # Run all checks (fmt + lint + test)
-make check
+./bin/orchestrator check
 ```
 
 ### **Building**
 
 ```bash
 # Build both binaries
-make build
+./bin/orchestrator build
 
 # Build CLI only
-make build-cli
+./bin/orchestrator build-cli
 
 # Build MCP server only
-make build-mcp
+./bin/orchestrator build-mcp
 
 # Install to $GOPATH/bin
-make install
+./bin/orchestrator install
 ```
 
 ### **Project Statistics**
@@ -600,7 +673,7 @@ template, err := manager.CreateTemplate("my-template", "refactoring", "Descripti
 
 ### **v0.4.0 - Extended Platform Support** (Q3 2025)
 
-- [ ] GitHub Actions integration
+- [x] GitHub API integration (MCP tools for repo management and PR workflows)
 - [ ] GitLab CI/CD support
 - [ ] Docker containerization
 - [ ] VS Code extension
@@ -622,7 +695,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for deta
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes with tests
-4. Run quality checks (`make check`)
+4. Run quality checks (`./bin/orchestrator check`)
 5. Commit your changes (`git commit -m 'feat: add amazing feature'`)
 6. Push to your fork (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
@@ -637,11 +710,14 @@ cd Juleson
 # Install dependencies
 go mod download
 
+# Build orchestrator
+go build -o bin/orchestrator ./cmd/orchestrator
+
 # Run tests
-make test
+./bin/orchestrator test
 
 # Build
-make build
+./bin/orchestrator build
 ```
 
 ### **Code Standards**
@@ -650,7 +726,7 @@ make build
 - Maintain >80% test coverage for new code
 - Use conventional commits (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`)
 - Add godoc comments for exported functions
-- Run `make fmt` and `make lint` before committing
+- Run `./bin/orchestrator fmt` and `./bin/orchestrator lint` before committing
 
 ## � **License**
 
@@ -669,9 +745,16 @@ copies of the Software...
 ## 🔗 **Resources**
 
 - **Documentation**: [docs/](docs/)
-  - [MCP Server Usage Guide](docs/MCP_SERVER_USAGE.md)
-  - [Template System Documentation](docs/Y2Q2_TEMPLATE_SYSTEM.md)
-  - [GitHub Actions Integration](docs/GITHUB_ACTIONS_GUIDE.md)
+  - [Setup Guide](docs/SETUP_GUIDE.md) - First-time setup and configuration
+  - [CLI Reference](docs/CLI_REFERENCE.md) - Complete command-line reference
+  - [MCP Server Usage Guide](docs/MCP_SERVER_USAGE.md) - MCP integration
+  - [Code Intelligence](docs/CODE_INTELLIGENCE.md) - Advanced code analysis features
+  - [Event System Quick Start](docs/EVENT_SYSTEM_QUICKSTART.md) - Event-driven architecture
+  - [Event System Architecture](docs/EVENT_SYSTEM_ARCHITECTURE.md) - Event system design
+  - [GitHub Configuration Guide](docs/GITHUB_CONFIGURATION_GUIDE.md) - GitHub setup
+  - [Installation Guide](docs/INSTALLATION_GUIDE.md) - Platform-specific installation
+  - [Template System Documentation](docs/Y2Q2_TEMPLATE_SYSTEM.md) - Template creation
+  - [GitHub Actions Integration](docs/GITHUB_ACTIONS_GUIDE.md) - CI/CD setup
 - **Jules API**: [Google Jules API Documentation](https://developers.google.com/jules/api)
 - **MCP Protocol**: [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 - **Official MCP Go SDK**: [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk)

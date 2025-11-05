@@ -48,6 +48,18 @@ type AnalyzeProjectOutput struct {
 	FileStructure map[string]int    `json:"file_structure"`
 	TestCoverage  float64           `json:"test_coverage"`
 	GitStatus     string            `json:"git_status"`
+	CodeQuality   *CodeQualityInfo  `json:"code_quality,omitempty"`
+}
+
+// CodeQualityInfo represents code quality metrics for MCP output
+type CodeQualityInfo struct {
+	TestCoverage      float64 `json:"test_coverage"`
+	CodeComplexity    float64 `json:"code_complexity"`
+	Maintainability   float64 `json:"maintainability"`
+	DuplicationRate   float64 `json:"duplication_rate"`
+	SecurityIssues    int     `json:"security_issues"`
+	CodeSmells        int     `json:"code_smells"`
+	PerformanceIssues int     `json:"performance_issues"`
 }
 
 // analyzeProject analyzes a project and returns context
@@ -87,6 +99,19 @@ func analyzeProject(ctx context.Context, req *mcp.CallToolRequest, input Analyze
 		FileStructure: context.FileStructure,
 		TestCoverage:  context.TestCoverage,
 		GitStatus:     context.GitStatus,
+	}
+
+	// Add code quality information if available
+	if context.CodeQuality != nil {
+		output.CodeQuality = &CodeQualityInfo{
+			TestCoverage:      context.CodeQuality.TestCoverage,
+			CodeComplexity:    context.CodeQuality.CodeComplexity,
+			Maintainability:   context.CodeQuality.Maintainability,
+			DuplicationRate:   context.CodeQuality.DuplicationRate,
+			SecurityIssues:    len(context.CodeQuality.SecurityIssues),
+			CodeSmells:        len(context.CodeQuality.CodeSmells),
+			PerformanceIssues: len(context.CodeQuality.PerformanceIssues),
+		}
 	}
 
 	return nil, output, nil

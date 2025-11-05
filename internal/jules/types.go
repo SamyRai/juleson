@@ -80,6 +80,7 @@ type Activity struct {
 	PlanApproved     *PlanApproved     `json:"planApproved,omitempty"`
 	ProgressUpdated  *ProgressUpdated  `json:"progressUpdated,omitempty"`
 	SessionCompleted *SessionCompleted `json:"sessionCompleted,omitempty"`
+	SessionFailed    *SessionFailed    `json:"sessionFailed,omitempty"`
 	Artifacts        []Artifact        `json:"artifacts,omitempty"`
 	ID               string            `json:"id"`
 }
@@ -116,6 +117,11 @@ type ProgressUpdated struct {
 
 // SessionCompleted represents session completion activity
 type SessionCompleted struct{}
+
+// SessionFailed represents session failure activity
+type SessionFailed struct {
+	Reason string `json:"reason"`
+}
 
 // ============================================================================
 // Artifact Types

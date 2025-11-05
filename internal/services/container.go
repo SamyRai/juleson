@@ -2,28 +2,39 @@ package services
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/gemini"
 	"github.com/SamyRai/juleson/internal/jules"
 	"github.com/SamyRai/juleson/internal/templates"
 )
 
 // Container manages application dependencies and services
+// It follows the Dependency Injection pattern for lazy initialization
 type Container struct {
 	config           *config.Config
 	julesClient      *jules.Client
+	geminiClient     *gemini.Client
 	templateManager  *templates.Manager
 	automationEngine *automation.Engine
+	logger           *slog.Logger
 	mu               sync.RWMutex
 }
 
 // NewContainer creates a new service container
+// Event coordination should be initialized separately by the application
 func NewContainer(cfg *config.Config) *Container {
-	return &Container{
+	logger := slog.Default()
+
+	container := &Container{
 		config: cfg,
+		logger: logger,
 	}
+
+	return container
 }
 
 // JulesClient returns the Jules API client (lazy initialization)
@@ -32,6 +43,14 @@ func (c *Container) JulesClient() *jules.Client {
 	defer c.mu.Unlock()
 
 	return c.julesClientLocked()
+}
+
+// GeminiClient returns the Gemini AI client (lazy initialization)
+func (c *Container) GeminiClient() *gemini.Client {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.geminiClientLocked()
 }
 
 // julesClientLocked returns the Jules API client without locking (internal use)
@@ -47,9 +66,40 @@ func (c *Container) julesClientLocked() *jules.Client {
 			c.config.Jules.Timeout,
 			c.config.Jules.RetryAttempts,
 		)
+
 	}
 
 	return c.julesClient
+}
+
+// geminiClientLocked returns the Gemini AI client without locking (internal use)
+func (c *Container) geminiClientLocked() *gemini.Client {
+	if c.geminiClient == nil {
+		// Only create client if API key is available
+		if c.config.Gemini.APIKey == "" {
+			return nil // Return nil to indicate client is not available
+		}
+
+		geminiConfig := &gemini.Config{
+			APIKey:    c.config.Gemini.APIKey,
+			Backend:   c.config.Gemini.Backend,
+			Project:   c.config.Gemini.Project,
+			Location:  c.config.Gemini.Location,
+			Model:     c.config.Gemini.Model,
+			Timeout:   c.config.Gemini.Timeout,
+			MaxTokens: c.config.Gemini.MaxTokens,
+		}
+
+		client, err := gemini.NewClient(geminiConfig)
+		if err != nil {
+			// Log error but don't fail - client will be nil
+			// In production, this should be logged properly
+			return nil
+		}
+		c.geminiClient = client
+	}
+
+	return c.geminiClient
 }
 
 // TemplateManager returns the template manager (lazy initialization)
@@ -103,7 +153,6 @@ func (c *Container) Config() *config.Config {
 
 // Close cleans up any resources held by the container
 func (c *Container) Close() error {
-	// Add cleanup logic if needed in the future
-	// For example: closing database connections, flushing logs, etc.
+	// No resources to clean up currently
 	return nil
 }
