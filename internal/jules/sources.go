@@ -3,6 +3,7 @@ package jules
 import (
 	"context"
 	"fmt"
+	"net/url"
 )
 
 // ListSources lists available code sources with pagination support
@@ -25,16 +26,18 @@ func (c *Client) ListSourcesWithPagination(ctx context.Context, pageSize int, pa
 		pageSize = 100 // max page size per API docs
 	}
 
-	url := fmt.Sprintf("%s/sources?pageSize=%d", c.BaseURL, pageSize)
+	requestURL := fmt.Sprintf("%s/sources?pageSize=%d", c.BaseURL, pageSize)
 	if pageToken != "" {
-		url += fmt.Sprintf("&pageToken=%s", pageToken)
+		requestURL += fmt.Sprintf("&pageToken=%s", pageToken)
 	}
 	if filter != "" {
-		url += fmt.Sprintf("&filter=%s", filter)
+		// URL encode the filter parameter
+		encodedFilter := url.QueryEscape(filter)
+		requestURL += fmt.Sprintf("&filter=%s", encodedFilter)
 	}
 
 	var response SourcesResponse
-	if err := c.doRequestWithJSON(ctx, "GET", url, nil, &response); err != nil {
+	if err := c.doRequestWithJSON(ctx, "GET", requestURL, nil, &response); err != nil {
 		return nil, fmt.Errorf("failed to list sources: %w", err)
 	}
 

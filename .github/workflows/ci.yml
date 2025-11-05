@@ -1,214 +1,354 @@
 name: CI
 
 on:
-    push:
-        branches: [main, develop]
-        paths-ignore:
-            - "**.md"
-            - "docs/**"
-            - "LICENSE"
-    pull_request:
-        branches: [main, develop]
-    workflow_dispatch:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - "CHANGELOG.md"
+      - "ROADMAP.md"
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - "CHANGELOG.md"
+      - "ROADMAP.md"
+  workflow_dispatch:
+    inputs:
+      go-version:
+        description: "Go version to use"
+        required: false
+        default: "stable"
+        type: string
 
 # Set minimal permissions by default
 permissions:
-    contents: read
+  contents: read
 
 # Cancel in-progress runs for the same PR/branch
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-    GO_VERSION: "1.23.x"
+  GO_VERSION: ${{ github.event.inputs.go-version || 'stable' }}
+  CGO_ENABLED: 0
 
 jobs:
-    test:
-        name: Test
-        runs-on: ${{ matrix.os }}
-        permissions:
-            contents: read
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-latest, macos-latest, windows-latest]
+  # Fast feedback job for basic checks
+  pre-check:
+    name: Pre-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      go-version: ${{ steps.setup-go.outputs.go-version }}
+      cache-hit: ${{ steps.cache-go-modules.outputs.cache-hit }}
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-            - name: Set up Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version: ${{ env.GO_VERSION }}
-                  cache: true # Built-in caching in v5
+      - name: Set up Go
+        id: setup-go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          check-latest: true
+          cache: true
 
-            - name: Download dependencies
-              run: go mod download
+      - name: Cache Go modules
+        id: cache-go-modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-            - name: Verify dependencies
-              run: go mod verify
+      - name: Download dependencies
+        run: go mod download
 
-            - name: Run tests
-              run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Verify dependencies
+        run: go mod verify
 
-            - name: Upload coverage to Codecov
-              if: matrix.os == 'ubuntu-latest'
-              uses: codecov/codecov-action@v5
-              with:
-                  files: ./coverage.out
-                  flags: unittests
-                  name: codecov-${{ matrix.os }}
-                  token: ${{ secrets.CODECOV_TOKEN }}
-                  fail_ci_if_error: false
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+              echo "The following files are not formatted:"
+              gofmt -s -l .
+              exit 1
+          fi
 
-    lint:
-        name: Lint
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            pull-requests: read # For golangci-lint-action
+      - name: Check go.mod/go.sum consistency
+        run: go mod tidy && git diff --exit-code go.mod go.sum
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: pre-check
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ["stable", "oldstable"]
+        exclude:
+          # Reduce matrix size - test oldstable only on ubuntu
+          - os: macos-latest
+            go-version: oldstable
+          - os: windows-latest
+            go-version: oldstable
 
-            - name: Set up Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version: ${{ env.GO_VERSION }}
-                  cache: false # golangci-lint has its own cache
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Run golangci-lint
-              uses: golangci/golangci-lint-action@v6
-              with:
-                  version: latest
-                  args: --timeout=5m
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
 
-    markdown-lint:
-        name: Markdown Lint
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
+      - name: Download dependencies
+        run: go mod download
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
+      - name: Run tests with race detection
+        run: go test -v -race -timeout=10m -coverprofile=coverage.out -covermode=atomic ./...
 
-            - name: Run markdownlint
-              uses: DavidAnson/markdownlint-cli2-action@v16
-              with:
-                  globs: "**/*.md"
+      - name: Run tests with -short flag
+        run: go test -v -short -timeout=5m ./...
 
-    build:
-        name: Build
-        runs-on: ${{ matrix.os }}
-        permissions:
-            contents: read
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-latest, macos-latest, windows-latest]
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+          flags: unittests-${{ matrix.os }}
+          name: codecov-${{ matrix.os }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
+      - name: Generate coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        run: go tool cover -html=coverage.out -o coverage.html
 
-            - name: Set up Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version: ${{ env.GO_VERSION }}
-                  cache: true
+      - name: Upload coverage HTML
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+          retention-days: 30
 
-            - name: Build juleson
-              run: go build -v -ldflags="-s -w" -o bin/juleson ./cmd/juleson
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: pre-check
+    permissions:
+      contents: read
+      pull-requests: read # For golangci-lint-action
 
-            - name: Build jules-mcp
-              run: go build -v -ldflags="-s -w" -o bin/jules-mcp ./cmd/jules-mcp
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-            - name: Test binaries (Unix)
-              if: runner.os != 'Windows'
-              run: |
-                  ./bin/juleson --version || echo "Version flag not implemented yet"
-                  ./bin/jules-mcp --help || echo "Help flag not implemented yet"
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
 
-            - name: Test binaries (Windows)
-              if: runner.os == 'Windows'
-              run: |
-                  .\bin\juleson.exe --version || echo "Version flag not implemented yet"
-                  .\bin\jules-mcp.exe --help || echo "Help flag not implemented yet"
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=10m --verbose
+          skip-cache: false
 
-            - name: Upload artifacts
-              if: matrix.os == 'ubuntu-latest'
-              uses: actions/upload-artifact@v5
-              with:
-                  name: jules-binaries-${{ runner.os }}
-                  path: bin/
-                  retention-days: 7
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: pre-check
+    permissions:
+      contents: read
+      security-events: write # For uploading SARIF results
 
-    security:
-        name: Security Scan
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            security-events: write # For uploading SARIF results
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
 
-            - name: Set up Go
-              uses: actions/setup-go@v5
-              with:
-                  go-version: ${{ env.GO_VERSION }}
-                  cache: true
+      - name: Run Gosec Security Scanner
+        uses: securecodewarrior/github-action-gosec@master
+        with:
+          args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
-            - name: Run Gosec Security Scanner
-              uses: securego/gosec@master
-              with:
-                  args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
-
-            - name: Upload SARIF file
-              if: always()
-              uses: github/codeql-action/upload-sarif@v4
-              with:
-                  sarif_file: gosec-results.sarif
-
-    dependency-review:
-        name: Dependency Review
-        runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
-        permissions:
-            contents: read
-            pull-requests: write
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v5
-
-            - name: Dependency Review
-              uses: actions/dependency-review-action@v4
-              with:
-                  fail-on-severity: moderate
-
-    all-checks-pass:
-        name: All Checks Pass
+      - name: Upload SARIF file
         if: always()
-        needs: [test, lint, markdown-lint, build, security]
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec-results.sarif
 
-        steps:
-            - name: Check all job statuses
-              run: |
-                  if [[ "${{ needs.test.result }}" != "success" ]] || \
-                     [[ "${{ needs.lint.result }}" != "success" ]] || \
-                     [[ "${{ needs.markdown-lint.result }}" != "success" ]] || \
-                     [[ "${{ needs.build.result }}" != "success" ]] || \
-                     [[ "${{ needs.security.result }}" != "success" ]]; then
-                    echo "One or more required jobs failed"
-                    exit 1
-                  fi
-                  echo "All required jobs passed successfully!"
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy SARIF file
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: pre-check
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Build juleson (optimized)
+        run: go build -v -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -trimpath -o bin/juleson ./cmd/juleson
+
+      - name: Build jules-mcp (optimized)
+        run: go build -v -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -trimpath -o bin/jules-mcp ./cmd/jules-mcp
+
+      - name: Test binaries (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          ./bin/juleson --version || echo "Version flag not implemented yet"
+          ./bin/jules-mcp --help || echo "Help flag not implemented yet"
+
+      - name: Test binaries (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .\bin\juleson.exe --version || echo "Version flag not implemented yet"
+          .\bin\jules-mcp.exe --help || echo "Help flag not implemented yet"
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Check for ineffective assignments
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+      - name: Upload binaries
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jules-binaries-${{ runner.os }}
+          path: bin/
+          retention-days: 30
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+
+  performance-test:
+    name: Performance Test
+    runs-on: ubuntu-latest
+    needs: pre-check
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Run benchmarks
+        run: go test -bench=. -benchmem -run=^$ ./...
+
+      - name: Run memory profiling
+        run: go test -memprofile=mem.out -run=^$ ./...
+
+  all-checks-pass:
+    name: All Checks Pass
+    if: always()
+    needs:
+      [
+        pre-check,
+        test,
+        lint,
+        security,
+        build,
+        dependency-review,
+        performance-test,
+      ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check all job statuses
+        run: |
+          # Define required jobs
+          required_jobs="pre-check test lint security build dependency-review performance-test"
+
+          # Check each required job
+          for job in $required_jobs; do
+              status="${{ needs.$job.result }}"
+              if [[ "$status" != "success" && "$status" != "skipped" ]]; then
+                  echo "❌ Job '$job' failed with status: $status"
+                  exit 1
+              fi
+          done
+
+          echo "✅ All required jobs passed successfully!"
+          echo "🚀 CI pipeline completed successfully"

@@ -25,6 +25,7 @@ type Server struct {
 	container *services.Container
 	server    *mcp.Server
 	logger    *slog.Logger
+	config    *config.Config
 }
 
 // NewServer creates a new MCP server using the official SDK
@@ -38,10 +39,10 @@ func NewServer(cfg *config.Config) *Server {
 		Instructions: `You are Juleson MCP Server, a powerful tool for project analysis, automation, and session management.
 
 Available capabilities:
-- Project Analysis: Analyze project structure, dependencies, and complexity
-- Template Management: List, search, create, and execute automation templates
-- Session Management: Monitor, approve, and manage Jules sessions
-- Automation Execution: Run templates to automate project tasks
+- Project Analysis: Analyze project structure, languages, frameworks, and complexity
+- Template Management: Create, list, search, and execute automation templates
+- Session Management: Monitor and control Jules automation sessions
+- GitHub Integration: Create sessions from GitHub repos, merge PRs, and manage repositories
 
 Note: Session cancel and delete operations are not available via Jules API v1alpha.
 These operations must be performed through the Jules web UI.
@@ -52,6 +53,7 @@ Use the available tools to help users with their automation needs. Always provid
 	server := &Server{
 		container: container,
 		logger:    slog.Default(),
+		config:    cfg,
 	}
 
 	// Create the MCP server instance
@@ -103,6 +105,14 @@ func (s *Server) addTools() {
 	log.Println("Registering developer tools...")
 	tools.RegisterDevTools(s.server)
 
+	// Register code intelligence tools (always available for Go projects)
+	log.Println("Registering code intelligence tools...")
+	tools.RegisterCodeIntelTools(s.server)
+
+	// Register Docker tools (requires Docker to be installed)
+	log.Println("Registering Docker tools...")
+	tools.RegisterDockerTools(s.server)
+
 	// Register project-related tools (lazy initialization)
 	log.Println("Registering project tools...")
 	tools.RegisterProjectTools(s.server, s.container)
@@ -116,8 +126,20 @@ func (s *Server) addTools() {
 	if julesClient != nil {
 		log.Println("Registering session tools...")
 		tools.RegisterSessionTools(s.server, julesClient)
+
+		// Register GitHub tools (only if GitHub token is configured)
+		if s.config.GitHub.Token != "" {
+			log.Println("Registering GitHub tools...")
+			tools.RegisterGitHubTools(s.server, s.config, julesClient)
+		}
+
+		// Register Gemini tools (only if Gemini API key is configured)
+		if s.config.Gemini.APIKey != "" {
+			log.Println("Registering Gemini AI tools...")
+			tools.RegisterGeminiTools(s.server, s.container)
+		}
 	} else {
-		s.logger.Warn("Jules client not available - session tools will not be registered")
+		s.logger.Warn("Jules client not available - session and GitHub tools will not be registered")
 	}
 
 	log.Println("All tools registered successfully")
@@ -179,6 +201,8 @@ Capabilities:
 - Project Analysis: Analyze project structure, languages, frameworks, and complexity
 - Template Management: Create, list, search, and execute automation templates
 - Session Management: Monitor and control Jules automation sessions
+- Docker Management: Build, run, and manage Docker containers and images
+- Development Tools: Build, test, lint, and format Go code
 - Automation Execution: Run templates to automate development tasks
 
 Tools Available:
@@ -191,6 +215,29 @@ Tools Available:
 - list_sessions: List all Jules sessions
 - get_session_status: Get detailed session status summary
 - approve_session_plan: Approve session plans for execution
+- github_create_session_from_repo: Create Jules session from GitHub repository
+- github_merge_session_pr: Merge PR created by Jules session
+- github_list_repos: List accessible GitHub repositories
+- github_current_repo: Get current repository information
+- github_list_connected_repos: List repositories connected to Jules
+- github_search_repos: Search for GitHub repositories
+- docker_build: Build Docker images from Dockerfiles
+- docker_run: Run Docker containers with custom options
+- docker_images: List Docker images
+- docker_containers: List Docker containers
+- docker_stop: Stop running containers
+- docker_remove: Remove containers
+- docker_rmi: Remove Docker images
+- docker_prune: Clean up Docker system
+- docker_exec: Execute commands in running containers
+- build_project: Build Juleson binaries
+- run_tests: Execute tests with coverage
+- lint_code: Run linters
+- format_code: Format Go code
+- clean_artifacts: Clean build artifacts
+- quality_check: Run all quality checks
+- module_maintenance: Go module operations
+- build_release: Build release binaries for all platforms
 
 Note: cancel_session and delete_session are NOT available - Jules API v1alpha does not support these operations.
 

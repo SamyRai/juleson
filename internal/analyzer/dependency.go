@@ -51,7 +51,12 @@ func (d *DependencyAnalyzer) analyzeGoMod(projectPath string) (map[string]string
 	if err != nil {
 		return deps, err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Log error but don't override the main error
+			// In a real implementation, you'd use a proper logger
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	inRequire := false
@@ -104,7 +109,12 @@ func (d *DependencyAnalyzer) analyzeRequirementsTxt(projectPath string) (map[str
 	if err != nil {
 		return deps, err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Log error but don't override the main error
+			// In a real implementation, you'd use a proper logger
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {

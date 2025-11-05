@@ -3,6 +3,8 @@ package jules
 import (
 	"context"
 	"fmt"
+
+	"github.com/SamyRai/juleson/internal/events"
 )
 
 // CreateSession creates a new coding session
@@ -18,7 +20,25 @@ func (c *Client) CreateSession(ctx context.Context, req *CreateSessionRequest) (
 
 	var session Session
 	if err := c.doRequestWithJSON(ctx, "POST", url, req, &session); err != nil {
+		// Emit session creation failed event if emitter is available
+		if c.EventEmitter != nil {
+			c.EventEmitter.EmitSessionEvent(ctx, events.EventSessionFailed, events.SessionEventData{
+				SessionID: "",
+				State:     "failed",
+				Error:     err.Error(),
+			})
+		}
 		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+
+	// Emit session created event if emitter is available
+	if c.EventEmitter != nil {
+		c.EventEmitter.EmitSessionEvent(ctx, events.EventSessionCreated, events.SessionEventData{
+			SessionID: session.ID,
+			State:     session.State,
+			Title:     session.Title,
+			URL:       session.URL,
+		})
 	}
 
 	return &session, nil
@@ -84,7 +104,37 @@ func (c *Client) SendMessage(ctx context.Context, sessionID string, req *SendMes
 	url := fmt.Sprintf("%s/sessions/%s:sendMessage", c.BaseURL, sessionID)
 
 	if err := c.doRequestWithJSON(ctx, "POST", url, req, nil); err != nil {
+		// Emit activity event for failed message
+		if c.EventEmitter != nil {
+			c.EventEmitter.EmitActivityEvent(ctx, events.EventActivityProcessed, events.ActivityEventData{
+				SessionID:    sessionID,
+				ActivityID:   "",
+				ActivityType: "message",
+				Originator:   "user",
+				Description:  "Failed to send message",
+				Artifacts:    0,
+				Metadata: map[string]interface{}{
+					"error":  err.Error(),
+					"prompt": req.Prompt,
+				},
+			})
+		}
 		return fmt.Errorf("failed to send message: %w", err)
+	}
+
+	// Emit activity event for successful message
+	if c.EventEmitter != nil {
+		c.EventEmitter.EmitActivityEvent(ctx, events.EventActivityProcessed, events.ActivityEventData{
+			SessionID:    sessionID,
+			ActivityID:   "",
+			ActivityType: "message",
+			Originator:   "user",
+			Description:  "Message sent successfully",
+			Artifacts:    0,
+			Metadata: map[string]interface{}{
+				"prompt": req.Prompt,
+			},
+		})
 	}
 
 	return nil
@@ -99,7 +149,33 @@ func (c *Client) ApprovePlan(ctx context.Context, sessionID string) error {
 	url := fmt.Sprintf("%s/sessions/%s:approvePlan", c.BaseURL, sessionID)
 
 	if err := c.doRequestWithJSON(ctx, "POST", url, nil, nil); err != nil {
+		// Emit activity event for failed plan approval
+		if c.EventEmitter != nil {
+			c.EventEmitter.EmitActivityEvent(ctx, events.EventActivityProcessed, events.ActivityEventData{
+				SessionID:    sessionID,
+				ActivityID:   "",
+				ActivityType: "plan_approval",
+				Originator:   "user",
+				Description:  "Failed to approve plan",
+				Artifacts:    0,
+				Metadata: map[string]interface{}{
+					"error": err.Error(),
+				},
+			})
+		}
 		return fmt.Errorf("failed to approve plan: %w", err)
+	}
+
+	// Emit activity event for successful plan approval
+	if c.EventEmitter != nil {
+		c.EventEmitter.EmitActivityEvent(ctx, events.EventPlanApproved, events.ActivityEventData{
+			SessionID:    sessionID,
+			ActivityID:   "",
+			ActivityType: "plan_approval",
+			Originator:   "user",
+			Description:  "Plan approved successfully",
+			Artifacts:    0,
+		})
 	}
 
 	return nil

@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,11 +17,20 @@ func NewFileStructureAnalyzer() *FileStructureAnalyzer {
 
 // Analyze analyzes the file structure and returns file counts by extension
 func (f *FileStructureAnalyzer) Analyze(projectPath string) (map[string]int, error) {
+	if projectPath == "" {
+		return nil, fmt.Errorf("project path cannot be empty")
+	}
+
+	if _, err := os.Stat(projectPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("project path does not exist: %s", projectPath)
+	}
+
 	structure := make(map[string]int)
 
 	err := filepath.Walk(projectPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			// Log the error but continue walking
+			return nil
 		}
 
 		// Skip directories and common ignore patterns
@@ -43,13 +53,21 @@ func (f *FileStructureAnalyzer) Analyze(projectPath string) (map[string]int, err
 		return nil
 	})
 
-	return structure, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to walk project directory: %w", err)
+	}
+
+	return structure, nil
 }
 
 func shouldSkipDir(name string) bool {
 	skipDirs := []string{
 		".git", "node_modules", "vendor", ".idea", ".vscode",
-		"dist", "build", "bin", ".cache", "tmp",
+		"dist", "build", "bin", ".cache", "tmp", "__pycache__",
+		".next", ".nuxt", ".vuepress", "target", ".gradle",
+		"cmake-build-debug", "cmake-build-release", ".cargo",
+		".bundle", "vendor/bundle", ".meteor", ".expo",
+		".expo-shared", "coverage", ".nyc_output",
 	}
 
 	for _, skip := range skipDirs {

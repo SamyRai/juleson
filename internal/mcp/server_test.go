@@ -18,8 +18,8 @@ func TestNewServer(t *testing.T) {
 			RetryAttempts: 3,
 		},
 		Templates: config.TemplatesConfig{
-			BuiltinPath:  "./templates/builtin",
-			CustomPath:   "./templates/custom",
+			BuiltinPath:  "../../templates/builtin",
+			CustomPath:   "../../templates/custom",
 			EnableCustom: false,
 		},
 	}
@@ -37,8 +37,8 @@ func TestServerInitialization(t *testing.T) {
 			RetryAttempts: 3,
 		},
 		Templates: config.TemplatesConfig{
-			BuiltinPath:  "./templates/builtin",
-			CustomPath:   "./templates/custom",
+			BuiltinPath:  "../../templates/builtin",
+			CustomPath:   "../../templates/custom",
 			EnableCustom: false,
 		},
 	}

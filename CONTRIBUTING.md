@@ -145,6 +145,15 @@ Juleson/
 │   ├── automation/       # Automation engine
 │   ├── cli/              # CLI implementation
 │   ├── config/           # Configuration management
+│   ├── github/           # GitHub API integration (SOLID architecture)
+│   │   ├── client.go     # Main client facade
+│   │   ├── actions.go    # GitHub Actions service
+│   │   ├── repositories.go # Repository service
+│   │   ├── pullrequests.go # Pull request service
+│   │   ├── sessions.go   # Session service
+│   │   ├── git.go        # Git utilities
+│   │   ├── types.go      # Domain models
+│   │   └── utils.go      # Helper functions
 │   ├── jules/            # Jules API client
 │   ├── mcp/              # MCP server implementation
 │   └── templates/        # Template management

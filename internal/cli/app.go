@@ -80,6 +80,7 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 `)
 
 	// Register commands with their dependencies
+	a.rootCmd.AddCommand(commands.NewSetupCommand())
 	a.rootCmd.AddCommand(commands.NewInitCommand(a.formatters.ConfigGen.GenerateProjectConfig))
 	a.rootCmd.AddCommand(commands.NewAnalyzeCommand(
 		a.container.AutomationEngine,
@@ -96,5 +97,15 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 	))
 	a.rootCmd.AddCommand(commands.NewSyncCommand())
 	a.rootCmd.AddCommand(commands.NewSessionsCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewSourcesCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewActivitiesCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewPRCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewGitHubCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewActionsCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewOrchestrateCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewAIOrchestCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewAgentCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewDevCommand())
+	a.rootCmd.AddCommand(commands.NewCompletionCommand())
+	a.rootCmd.AddCommand(commands.NewVersionCommand())
 }

@@ -198,11 +198,14 @@ cd juleson
 # Download dependencies
 go mod download
 
-# Build using Make
-make build
+# Build orchestrator first
+go build -o bin/orchestrator ./cmd/orchestrator
+
+# Build binaries using orchestrator
+./bin/orchestrator build
 
 # Install to system
-sudo make install
+./bin/orchestrator install
 
 # Or use the dev command for custom installation
 ./bin/juleson dev install --path /usr/local/bin
