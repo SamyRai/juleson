@@ -114,7 +114,7 @@ Juleson/
 ## 📊 **Project Status**
 
 - **Version**: 0.1.0 (Alpha)
-- **Go Version**: 1.23+
+- **Go Version**: 1.24+
 - **Test Coverage**: 80%+
 - **License**: MIT
 - **Status**: Production-ready (requires Jules API key)
