@@ -1,12 +1,9 @@
-version: "2"
-
 run:
   timeout: 5m
   tests: true
   modules-download-mode: readonly
 
 linters:
-  default: none
   enable:
     - errcheck # Check for unchecked errors
     - staticcheck # Advanced Go linter (includes gosimple)
@@ -23,32 +20,29 @@ linters:
     - gosec # Security checker
     - unconvert # Remove unnecessary type conversions
 
-  settings:
-    errcheck:
-      check-type-assertions: true
-      check-blank: true
-
-    govet:
-      enable-all: true
-      disable:
-        - shadow
-
-    gocyclo:
-      min-complexity: 15
-
-    dupl:
-      threshold: 100
-
-    gocritic:
-      enabled-tags:
-        - diagnostic
-        - experimental
-        - opinionated
-        - performance
-        - style
-
-    misspell:
-      locale: US
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  misspell:
+    locale: US
+  gosec:
+    sarif: true
 
   exclusions:
     rules:
@@ -72,8 +66,8 @@ issues:
 
 output:
   formats:
-    text:
-      path: stdout
-      print-linter-name: true
-      print-issued-lines: true
-      colors: true
+    - text:
+        path: stdout
+        print-linter-name: true
+        print-issued-lines: true
+        colors: true

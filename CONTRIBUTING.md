@@ -136,7 +136,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ## 🏗️ Project Structure
 
-```text
+```bash
 Juleson/
 ├── cmd/                    # Entry points for binaries
 │   ├── juleson/         # CLI application
