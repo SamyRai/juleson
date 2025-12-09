@@ -31,6 +31,43 @@ func NewDevCommand() *cobra.Command {
 	return devCmd
 }
 
+func buildBinaries(ctx context.Context, version, goos, goarch string, race bool) ([]*build.BuildResult, error) {
+	var results []*build.BuildResult
+
+	binaries := []struct {
+		name string
+		path string
+	}{
+		{"juleson", "./cmd/juleson"},
+		{"juleson-mcp", "./cmd/jules-mcp"},
+	}
+
+	for _, binary := range binaries {
+		fmt.Printf("🔨 Building %s...\n", binary.name)
+		config := build.DefaultConfig(binary.name, binary.path)
+		config.Version = version
+		config.GOOS = goos
+		config.GOARCH = goarch
+		config.Race = race
+
+		if version != "" && version != "dev" {
+			config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", version))
+		}
+
+		builder := build.NewBuilder(config)
+		result := builder.BuildWithResult(ctx)
+		results = append(results, result)
+
+		if result.Success {
+			fmt.Printf("✅ %s\n", result.String())
+		} else {
+			fmt.Printf("❌ %s\n", result.String())
+		}
+	}
+
+	return results, nil
+}
+
 // newBuildCommand creates the build command
 func newBuildCommand() *cobra.Command {
 	var (
@@ -50,58 +87,9 @@ func newBuildCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			// Determine what to build
-			buildCLI := cli || all || (!cli && !mcp)
-			buildMCP := mcp || all || (!cli && !mcp)
-
-			var results []*build.BuildResult
-
-			// Build CLI
-			if buildCLI {
-				fmt.Println("🔨 Building Juleson CLI...")
-				config := build.DefaultConfig("juleson", "./cmd/juleson")
-				config.Version = version
-				config.GOOS = goos
-				config.GOARCH = goarch
-				config.Race = race
-
-				if version != "" && version != "dev" {
-					config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", version))
-				}
-
-				builder := build.NewBuilder(config)
-				result := builder.BuildWithResult(ctx)
-				results = append(results, result)
-
-				if result.Success {
-					fmt.Printf("✅ %s\n", result.String())
-				} else {
-					fmt.Printf("❌ %s\n", result.String())
-				}
-			}
-
-			// Build MCP
-			if buildMCP {
-				fmt.Println("🔨 Building Juleson MCP Server...")
-				config := build.DefaultConfig("juleson-mcp", "./cmd/jules-mcp")
-				config.Version = version
-				config.GOOS = goos
-				config.GOARCH = goarch
-				config.Race = race
-
-				if version != "" && version != "dev" {
-					config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", version))
-				}
-
-				builder := build.NewBuilder(config)
-				result := builder.BuildWithResult(ctx)
-				results = append(results, result)
-
-				if result.Success {
-					fmt.Printf("✅ %s\n", result.String())
-				} else {
-					fmt.Printf("❌ %s\n", result.String())
-				}
+			results, err := buildBinaries(ctx, version, goos, goarch, race)
+			if err != nil {
+				return err
 			}
 
 			// Print summary
@@ -556,27 +544,15 @@ func newInstallCommand() *cobra.Command {
 			// Build both binaries
 			fmt.Println("🔨 Building binaries...")
 
-			// Build CLI
-			cliConfig := build.DefaultConfig("juleson", "./cmd/juleson")
-			cliBuilder := build.NewBuilder(cliConfig)
-			if err := cliBuilder.Build(ctx); err != nil {
-				return fmt.Errorf("failed to build CLI: %w", err)
+			_, err := buildBinaries(ctx, "dev", runtime.GOOS, runtime.GOARCH, false)
+			if err != nil {
+				return err
 			}
-			fmt.Println("✅ CLI built")
-
-			// Build MCP
-			mcpConfig := build.DefaultConfig("juleson-mcp", "./cmd/jules-mcp")
-			mcpBuilder := build.NewBuilder(mcpConfig)
-			if err := mcpBuilder.Build(ctx); err != nil {
-				return fmt.Errorf("failed to build MCP: %w", err)
-			}
-			fmt.Println("✅ MCP server built")
 
 			// Install binaries
 			installer := build.NewInstaller("bin", []string{"juleson", "juleson-mcp"})
 
 			var result *build.InstallResult
-			var err error
 
 			if installPath != "" {
 				fmt.Printf("📦 Installing to %s...", installPath)
@@ -646,34 +622,19 @@ func newReleaseCommand() *cobra.Command {
 			failCount := 0
 
 			for _, platform := range platforms {
-				for _, binary := range []struct {
-					name string
-					path string
-				}{
-					{"juleson", "./cmd/juleson"},
-					{"juleson-mcp", "./cmd/jules-mcp"},
-				} {
-					fmt.Printf("Building %s for %s/%s...\n", binary.name, platform.goos, platform.goarch)
+				results, err := buildBinaries(ctx, version, platform.goos, platform.goarch, false)
+				if err != nil {
+					failCount += len(results)
+					continue
+				}
 
-					config := build.DefaultConfig(binary.name, binary.path)
-					config.Version = version
-					config.GOOS = platform.goos
-					config.GOARCH = platform.goarch
-					config.OutputDir = fmt.Sprintf("dist/%s-%s-%s", binary.name, platform.goos, platform.goarch)
-					config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", version))
-
-					builder := build.NewBuilder(config)
-					result := builder.BuildWithResult(ctx)
-
+				for _, result := range results {
 					if result.Success {
-						fmt.Printf("  ✅ %s\n", result.String())
 						successCount++
 					} else {
-						fmt.Printf("  ❌ Failed: %v\n", result.Error)
 						failCount++
 					}
 				}
-				fmt.Println()
 			}
 
 			fmt.Printf("\n📊 Release Summary:\n")

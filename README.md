@@ -28,7 +28,7 @@ Juleson bridges your development workflow with Google's Jules AI agent, providin
 
 ## 🏗️ **Architecture**
 
-```text
+```bash
 Juleson/
 ├── cmd/                          # Application entry points
 │   ├── juleson/                 # CLI tool for direct usage
@@ -873,7 +873,7 @@ go build -o bin/orchestrator ./cmd/orchestrator
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-```text
+```bash
 Copyright (c) 2025 Juleson Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
