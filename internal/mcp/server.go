@@ -127,6 +127,9 @@ func (s *Server) addTools() {
 		log.Println("Registering session tools...")
 		tools.RegisterSessionTools(s.server, julesClient)
 
+		log.Println("Registering activity tools...")
+		tools.RegisterActivityTools(s.server, julesClient)
+
 		// Register GitHub tools (only if GitHub token is configured)
 		if s.config.GitHub.Token != "" {
 			log.Println("Registering GitHub tools...")

@@ -56,6 +56,30 @@ func RegisterSessionTools(server *mcp.Server, julesClient *jules.Client) {
 		return previewSessionChanges(ctx, req, input, julesClient)
 	})
 
+	// Send Session Message Tool
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "send_session_message",
+		Description: "Send a message to Jules within a session to request changes or provide feedback",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input SendSessionMessageInput) (*mcp.CallToolResult, SendSessionMessageOutput, error) {
+		return sendSessionMessage(ctx, req, input, julesClient)
+	})
+
+	// Create Session Tool
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_session",
+		Description: "Create a new Jules coding session with a source and prompt",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input CreateSessionInput) (*mcp.CallToolResult, CreateSessionOutput, error) {
+		return createSession(ctx, req, input, julesClient)
+	})
+
+	// Get Session Tool
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_session",
+		Description: "Get detailed information about a specific Jules session",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetSessionInput) (*mcp.CallToolResult, GetSessionOutput, error) {
+		return getSession(ctx, req, input, julesClient)
+	})
+
 	// NOTE: cancel_session and delete_session tools are NOT available
 	// The Jules API v1alpha does not support these operations.
 	// Users must use the Jules web UI to cancel or delete sessions.
@@ -346,6 +370,147 @@ func previewSessionChanges(ctx context.Context, req *mcp.CallToolRequest, input 
 		CanApply:     canApply,
 		Errors:       errors,
 		Summary:      summary,
+	}
+
+	return nil, output, nil
+}
+
+// SendSessionMessageInput represents input for send_session_message tool
+type SendSessionMessageInput struct {
+	SessionID string `json:"session_id" jsonschema:"ID of the session to send message to"`
+	Message   string `json:"message" jsonschema:"Message to send to Jules within the session"`
+}
+
+// SendSessionMessageOutput represents output for send_session_message tool
+type SendSessionMessageOutput struct {
+	SessionID string `json:"session_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+// sendSessionMessage sends a message to Jules within a session
+func sendSessionMessage(ctx context.Context, req *mcp.CallToolRequest, input SendSessionMessageInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	SendSessionMessageOutput,
+	error,
+) {
+	sendReq := &jules.SendMessageRequest{
+		Prompt: input.Message,
+	}
+
+	err := client.SendMessage(ctx, input.SessionID, sendReq)
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to send message: %v", err)},
+			},
+		}, SendSessionMessageOutput{}, err
+	}
+
+	output := SendSessionMessageOutput{
+		SessionID: input.SessionID,
+		Status:    "sent",
+		Message:   "Message sent successfully to Jules session",
+	}
+
+	return nil, output, nil
+}
+
+// CreateSessionInput represents input for create_session tool
+type CreateSessionInput struct {
+	Source              string `json:"source" jsonschema:"Source ID or path (e.g., 'sources/github/owner/repo')"`
+	Prompt              string `json:"prompt" jsonschema:"Prompt describing the task for Jules to work on"`
+	Title               string `json:"title,omitempty" jsonschema:"Optional title for the session"`
+	RequirePlanApproval bool   `json:"require_plan_approval,omitempty" jsonschema:"Whether to require manual approval of plans (default: false)"`
+	AutomationMode      string `json:"automation_mode,omitempty" jsonschema:"Automation mode (e.g., 'AUTO_CREATE_PR')"`
+	StartingBranch      string `json:"starting_branch,omitempty" jsonschema:"Starting branch for GitHub repos (default: repo's default branch)"`
+}
+
+// CreateSessionOutput represents output for create_session tool
+type CreateSessionOutput struct {
+	SessionID string        `json:"session_id"`
+	Session   jules.Session `json:"session"`
+	URL       string        `json:"url"`
+	Message   string        `json:"message"`
+}
+
+// createSession creates a new Jules session
+func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSessionInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	CreateSessionOutput,
+	error,
+) {
+	sourceContext := &jules.SourceContext{
+		Source: input.Source,
+	}
+
+	if input.StartingBranch != "" {
+		sourceContext.GithubRepoContext = &jules.GithubRepoContext{
+			StartingBranch: input.StartingBranch,
+		}
+	}
+
+	createReq := &jules.CreateSessionRequest{
+		Prompt:              input.Prompt,
+		SourceContext:       sourceContext,
+		Title:               input.Title,
+		RequirePlanApproval: input.RequirePlanApproval,
+		AutomationMode:      input.AutomationMode,
+	}
+
+	session, err := client.CreateSession(ctx, createReq)
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to create session: %v", err)},
+			},
+		}, CreateSessionOutput{}, err
+	}
+
+	output := CreateSessionOutput{
+		SessionID: session.ID,
+		Session:   *session,
+		URL:       session.URL,
+		Message:   fmt.Sprintf("Session created successfully: %s", session.ID),
+	}
+
+	return nil, output, nil
+}
+
+// GetSessionInput represents input for get_session tool
+type GetSessionInput struct {
+	SessionID string `json:"session_id" jsonschema:"ID of the session to retrieve"`
+}
+
+// GetSessionOutput represents output for get_session tool
+type GetSessionOutput struct {
+	SessionID string        `json:"session_id"`
+	Session   jules.Session `json:"session"`
+	URL       string        `json:"url"`
+}
+
+// getSession retrieves detailed information about a session
+func getSession(ctx context.Context, req *mcp.CallToolRequest, input GetSessionInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	GetSessionOutput,
+	error,
+) {
+	session, err := client.GetSession(ctx, input.SessionID)
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to get session: %v", err)},
+			},
+		}, GetSessionOutput{}, err
+	}
+
+	output := GetSessionOutput{
+		SessionID: session.ID,
+		Session:   *session,
+		URL:       session.URL,
 	}
 
 	return nil, output, nil
