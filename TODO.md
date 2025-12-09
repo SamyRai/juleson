@@ -1,6 +1,6 @@
 # Juleson TODO List
 
-**Last Updated**: November 1, 2025
+**Last Updated**: November 3, 2025
 **Current Version**: 0.1.0 (Alpha)
 
 This document tracks all planned features, improvements, and bug fixes organized by priority and category.
@@ -93,8 +93,11 @@ This document tracks all planned features, improvements, and bug fixes organized
 - [x] Implement `--dry-run` flag (DONE - via PatchApplicationOptions)
 - [ ] Add progress bars for long-running operations
 - [ ] Create `juleson update` command for self-updating
-- [ ] Add shell completion (bash, zsh, fish)
-- [x] Configuration wizard (DONE - `juleson init` exists)
+- [x] Add shell completion (bash, zsh, fish, powershell) (DONE - `juleson completion`)
+- [x] Configuration wizard (DONE - `juleson setup` with auto-detection and validation)
+- [x] GitHub integration (DONE - `juleson github` and `juleson pr` commands)
+- [x] GitHub authentication (DONE - `juleson github login/status`)
+- [x] Pull request management (DONE - list, get, merge, diff)
 
 ### Testing & Quality
 
@@ -182,6 +185,17 @@ This document tracks all planned features, improvements, and bug fixes organized
 ## 🟢 Low Priority (P3)
 
 ### Features (v0.4.0 - Platform Support)
+
+#### GitHub Integration
+
+- [x] GitHub API client (DONE - internal/github/client.go)
+- [x] Repository discovery and management (DONE - `juleson github repos/current`)
+- [x] PR creation from Jules sessions (DONE - automated in session workflow)
+- [x] PR management (list, view, merge) (DONE - `juleson pr` commands)
+- [x] GitHub authentication (DONE - `juleson github login/status`)
+- [ ] Issue tracking integration
+- [ ] GitHub Actions workflow templates
+- [ ] Branch protection rule management
 
 #### CI/CD Integration
 
@@ -351,7 +365,10 @@ This document tracks all planned features, improvements, and bug fixes organized
 
 ### User Documentation
 
-- [ ] Getting started guide
+- [x] Getting started guide (DONE - docs/SETUP_GUIDE.md)
+- [x] CLI reference documentation (DONE - docs/CLI_REFERENCE.md)
+- [x] GitHub integration guide (DONE - docs/GITHUB_CONFIGURATION_GUIDE.md)
+- [x] Installation guide (DONE - docs/INSTALLATION_GUIDE.md)
 - [ ] Template authoring tutorial
 - [ ] Advanced usage guide
 - [ ] FAQ section
@@ -360,9 +377,9 @@ This document tracks all planned features, improvements, and bug fixes organized
 ### Developer Documentation
 
 - [ ] Architecture overview
-- [ ] Contribution guide
+- [x] Contribution guide (DONE - CONTRIBUTING.md)
 - [ ] Development setup guide
-- [ ] Testing guide
+- [x] Testing guide (DONE - TESTING_GUIDE.md)
 - [ ] Release process
 
 ### Video Content
@@ -419,12 +436,14 @@ This document tracks all planned features, improvements, and bug fixes organized
 - [x] Add `--version` flag to CLI (DONE - working in CI/README)
 - [ ] Improve help text formatting consistency
 - [x] Add example config to repository (DONE - configs/juleson.example.yaml)
-- [ ] Create CONTRIBUTING.md with detailed guidelines
+- [x] Create CONTRIBUTING.md with detailed guidelines (DONE)
 - [ ] Add badge to README for test coverage
 - [ ] Create issue templates for bugs and features
 - [ ] Add `.editorconfig` file
 - [ ] Create VS Code workspace settings
 - [ ] Add pre-commit hooks configuration (gofmt, golangci-lint)
+- [x] Create setup documentation (DONE - docs/SETUP_GUIDE.md)
+- [x] Create CLI reference (DONE - docs/CLI_REFERENCE.md)
 - [ ] Create FAQ document
 
 ---
@@ -512,8 +531,8 @@ Ideas to explore but not yet committed to roadmap:
 
 ---
 
-**Last Updated**: November 1, 2025
-**Next Review**: December 1, 2025
+**Last Updated**: November 3, 2025
+**Next Review**: December 3, 2025
 **Maintained By**: Juleson Core Team
 
 ---

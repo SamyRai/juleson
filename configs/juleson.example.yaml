@@ -15,6 +15,36 @@ jules:
   # Number of retry attempts for failed requests
   retry_attempts: 3
 
+# GitHub Integration Configuration (Optional)
+github:
+  # Personal Access Token with repo, workflow, and read:org scopes
+  # Generate at: https://github.com/settings/tokens
+  # Can be set via GITHUB_TOKEN environment variable
+  token: ""
+
+  # Default organization for repository operations
+  # Can be set via GITHUB_DEFAULT_ORG environment variable
+  default_org: ""
+
+  # Pull Request settings
+  pr:
+    # Default merge method: merge, squash, or rebase
+    default_merge_method: "squash"
+
+    # Automatically delete branch after merge
+    auto_delete_branch: true
+
+  # Repository discovery settings
+  discovery:
+    # Enable automatic repository discovery
+    enabled: true
+
+    # Use git remote URL for repository detection
+    use_git_remote: true
+
+    # Cache TTL for repository metadata
+    cache_ttl: "5m"
+
 # MCP (Model Context Protocol) Configuration
 mcp:
   server:

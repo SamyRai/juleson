@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  juleson:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: juleson
+    environment:
+      - JULES_API_KEY=${JULES_API_KEY}
+      - JULES_BASE_URL=https://jules.googleapis.com/v1alpha
+      - JULES_LOG_LEVEL=info
+    volumes:
+      - .:/workspace
+      - ./configs:/home/juleson/configs
+    working_dir: /workspace
+    command: ["./juleson", "analyze", "/workspace"]
+    networks:
+      - juleson-network
+
+  juleson-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: juleson-mcp
+    environment:
+      - JULES_API_KEY=${JULES_API_KEY}
+      - JULES_BASE_URL=https://jules.googleapis.com/v1alpha
+      - JULES_LOG_LEVEL=info
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/home/juleson/configs
+    command: ["./juleson-mcp"]
+    networks:
+      - juleson-network
+    restart: unless-stopped
+
+networks:
+  juleson-network:
+    driver: bridge
+
+volumes:
+  workspace:
+    driver: local

@@ -18,7 +18,7 @@ func TestServerE2EWithCommandTransport(t *testing.T) {
 	if binaryPath == "" {
 		// Try common locations
 		for _, path := range []string{
-			"../../bin/juleson-mcp",
+			"../bin/juleson-mcp",
 			"./bin/juleson-mcp",
 			"juleson-mcp",
 		} {
@@ -37,7 +37,7 @@ func TestServerE2EWithCommandTransport(t *testing.T) {
 
 	// Create a command transport like VSCode would
 	cmd := exec.Command(binaryPath)
-	cmd.Dir = "../../" // Run from project root
+	// Don't change directory - run from current directory
 	transport := &mcp.CommandTransport{Command: cmd}
 
 	// Create client
