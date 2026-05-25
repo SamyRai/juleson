@@ -115,7 +115,7 @@ sudo mv juleson jules-mcp /usr/local/bin/
 sudo chmod +x /usr/local/bin/juleson /usr/local/bin/jules-mcp
 ```
 
-### Windows (x86_64)
+### Windows (x86_64 and ARM64)
 
 ```powershell
 # Download binaries
@@ -137,6 +137,9 @@ Expand-Archive -Path "jules-mcp.zip" -DestinationPath "C:\Program Files\juleson"
 juleson --version
 jules-mcp --version
 ```
+
+On Windows ARM64, use `juleson-windows-arm64.zip` and
+`jules-mcp-windows-arm64.zip`.
 
 ## Method 2: Go Install
 

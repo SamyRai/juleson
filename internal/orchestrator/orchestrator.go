@@ -28,7 +28,7 @@ type Config struct {
 func DefaultConfig(version, buildDate, gitCommit string) *Config {
 	return &Config{
 		BinaryCLI:    "juleson",
-		BinaryMCP:    "juleson-mcp",
+		BinaryMCP:    "jules-mcp",
 		BinDir:       "bin",
 		CmdCLIDir:    "cmd/juleson",
 		CmdMCPDir:    "cmd/jules-mcp",

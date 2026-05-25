@@ -121,6 +121,7 @@ func TestReleaseWorkflowPublishesInstallAssets(t *testing.T) {
 		"jules-mcp-${OS}-${ARCH}.tar.gz",
 		"juleson-${OS}-${ARCH}.zip",
 		"jules-mcp-${OS}-${ARCH}.zip",
+		"- goos: windows\n            goarch: arm64",
 		"github.com/SamyRai/juleson@${{ needs.validate.outputs.version }}",
 		"if: github.event_name == 'workflow_dispatch'",
 	} {

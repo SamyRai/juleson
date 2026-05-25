@@ -71,7 +71,7 @@ See [`templates/`](../templates/README.md) for template documentation.
 Juleson/
 ├── cmd/                          # Application entry points
 │   ├── juleson/                 # CLI tool
-│   └── juleson-mcp/             # MCP server
+│   └── jules-mcp/               # MCP server
 ├── internal/                     # Core packages
 │   ├── events/                  # Event-driven architecture
 │   ├── jules/                   # Jules API client

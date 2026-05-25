@@ -32,9 +32,14 @@ if ($Help) {
 if ([string]::IsNullOrWhiteSpace($Version) -or [string]::IsNullOrWhiteSpace($InstallDir) -or [string]::IsNullOrWhiteSpace($Repo)) {
     throw "Version, install directory, and repository must be non-empty."
 }
+$installRoot = [System.IO.Path]::GetPathRoot($InstallDir)
+if ($InstallDir -ne $installRoot) {
+    $InstallDir = $InstallDir.TrimEnd('\', '/')
+}
 
 $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     "AMD64" { "amd64" }
+    "ARM64" { "arm64" }
     default { throw "Unsupported Windows architecture: $env:PROCESSOR_ARCHITECTURE" }
 }
 

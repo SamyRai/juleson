@@ -213,7 +213,7 @@ func buildProjectHandler(ctx context.Context, req *mcp.CallToolRequest, input Bu
 	// Build MCP
 	if buildMCP {
 		totalCount++
-		config := build.DefaultConfig("juleson-mcp", "./cmd/jules-mcp")
+		config := build.DefaultConfig("jules-mcp", "./cmd/jules-mcp")
 		config.Version = input.Version
 		config.GOOS = input.GOOS
 		config.GOARCH = input.GOARCH
@@ -533,7 +533,7 @@ func buildReleaseHandler(ctx context.Context, req *mcp.CallToolRequest, input Bu
 			path string
 		}{
 			{"juleson", "./cmd/juleson"},
-			{"juleson-mcp", "./cmd/jules-mcp"},
+			{"jules-mcp", "./cmd/jules-mcp"},
 		} {
 			totalCount++
 

@@ -120,7 +120,7 @@ binary/script boundary
 
 Current E2E coverage includes:
 
-- `internal/mcp/server_e2e_test.go`, which builds a temporary `juleson-mcp`
+- `internal/mcp/server_e2e_test.go`, which builds a temporary `jules-mcp`
   binary when `JULESON_MCP_BINARY` is not set, connects through MCP command
   transport, and verifies tools, prompts, and resources.
 - `scripts/install_test.go`, which serves local fake release archives and runs

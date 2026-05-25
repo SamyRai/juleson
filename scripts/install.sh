@@ -52,6 +52,9 @@ if [ -z "$version" ] || [ -z "$install_dir" ] || [ -z "$repo" ]; then
 	echo "version, install directory, and repository must be non-empty" >&2
 	exit 2
 fi
+if [ "$install_dir" != "/" ]; then
+	install_dir="${install_dir%/}"
+fi
 
 require_cmd() {
 	if ! command -v "$1" >/dev/null 2>&1; then

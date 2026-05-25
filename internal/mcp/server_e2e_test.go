@@ -97,15 +97,15 @@ func resolveMCPBinary(t *testing.T, ctx context.Context) string {
 
 	root := repoRoot(t)
 	for _, path := range []string{
-		filepath.Join(root, "bin", "juleson-mcp"),
-		filepath.Join(root, "juleson-mcp"),
+		filepath.Join(root, "bin", "jules-mcp"),
+		filepath.Join(root, "jules-mcp"),
 	} {
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}
 
-	binaryPath := filepath.Join(t.TempDir(), "juleson-mcp")
+	binaryPath := filepath.Join(t.TempDir(), "jules-mcp")
 	if os.Getenv("GOOS") == "windows" {
 		binaryPath += ".exe"
 	}
@@ -113,7 +113,7 @@ func resolveMCPBinary(t *testing.T, ctx context.Context) string {
 	buildCmd := exec.CommandContext(ctx, "go", "build", "-o", binaryPath, "./cmd/jules-mcp")
 	buildCmd.Dir = root
 	if output, err := buildCmd.CombinedOutput(); err != nil {
-		t.Fatalf("build juleson-mcp E2E binary: %v\n%s", err, output)
+		t.Fatalf("build jules-mcp E2E binary: %v\n%s", err, output)
 	}
 	return binaryPath
 }

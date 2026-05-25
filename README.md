@@ -32,7 +32,7 @@ Juleson bridges your development workflow with Google's Jules AI agent, providin
 Juleson/
 ├── cmd/                          # Application entry points
 │   ├── juleson/                 # CLI tool for direct usage
-│   ├── juleson-mcp/             # MCP server for AI assistants
+│   ├── jules-mcp/               # MCP server for AI assistants
 │   └── orchestrator/            # Build orchestrator
 ├── internal/
 │   ├── agent/                   # 🤖 Intelligent AI Agent System
@@ -321,7 +321,7 @@ go build -o bin/orchestrator ./cmd/orchestrator
 
 # Verify installation
 juleson --version
-juleson-mcp --version
+jules-mcp --version
 ```
 
 ## 📖 **Usage**
@@ -396,7 +396,7 @@ juleson template create my-template refactoring "Description" # Create custom te
 Start the MCP server for integration with AI assistants:
 
 ```bash
-./bin/juleson-mcp
+./bin/jules-mcp
 ```
 
 #### **Configure with Claude Desktop**
@@ -407,7 +407,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "Juleson": {
-      "command": "/absolute/path/to/Juleson/bin/juleson-mcp",
+      "command": "/absolute/path/to/Juleson/bin/jules-mcp",
       "env": {
         "JULES_API_KEY": "your-api-key"
       }
@@ -424,7 +424,7 @@ Add to Cursor settings JSON:
 {
   "mcp.servers": {
     "Juleson": {
-      "command": "/absolute/path/to/Juleson/bin/juleson-mcp",
+      "command": "/absolute/path/to/Juleson/bin/jules-mcp",
       "env": {
         "JULES_API_KEY": "your-api-key"
       }
