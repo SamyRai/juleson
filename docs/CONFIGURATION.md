@@ -88,7 +88,10 @@ set in `juleson.yaml`.
 ## Validation
 
 `juleson` uses optional config loading for local commands. Commands that call the
-Jules API still require `JULES_API_KEY` or `jules.api_key`.
+Jules API still require `JULES_API_KEY` or `jules.api_key`. You can validate
+the current configuration state safely using `juleson config validate`, which
+reports missing credentials as warnings and validates configuration fields like
+MCP ports and automation concurrency constraints without exposing secret values.
 
 `jules-mcp` starts with minimal config when the Jules API key is missing. Tools
 that require Jules, GitHub, or Gemini configuration are skipped or fail with a

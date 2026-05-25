@@ -107,4 +107,5 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 	a.rootCmd.AddCommand(commands.NewAgentCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewDevCommand())
 	a.rootCmd.AddCommand(commands.NewOfficialCommand())
+	a.rootCmd.AddCommand(commands.NewConfigCommand(a.container.Config()))
 }

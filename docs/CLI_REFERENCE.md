@@ -22,6 +22,7 @@ Available commands:
 | `ai-orchestrate` | Let Gemini plan and run a multi-step workflow |
 | `analyze` | Analyze project structure and context |
 | `completion` | Generate shell completion scripts |
+| `config` | Manage Juleson configuration |
 | `dev` | Build, test, lint, format, and release helpers |
 | `execute` | Execute templates and automation tasks |
 | `github` | Manage GitHub integration |
@@ -36,11 +37,16 @@ Available commands:
 | `template` | Manage templates |
 | `version` | Print version information |
 
-## Setup
+## Config And Setup
 
 ```bash
+juleson config validate
 juleson setup [flags]
 ```
+
+`config validate` validates the effective configuration and checks for hard errors
+(e.g., invalid port or concurrency limits) and reports missing credentials as warnings.
+It never prints API keys or other secrets to output.
 
 Flags:
 

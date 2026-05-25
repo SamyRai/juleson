@@ -100,16 +100,22 @@ type TemplatesConfig struct {
 
 // Load loads configuration from file and environment variables
 func Load() (*Config, error) {
-	return load(true)
+	return load(true, true)
 }
 
 // LoadOptional loads configuration without requiring a Jules API key.
 // Commands that need Jules API access should still validate credentials before use.
 func LoadOptional() (*Config, error) {
-	return load(false)
+	return load(false, true)
 }
 
-func load(requireJulesAPIKey bool) (*Config, error) {
+// LoadForValidation loads configuration without semantic validation so the
+// config validate command can report all findings itself.
+func LoadForValidation() (*Config, error) {
+	return load(false, false)
+}
+
+func load(requireJulesAPIKey bool, validateConfig bool) (*Config, error) {
 	// Load .env file from multiple possible locations
 	loadEnvFiles()
 
@@ -142,13 +148,28 @@ func load(requireJulesAPIKey bool) (*Config, error) {
 	// Expand environment variables in paths
 	config.Templates.CustomPath = os.ExpandEnv(config.Templates.CustomPath)
 	config.Templates.BuiltinPath = os.ExpandEnv(config.Templates.BuiltinPath)
+	applyCredentialFallbacks(&config)
 
 	// Validate configuration
-	if err := validate(&config, requireJulesAPIKey); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	if validateConfig {
+		if err := validate(&config, requireJulesAPIKey); err != nil {
+			return nil, fmt.Errorf("configuration validation failed: %w", err)
+		}
 	}
 
 	return &config, nil
+}
+
+func applyCredentialFallbacks(config *Config) {
+	if config.Jules.APIKey == "" {
+		config.Jules.APIKey = os.Getenv("JULES_API_KEY")
+	}
+	if config.GitHub.Token == "" {
+		config.GitHub.Token = os.Getenv("GITHUB_TOKEN")
+	}
+	if config.Gemini.APIKey == "" {
+		config.Gemini.APIKey = os.Getenv("GEMINI_API_KEY")
+	}
 }
 
 // loadEnvFiles loads .env files from multiple possible locations
@@ -211,13 +232,8 @@ func setDefaults() {
 
 // validate validates the configuration
 func validate(config *Config, requireJulesAPIKey bool) error {
-	if config.Jules.APIKey == "" {
-		// Try to get from environment variable as fallback
-		if apiKey := os.Getenv("JULES_API_KEY"); apiKey != "" {
-			config.Jules.APIKey = apiKey
-		} else if requireJulesAPIKey {
-			return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
-		}
+	if config.Jules.APIKey == "" && requireJulesAPIKey {
+		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
 	}
 
 	if config.MCP.Server.Port <= 0 || config.MCP.Server.Port > 65535 {
