@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -196,7 +197,7 @@ func (suite *PatchesTestSuite) TestApplyGitPatch() {
 	assert.Contains(suite.T(), files, "test.txt")
 	content, err := os.ReadFile(testFile)
 	require.NoError(suite.T(), err)
-	assert.Equal(suite.T(), "line 1\nline two\nline 3\n", string(content))
+	assert.Equal(suite.T(), "line 1\nline two\nline 3\n", strings.ReplaceAll(string(content), "\r\n", "\n"))
 }
 
 func (suite *PatchesTestSuite) TestApplyActivityPatches() {
