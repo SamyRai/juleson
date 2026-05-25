@@ -15,6 +15,8 @@ permissions:
   contents: write # For creating releases and tags
   packages: write # For publishing Docker images
   id-token: write # For Go module publishing and attestations
+  attestations: write # For publishing artifact attestations
+  artifact-metadata: write # For artifact metadata storage records
 
 env:
   GO_VERSION: "1.23"
@@ -264,7 +266,13 @@ jobs:
           artifact-name: sbom-${{ needs.validate.outputs.version }}
           output-file: ./sbom.json
 
+      - name: Download linux amd64 artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: binaries-linux-amd64
+          path: dist/
+
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest@v4
         with:
           subject-path: "dist/juleson-linux-amd64,dist/jules-mcp-linux-amd64"
