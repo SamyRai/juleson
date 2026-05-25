@@ -11,6 +11,9 @@ import (
 	"github.com/SamyRai/juleson/pkg/jules"
 )
 
+// AIOrchestrator is a legacy compatibility surface. New CLI and MCP workflows
+// should use internal/orchestration.Runtime and its AIWorkflowRunner.
+//
 // AIOrchestrator uses Gemini AI to intelligently orchestrate complex workflows
 // The AI decides:
 // - What tasks to execute and in what order

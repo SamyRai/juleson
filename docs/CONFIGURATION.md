@@ -61,6 +61,7 @@ automation:
   strategies: ["modular", "layered", "microservices"]
   max_concurrent_tasks: 5
   task_timeout: "300s"
+  checkpoint_path: "./data/checkpoints"
 
 projects:
   default_path: "./projects"
@@ -98,6 +99,11 @@ MCP ports and automation concurrency constraints without exposing secret values.
 that require Jules, GitHub, or Gemini configuration are skipped or fail with a
 credential error. GitHub and Gemini MCP tool registration is based on values in
 the loaded config object.
+
+Agent and AI orchestration checkpoints are written as local JSON files under
+`automation.checkpoint_path`. The default is `./data/checkpoints`; set this to a
+project-specific or user-specific directory if multiple workspaces share the
+same working directory.
 
 The Go SDK in `pkg/jules` does not load this configuration directly. Applications
 pass credentials and options explicitly with `jules.NewClient` and client

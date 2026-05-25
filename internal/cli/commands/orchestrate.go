@@ -5,16 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/automation"
-	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/orchestration"
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
-	"github.com/SamyRai/juleson/internal/services"
 
 	"github.com/spf13/cobra"
 )
 
 // NewOrchestrateCommand creates the orchestrate command for multi-task workflows
-func NewOrchestrateCommand(cfg *config.Config) *cobra.Command {
+func NewOrchestrateCommand(initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "orchestrate",
 		Short: "Orchestrate complex multi-task workflows in a single session",
@@ -31,15 +29,15 @@ This approach is much more efficient than creating separate sessions for each ta
 	}
 
 	// Add workflow presets
-	cmd.AddCommand(newOrchestrateAPICommand(cfg))
-	cmd.AddCommand(newOrchestrateMicroservicesCommand(cfg))
-	cmd.AddCommand(newOrchestrateCustomCommand(cfg))
+	cmd.AddCommand(newOrchestrateAPICommand(initializeRuntime))
+	cmd.AddCommand(newOrchestrateMicroservicesCommand(initializeRuntime))
+	cmd.AddCommand(newOrchestrateCustomCommand())
 
 	return cmd
 }
 
 // newOrchestrateAPICommand creates command for API modernization workflow
-func newOrchestrateAPICommand(cfg *config.Config) *cobra.Command {
+func newOrchestrateAPICommand(initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	var sourceID string
 	var autoApprove bool
 
@@ -68,7 +66,7 @@ Phase 4: DevOps (30 min)
 
 Total estimated duration: 2h 45min in a single session!`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAPIModernizationWorkflow(cfg, sourceID, autoApprove)
+			return runAPIModernizationWorkflow(initializeRuntime, sourceID, autoApprove)
 		},
 	}
 
@@ -80,7 +78,7 @@ Total estimated duration: 2h 45min in a single session!`,
 }
 
 // newOrchestrateMicroservicesCommand creates command for microservices migration
-func newOrchestrateMicroservicesCommand(cfg *config.Config) *cobra.Command {
+func newOrchestrateMicroservicesCommand(initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	var sourceID string
 	var autoApprove bool
 
@@ -106,7 +104,7 @@ Phase 3: Data Migration (1 hour)
 
 Total estimated duration: 3h 45min in a single session!`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runMicroservicesMigrationWorkflow(cfg, sourceID, autoApprove)
+			return runMicroservicesMigrationWorkflow(initializeRuntime, sourceID, autoApprove)
 		},
 	}
 
@@ -118,7 +116,7 @@ Total estimated duration: 3h 45min in a single session!`,
 }
 
 // newOrchestrateCustomCommand creates command for custom workflows
-func newOrchestrateCustomCommand(cfg *config.Config) *cobra.Command {
+func newOrchestrateCustomCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "custom [workflow-file]",
 		Short: "Execute a custom workflow from YAML file",
@@ -145,21 +143,21 @@ The workflow file should define phases and tasks:
 	return cmd
 }
 
-func runAPIModernizationWorkflow(cfg *config.Config, sourceID string, autoApprove bool) error {
+func runAPIModernizationWorkflow(initializeRuntime func() (*orchestration.Runtime, error), sourceID string, autoApprove bool) error {
 	ctx := context.Background()
 
-	// Define API Modernization workflow
-	workflow := &automation.WorkflowDefinition{
+	workflow := domain.Workflow{
 		Name:        "API Modernization",
 		Description: "Modernize legacy API with authentication, testing, and CI/CD",
 		MaxDuration: 4 * time.Hour,
-		Phases: []automation.Phase{
+		Phases: []domain.Phase{
 			{
 				Name:        "Foundation",
 				Description: "Set up project structure and dependencies",
 				Timeout:     45 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "Project Analysis & Planning",
 						Name:        "Project Analysis & Planning",
 						Description: "Analyze API and create modernization plan",
 						Prompt: `Analyze the current API structure and create a comprehensive modernization plan:
@@ -171,8 +169,7 @@ func runAPIModernizationWorkflow(cfg *config.Config, sourceID string, autoApprov
 5. List all required dependencies and updates
 
 Provide a detailed plan with estimated effort for each component.`,
-						WaitForPlan: true,
-						AutoApprove: autoApprove,
+						RequiresApproval: true,
 					},
 				},
 			},
@@ -180,8 +177,9 @@ Provide a detailed plan with estimated effort for each component.`,
 				Name:        "Core Implementation",
 				Description: "Implement authentication and refactor API",
 				Timeout:     90 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "JWT Authentication",
 						Name:        "JWT Authentication",
 						Description: "Implement JWT-based authentication system",
 						Prompt: `Implement a complete JWT authentication system:
@@ -194,10 +192,9 @@ Provide a detailed plan with estimated effort for each component.`,
 6. Implement logout and token revocation
 
 Ensure all security best practices are followed.`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 					{
+						ID:          "API Endpoint Refactoring",
 						Name:        "API Endpoint Refactoring",
 						Description: "Refactor existing endpoints",
 						Prompt: `Refactor all API endpoints to use the new authentication system:
@@ -208,8 +205,6 @@ Ensure all security best practices are followed.`,
 4. Add request/response logging
 5. Update endpoint documentation
 6. Ensure backward compatibility where possible`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 				},
 			},
@@ -217,8 +212,9 @@ Ensure all security best practices are followed.`,
 				Name:        "Quality Assurance",
 				Description: "Add testing and documentation",
 				Timeout:     60 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "Comprehensive Testing",
 						Name:        "Comprehensive Testing",
 						Description: "Add unit, integration, and e2e tests",
 						Prompt: `Create a comprehensive test suite:
@@ -231,10 +227,9 @@ Ensure all security best practices are followed.`,
 6. Achieve >80% code coverage
 
 Ensure tests are maintainable and well-documented.`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 					{
+						ID:          "API Documentation",
 						Name:        "API Documentation",
 						Description: "Generate comprehensive documentation",
 						Prompt: `Generate complete API documentation:
@@ -245,8 +240,6 @@ Ensure tests are maintainable and well-documented.`,
 4. Create migration guide from old API
 5. Add troubleshooting section
 6. Include code samples in multiple languages`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 				},
 			},
@@ -254,8 +247,9 @@ Ensure tests are maintainable and well-documented.`,
 				Name:        "DevOps Setup",
 				Description: "Configure CI/CD and monitoring",
 				Timeout:     45 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "CI/CD Pipeline",
 						Name:        "CI/CD Pipeline",
 						Description: "Set up automated testing and deployment",
 						Prompt: `Create a complete CI/CD pipeline using GitHub Actions:
@@ -268,10 +262,9 @@ Ensure tests are maintainable and well-documented.`,
 6. Implement rollback mechanism
 
 Ensure the pipeline is fast and reliable.`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 					{
+						ID:          "Monitoring & Observability",
 						Name:        "Monitoring & Observability",
 						Description: "Add logging, metrics, and health checks",
 						Prompt: `Implement comprehensive monitoring and observability:
@@ -284,24 +277,9 @@ Ensure the pipeline is fast and reliable.`,
 6. Create dashboards for key metrics
 
 Make the system observable and debuggable.`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 				},
 			},
-		},
-		OnPhaseComplete: func(phaseIndex int, result automation.PhaseResult) error {
-			fmt.Printf("\n✅ Phase %d completed: %s\n", phaseIndex+1, result.PhaseName)
-			fmt.Printf("   Duration: %v\n", result.Duration)
-			fmt.Printf("   Tasks: %d\n", len(result.Tasks))
-			return nil
-		},
-		OnWorkflowComplete: func(result automation.WorkflowResult) error {
-			fmt.Printf("\n🎉 Workflow completed successfully!\n")
-			fmt.Printf("   Total duration: %v\n", result.TotalDuration)
-			fmt.Printf("   Phases: %d\n", result.TotalPhases)
-			fmt.Printf("   Session: %s\n", result.SessionID)
-			return nil
 		},
 	}
 
@@ -311,24 +289,24 @@ Make the system observable and debuggable.`,
 	fmt.Printf("Source: %s\n", sourceID)
 	fmt.Printf("Auto-approve: %v\n\n", autoApprove)
 
-	return runDomainWorkflow(ctx, cfg, sourceID, autoApprove, workflow)
+	return runDomainWorkflow(ctx, initializeRuntime, sourceID, autoApprove, workflow)
 }
 
-func runMicroservicesMigrationWorkflow(cfg *config.Config, sourceID string, autoApprove bool) error {
+func runMicroservicesMigrationWorkflow(initializeRuntime func() (*orchestration.Runtime, error), sourceID string, autoApprove bool) error {
 	ctx := context.Background()
 
-	// Define Microservices Migration workflow
-	workflow := &automation.WorkflowDefinition{
+	workflow := domain.Workflow{
 		Name:        "Microservices Migration",
 		Description: "Migrate monolith to microservices architecture",
 		MaxDuration: 5 * time.Hour,
-		Phases: []automation.Phase{
+		Phases: []domain.Phase{
 			{
 				Name:        "Architecture Analysis",
 				Description: "Analyze current architecture and plan decomposition",
 				Timeout:     60 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "Architecture Analysis",
 						Name:        "Architecture Analysis",
 						Description: "Analyze monolith and create migration plan",
 						Prompt: `Perform comprehensive architecture analysis and create microservices decomposition plan:
@@ -342,8 +320,7 @@ func runMicroservicesMigrationWorkflow(cfg *config.Config, sourceID string, auto
 7. Create phased migration strategy with minimal risk
 
 Provide detailed architecture diagrams and migration roadmap.`,
-						WaitForPlan: true,
-						AutoApprove: autoApprove,
+						RequiresApproval: true,
 					},
 				},
 			},
@@ -351,8 +328,9 @@ Provide detailed architecture diagrams and migration roadmap.`,
 				Name:        "First Service Extraction",
 				Description: "Extract user service as proof of concept",
 				Timeout:     150 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "User Service Extraction",
 						Name:        "User Service Extraction",
 						Description: "Extract user management into microservice",
 						Prompt: `Extract user management into a separate microservice:
@@ -366,10 +344,9 @@ Provide detailed architecture diagrams and migration roadmap.`,
 7. Create data migration scripts
 
 Ensure the service is production-ready and well-tested.`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 					{
+						ID:          "Service Communication",
 						Name:        "Service Communication",
 						Description: "Implement inter-service communication",
 						Prompt: `Implement robust communication between services:
@@ -383,8 +360,6 @@ Ensure the service is production-ready and well-tested.`,
 7. Implement distributed tracing
 
 Make the system resilient to failures.`,
-						WaitForPlan: false,
-						AutoApprove: true,
 					},
 				},
 			},
@@ -392,8 +367,9 @@ Make the system resilient to failures.`,
 				Name:        "Data Migration",
 				Description: "Migrate data and ensure consistency",
 				Timeout:     90 * time.Minute,
-				Tasks: []automation.Task{
+				Tasks: []domain.Task{
 					{
+						ID:          "Database Splitting",
 						Name:        "Database Splitting",
 						Description: "Split databases and migrate data",
 						Prompt: `Implement database per service pattern:
@@ -407,22 +383,10 @@ Make the system resilient to failures.`,
 7. Add data synchronization monitoring
 
 Ensure data integrity throughout the migration.`,
-						WaitForPlan: true,
-						AutoApprove: autoApprove,
+						RequiresApproval: true,
 					},
 				},
 			},
-		},
-		OnPhaseComplete: func(phaseIndex int, result automation.PhaseResult) error {
-			fmt.Printf("\n✅ Phase %d completed: %s\n", phaseIndex+1, result.PhaseName)
-			fmt.Printf("   Duration: %v\n", result.Duration)
-			return nil
-		},
-		OnWorkflowComplete: func(result automation.WorkflowResult) error {
-			fmt.Printf("\n🎉 Microservices migration workflow completed!\n")
-			fmt.Printf("   Total duration: %v\n", result.TotalDuration)
-			fmt.Printf("   Session: %s\n", result.SessionID)
-			return nil
 		},
 	}
 
@@ -430,16 +394,14 @@ Ensure data integrity throughout the migration.`,
 	fmt.Println("============================================")
 	fmt.Printf("Source: %s\n\n", sourceID)
 
-	return runDomainWorkflow(ctx, cfg, sourceID, autoApprove, workflow)
+	return runDomainWorkflow(ctx, initializeRuntime, sourceID, autoApprove, workflow)
 }
 
-func runDomainWorkflow(ctx context.Context, cfg *config.Config, sourceID string, autoApprove bool, workflow *automation.WorkflowDefinition) error {
-	container := services.NewContainer(cfg)
-	runtime, err := container.OrchestrationRuntime()
+func runDomainWorkflow(ctx context.Context, initializeRuntime func() (*orchestration.Runtime, error), sourceID string, autoApprove bool, workflow domain.Workflow) error {
+	runtime, err := initializeRuntime()
 	if err != nil {
 		return err
 	}
-	domainWorkflow := workflowToDomain(workflow)
 	execution := domain.ExecutionContext{
 		Goal: domain.Goal{
 			ID:          workflow.Name,
@@ -450,7 +412,7 @@ func runDomainWorkflow(ctx context.Context, cfg *config.Config, sourceID string,
 		},
 		ApprovalPolicy: domain.ApprovalPolicy{AutoApprove: autoApprove},
 	}
-	result, err := runtime.SessionWorkflowRunner().Run(ctx, domainWorkflow, execution)
+	result, err := runtime.SessionWorkflowRunner().Run(ctx, workflow, execution)
 	if err != nil {
 		return fmt.Errorf("workflow failed: %w", err)
 	}
@@ -468,95 +430,4 @@ func runDomainWorkflow(ctx context.Context, cfg *config.Config, sourceID string,
 		fmt.Printf("  %d. %s %s (%v)\n", i+1, status, phase.PhaseName, phase.Duration)
 	}
 	return nil
-}
-
-func workflowToDomain(workflow *automation.WorkflowDefinition) domain.Workflow {
-	phases := make([]domain.Phase, 0, len(workflow.Phases))
-	for _, phase := range workflow.Phases {
-		tasks := make([]domain.Task, 0, len(phase.Tasks))
-		for _, task := range phase.Tasks {
-			tasks = append(tasks, domain.Task{
-				ID:               task.Name,
-				Name:             task.Name,
-				Description:      task.Description,
-				Prompt:           task.Prompt,
-				RequiresApproval: task.WaitForPlan,
-				Retry:            task.Retry,
-				Timeout:          task.Timeout,
-			})
-		}
-		phases = append(phases, domain.Phase{
-			ID:              phase.Name,
-			Name:            phase.Name,
-			Description:     phase.Description,
-			Tasks:           tasks,
-			Parallel:        phase.Parallel,
-			ContinueOnError: phase.ContinueOnError,
-			Timeout:         phase.Timeout,
-			Prerequisites:   phase.Prerequisites,
-		})
-	}
-	return domain.Workflow{
-		Name:        workflow.Name,
-		Description: workflow.Description,
-		Phases:      phases,
-		MaxDuration: workflow.MaxDuration,
-	}
-}
-
-func monitorProgress(orchestrator *automation.SessionOrchestrator) {
-	for {
-		select {
-		case progress := <-orchestrator.ProgressChannel():
-			fmt.Printf("📊 [Phase %d/%d] %s (%.1f%%)\n",
-				progress.Phase+1,
-				progress.TotalPhases,
-				progress.Message,
-				progress.Progress,
-			)
-		case activity := <-orchestrator.ActivityChannel():
-			fmt.Printf("⚡ Activity: %s\n", activity.Message)
-		case err := <-orchestrator.ErrorChannel():
-			fmt.Printf("❌ Error: %v\n", err)
-		}
-	}
-}
-
-func displayExecutionSummary(orchestrator *automation.SessionOrchestrator) {
-	log := orchestrator.GetExecutionLog()
-
-	fmt.Println("\n📋 Execution Summary")
-	fmt.Println("===================")
-	fmt.Printf("Session ID: %s\n", orchestrator.GetSessionID())
-	fmt.Printf("Total tasks: %d\n", len(log))
-
-	successCount := 0
-	totalDuration := time.Duration(0)
-
-	for _, record := range log {
-		if record.Success {
-			successCount++
-		}
-		totalDuration += record.Duration
-	}
-
-	fmt.Printf("Successful: %d/%d\n", successCount, len(log))
-	fmt.Printf("Total duration: %v\n", totalDuration)
-
-	fmt.Println("\nTask Details:")
-	for i, record := range log {
-		status := "✅"
-		if !record.Success {
-			status = "❌"
-		}
-		fmt.Printf("  %d. %s %s (%v)\n", i+1, status, record.TaskName, record.Duration)
-		if record.ArtifactCount > 0 {
-			fmt.Printf("     Artifacts: %d\n", record.ArtifactCount)
-		}
-		if record.Error != "" {
-			fmt.Printf("     Error: %s\n", record.Error)
-		}
-	}
-
-	fmt.Printf("\n💡 View session at: https://jules.google.com/session/%s\n", orchestrator.GetSessionID())
 }

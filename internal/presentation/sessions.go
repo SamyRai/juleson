@@ -3,9 +3,20 @@ package presentation
 import (
 	"fmt"
 	"strings"
-
-	"github.com/SamyRai/juleson/pkg/jules"
+	"time"
 )
+
+type SessionView struct {
+	ID                  string
+	Title               string
+	State               string
+	CreateTime          time.Time
+	UpdateTime          time.Time
+	Source              string
+	RequirePlanApproval bool
+	AutomationMode      string
+	OutputCount         int
+}
 
 // SessionFormatter formats session information
 type SessionFormatter struct{}
@@ -16,7 +27,7 @@ func NewSessionFormatter() *SessionFormatter {
 }
 
 // FormatList displays a list of sessions
-func (f *SessionFormatter) FormatList(sessions []jules.Session) string {
+func (f *SessionFormatter) FormatList(sessions []SessionView) string {
 	var sb strings.Builder
 
 	sb.WriteString("🔍 Listing Jules sessions...\n")
@@ -37,8 +48,8 @@ func (f *SessionFormatter) FormatList(sessions []jules.Session) string {
 		if !session.UpdateTime.IsZero() {
 			sb.WriteString(fmt.Sprintf("   Updated: %s\n", session.UpdateTime))
 		}
-		if session.SourceContext != nil && session.SourceContext.Source != "" {
-			sb.WriteString(fmt.Sprintf("   Source: %s\n", session.SourceContext.Source))
+		if session.Source != "" {
+			sb.WriteString(fmt.Sprintf("   Source: %s\n", session.Source))
 		}
 		if session.RequirePlanApproval {
 			sb.WriteString("   Plan Approval Required: Yes\n")
@@ -46,17 +57,17 @@ func (f *SessionFormatter) FormatList(sessions []jules.Session) string {
 		if session.AutomationMode != "" {
 			sb.WriteString(fmt.Sprintf("   Automation Mode: %s\n", session.AutomationMode))
 		}
-		if len(session.Outputs) > 0 {
-			sb.WriteString(fmt.Sprintf("   Outputs: %d\n", len(session.Outputs)))
+		if session.OutputCount > 0 {
+			sb.WriteString(fmt.Sprintf("   Outputs: %d\n", session.OutputCount))
 		}
 
 		// Status indicators
-		switch session.State {
-		case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
+		switch SessionStatusText(session.State) {
+		case "ACTIVE":
 			sb.WriteString("   ⚡ ACTIVE\n")
-		case jules.SessionStateCompleted:
+		case "COMPLETED":
 			sb.WriteString("   ✅ COMPLETED\n")
-		case jules.SessionStateFailed:
+		case "FAILED":
 			sb.WriteString("   ❌ FAILED\n")
 		}
 		sb.WriteString("\n")
@@ -66,7 +77,7 @@ func (f *SessionFormatter) FormatList(sessions []jules.Session) string {
 }
 
 // FormatStatus displays session status summary
-func (f *SessionFormatter) FormatStatus(sessions []jules.Session) string {
+func (f *SessionFormatter) FormatStatus(sessions []SessionView) string {
 	var sb strings.Builder
 
 	sb.WriteString("📊 Jules Session Status\n")
@@ -81,7 +92,7 @@ func (f *SessionFormatter) FormatStatus(sessions []jules.Session) string {
 	// Count sessions by state
 	stateCounts := make(map[string]int)
 	for _, session := range sessions {
-		stateCounts[string(session.State)]++
+		stateCounts[session.State]++
 	}
 
 	sb.WriteString(fmt.Sprintf("Total Sessions: %d\n\n", totalSessions))
@@ -90,22 +101,11 @@ func (f *SessionFormatter) FormatStatus(sessions []jules.Session) string {
 	sb.WriteString("Session States:\n")
 	for state, count := range stateCounts {
 		percentage := float64(count) / float64(totalSessions) * 100
-		var icon string
-		switch state {
-		case "IN_PROGRESS", "PLANNING":
-			icon = "⚡"
-		case "COMPLETED":
-			icon = "✅"
-		case "FAILED":
-			icon = "❌"
-		default:
-			icon = "📋"
-		}
-		sb.WriteString(fmt.Sprintf("  %s %s: %d (%.1f%%)\n", icon, state, count, percentage))
+		sb.WriteString(fmt.Sprintf("  %s %s: %d (%.1f%%)\n", SessionStatusIcon(state), state, count, percentage))
 	}
 
 	// Active sessions summary
-	activeCount := stateCounts["IN_PROGRESS"] + stateCounts["PLANNING"]
+	activeCount := stateCounts["IN_PROGRESS"] + stateCounts["PLANNING"] + stateCounts["QUEUED"]
 	if activeCount > 0 {
 		sb.WriteString(fmt.Sprintf("\n⚠️  %d session(s) are currently active/running\n", activeCount))
 	} else {
@@ -122,24 +122,45 @@ func (f *SessionFormatter) FormatStatus(sessions []jules.Session) string {
 
 		for i := 0; i < recentCount; i++ {
 			session := sessions[i]
-			var statusIcon string
-			switch session.State {
-			case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
-				statusIcon = "⚡"
-			case jules.SessionStateCompleted:
-				statusIcon = "✅"
-			case jules.SessionStateFailed:
-				statusIcon = "❌"
-			default:
-				statusIcon = "📋"
-			}
 			sessionIDShort := session.ID
 			if len(sessionIDShort) > 12 {
 				sessionIDShort = sessionIDShort[:12]
 			}
-			sb.WriteString(fmt.Sprintf("  %s %s - %s (%s)\n", statusIcon, sessionIDShort, session.Title, session.State))
+			sb.WriteString(fmt.Sprintf("  %s %s - %s (%s)\n", SessionStatusIcon(session.State), sessionIDShort, session.Title, session.State))
 		}
 	}
 
 	return sb.String()
+}
+
+// SessionStatusIcon returns the presentation icon for a session state.
+func SessionStatusIcon(state string) string {
+	switch state {
+	case "IN_PROGRESS", "PLANNING", "QUEUED":
+		return "⚡"
+	case "AWAITING_PLAN_APPROVAL", "AWAITING_USER_FEEDBACK":
+		return "⏸"
+	case "COMPLETED":
+		return "✅"
+	case "FAILED":
+		return "❌"
+	default:
+		return "📋"
+	}
+}
+
+// SessionStatusText returns the display status bucket for a session state.
+func SessionStatusText(state string) string {
+	switch state {
+	case "IN_PROGRESS", "PLANNING", "QUEUED":
+		return "ACTIVE"
+	case "AWAITING_PLAN_APPROVAL", "AWAITING_USER_FEEDBACK":
+		return "NEEDS_USER_ACTION"
+	case "COMPLETED":
+		return "COMPLETED"
+	case "FAILED":
+		return "FAILED"
+	default:
+		return state
+	}
 }

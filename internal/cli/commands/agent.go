@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/orchestration"
 	"github.com/SamyRai/juleson/internal/orchestration/app"
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
-	"github.com/SamyRai/juleson/internal/services"
 	"github.com/spf13/cobra"
 )
 
 // NewAgentCommand creates the agent command
-func NewAgentCommand(cfg *config.Config) *cobra.Command {
+func NewAgentCommand(cfg *config.Config, initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Run the AI agent for automated development tasks",
@@ -34,14 +34,14 @@ Example:
   juleson agent execute "modernize API to OpenAPI 3.0" --dry-run`,
 	}
 
-	cmd.AddCommand(newAgentExecuteCommand(cfg))
-	cmd.AddCommand(newAgentStatusCommand(cfg))
+	cmd.AddCommand(newAgentExecuteCommand(initializeRuntime))
+	cmd.AddCommand(newAgentStatusCommand(cfg, initializeRuntime))
 
 	return cmd
 }
 
 // newAgentExecuteCommand creates the execute subcommand
-func newAgentExecuteCommand(cfg *config.Config) *cobra.Command {
+func newAgentExecuteCommand(initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	var (
 		sourceID    string
 		priority    string
@@ -90,8 +90,7 @@ Examples:
 				goalPriority = domain.PriorityMedium
 			}
 
-			container := services.NewContainer(cfg)
-			runtime, err := container.OrchestrationRuntime()
+			runtime, err := initializeRuntime()
 			if err != nil {
 				return fmt.Errorf("failed to create orchestration runtime: %w", err)
 			}
@@ -204,13 +203,12 @@ Examples:
 }
 
 // newAgentStatusCommand creates the status subcommand
-func newAgentStatusCommand(cfg *config.Config) *cobra.Command {
+func newAgentStatusCommand(cfg *config.Config, initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show agent status and capabilities",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			container := services.NewContainer(cfg)
-			runtime, err := container.OrchestrationRuntime()
+			runtime, err := initializeRuntime()
 			if err != nil {
 				return fmt.Errorf("failed to inspect orchestration runtime: %w", err)
 			}

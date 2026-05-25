@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/SamyRai/juleson/internal/analyzer"
-	"github.com/SamyRai/juleson/internal/automation"
+	"github.com/SamyRai/juleson/internal/presentation"
 	"github.com/SamyRai/juleson/internal/templates"
 )
 
@@ -64,7 +64,7 @@ func DisplayTemplateDetails(template *templates.Template) {
 }
 
 // DisplayExecutionResult displays execution results
-func DisplayExecutionResult(result *automation.ExecutionResult) {
+func DisplayExecutionResult(result *presentation.ExecutionResult) {
 	fmt.Println("🎯 Execution Results")
 	fmt.Println("====================")
 	fmt.Printf("Template: %s\n", result.TemplateName)

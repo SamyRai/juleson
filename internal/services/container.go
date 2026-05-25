@@ -168,10 +168,12 @@ func (c *Container) OrchestrationRuntime() (*orchestration.Runtime, error) {
 			Planner:         adapters.NewGeminiPlanner(c.geminiClientLocked()),
 			DecisionMaker:   adapters.NewGeminiDecisionMaker(c.geminiClientLocked()),
 			TaskExecutor:    adapters.NewJulesTaskExecutor(sessionGateway, sourceMatcher),
+			CheckpointStore: adapters.NewJSONCheckpointStore(c.config.Automation.CheckpointPath),
 			SessionGateway:  sessionGateway,
 			TemplateStore:   adapters.NewTemplateStoreAdapter(templateManager),
 			PromptRenderer:  adapters.NewPromptRendererAdapter(),
 			SourceMatcher:   sourceMatcher,
+			OutputWriter:    adapters.NewMarkdownOutputWriter(),
 			ProgressSink:    adapters.NoopProgressSink{},
 			Clock:           adapters.SystemClock{},
 		})

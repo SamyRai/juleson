@@ -83,6 +83,7 @@ type AutomationConfig struct {
 	Strategies         []string      `mapstructure:"strategies"`
 	MaxConcurrentTasks int           `mapstructure:"max_concurrent_tasks"`
 	TaskTimeout        time.Duration `mapstructure:"task_timeout"`
+	CheckpointPath     string        `mapstructure:"checkpoint_path"`
 }
 
 // ProjectsConfig contains project management settings
@@ -149,6 +150,7 @@ func load(requireJulesAPIKey bool, validateConfig bool) (*Config, error) {
 	// Expand environment variables in paths
 	config.Templates.CustomPath = os.ExpandEnv(config.Templates.CustomPath)
 	config.Templates.BuiltinPath = os.ExpandEnv(config.Templates.BuiltinPath)
+	config.Automation.CheckpointPath = os.ExpandEnv(config.Automation.CheckpointPath)
 	applyCredentialFallbacks(&config)
 
 	// Validate configuration
@@ -222,6 +224,7 @@ func setDefaults() {
 	viper.SetDefault("automation.strategies", []string{"modular", "layered", "microservices"})
 	viper.SetDefault("automation.max_concurrent_tasks", 5)
 	viper.SetDefault("automation.task_timeout", "300s")
+	viper.SetDefault("automation.checkpoint_path", "./data/checkpoints")
 
 	viper.SetDefault("projects.default_path", "./projects")
 	viper.SetDefault("projects.backup_enabled", true)
@@ -281,6 +284,7 @@ func (c *Config) Save() error {
 	viper.Set("automation.strategies", c.Automation.Strategies)
 	viper.Set("automation.max_concurrent_tasks", c.Automation.MaxConcurrentTasks)
 	viper.Set("automation.task_timeout", c.Automation.TaskTimeout.String())
+	viper.Set("automation.checkpoint_path", c.Automation.CheckpointPath)
 
 	viper.Set("projects.default_path", c.Projects.DefaultPath)
 	viper.Set("projects.backup_enabled", c.Projects.BackupEnabled)

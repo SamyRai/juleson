@@ -4,11 +4,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/orchestration"
 )
 
 func TestAgentExecuteRejectsInvalidStrictnessBeforeRuntime(t *testing.T) {
-	cmd := newAgentExecuteCommand(&config.Config{})
+	runtimeInitialized := false
+	cmd := newAgentExecuteCommand(func() (*orchestration.Runtime, error) {
+		runtimeInitialized = true
+		return nil, nil
+	})
 	cmd.SetArgs([]string{"inspect project safety", "--source", "test-source", "--strictness", "extreme"})
 
 	err := cmd.Execute()
@@ -17,5 +21,8 @@ func TestAgentExecuteRejectsInvalidStrictnessBeforeRuntime(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid --strictness") {
 		t.Fatalf("error = %q, want invalid strictness", err.Error())
+	}
+	if runtimeInitialized {
+		t.Fatal("runtime initialized before strictness validation")
 	}
 }

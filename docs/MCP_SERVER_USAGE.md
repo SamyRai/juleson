@@ -173,6 +173,10 @@ Registered when Gemini config is available:
 - `manage_github_project`
 - `synthesize_session_results`
 
+`orchestrate_workflow` dispatches supported steps to real handlers. Supported
+step tools are `analyze_project`, `execute_template`, and
+`create_github_issue`; unsupported step tools fail the workflow step.
+
 ## Resources And Prompts
 
 The server registers:

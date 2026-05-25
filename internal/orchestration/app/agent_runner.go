@@ -13,6 +13,16 @@ import (
 const defaultAgentMaxIterations = 20
 const defaultReviewStrictness = "medium"
 
+const (
+	agentAnalyzeNodeName         = "agent.analyze"
+	agentPlanNodeName            = "agent.plan"
+	agentOrderTasksNodeName      = "agent.orderTasks"
+	agentDryRunOrExecuteNodeName = "agent.maybeDryRunOrExecute"
+	agentExecuteTasksNodeName    = "agent.executeTasks"
+	agentReviewNodeName          = "agent.review"
+	agentCompleteNodeName        = "agent.complete"
+)
+
 type AgentRunOptions struct {
 	DryRun           bool
 	MaxIterations    int
@@ -64,85 +74,90 @@ func (r *AgentRunner) RunWithOptions(ctx context.Context, goal domain.Goal, opts
 	}
 
 	start := r.clock.Now()
-	result := &domain.Result{
-		Goal:  goal,
-		State: domain.StateAnalyzing,
-		Tasks: make([]domain.TaskResult, 0),
-	}
-
-	project, err := r.analyze(ctx, goal)
-	if err != nil {
-		execution := domain.ExecutionContext{
+	state := &appRunState{
+		goal:         goal,
+		agentOptions: opts,
+		startedAt:    start,
+		result: &domain.Result{
+			Goal:  goal,
+			State: domain.StateAnalyzing,
+			Tasks: make([]domain.TaskResult, 0),
+		},
+		execution: domain.ExecutionContext{
 			Goal:             goal,
-			Project:          project,
 			StartedAt:        start,
 			DryRun:           opts.DryRun,
 			ReviewStrictness: strictness,
-		}
-		return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+		},
 	}
 
-	result.State = domain.StatePlanning
+	graph, err := newAgentGraph(agentAnalyzeNodeName, map[string]graphNode{
+		agentAnalyzeNodeName:         r.agentAnalyzeNode,
+		agentPlanNodeName:            r.agentPlanNode,
+		agentOrderTasksNodeName:      r.agentOrderNode,
+		agentDryRunOrExecuteNodeName: r.agentDryRunOrExecuteNode,
+		agentExecuteTasksNodeName:    r.agentExecuteNode,
+		agentReviewNodeName:          r.agentReviewNode,
+		agentCompleteNodeName:        r.agentCompleteNode,
+	})
+	if err != nil {
+		return r.finishWithCheckpoint(ctx, state.result, start, domain.StateFailed, err, state.execution, "failed"), err
+	}
+
+	if err := graph.run(ctx, state); err != nil {
+		return r.finishWithCheckpoint(ctx, state.result, start, domain.StateFailed, err, state.execution, "failed"), err
+	}
+	return state.result, nil
+}
+
+func (r *AgentRunner) agentAnalyzeNode(ctx context.Context, state *appRunState) (string, error) {
+	project, err := r.analyze(ctx, state.goal)
+	if err != nil {
+		state.execution.Project = project
+		return "", err
+	}
+	state.project = project
+	state.execution.Project = project
+	return agentPlanNodeName, nil
+}
+
+func (r *AgentRunner) agentPlanNode(ctx context.Context, state *appRunState) (string, error) {
+	state.result.State = domain.StatePlanning
 	if err := reportProgress(ctx, r.deps.ProgressSink, domain.Progress{
 		State:     domain.StatePlanning,
 		Message:   "Planning",
 		Progress:  20,
 		Timestamp: r.clock.Now(),
 	}); err != nil {
-		execution := domain.ExecutionContext{
-			Goal:             goal,
-			Project:          project,
-			StartedAt:        start,
-			DryRun:           opts.DryRun,
-			ReviewStrictness: strictness,
-		}
-		return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+		return "", err
 	}
 
-	plan, err := r.deps.Planner.Plan(ctx, goal, project)
+	plan, err := r.deps.Planner.Plan(ctx, state.goal, state.project)
 	if err != nil {
-		wrapped := fmt.Errorf("plan goal: %w", err)
-		execution := domain.ExecutionContext{
-			Goal:             goal,
-			Project:          project,
-			StartedAt:        start,
-			DryRun:           opts.DryRun,
-			ReviewStrictness: strictness,
-		}
-		return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, wrapped, execution, "failed"), err
+		return "", fmt.Errorf("plan goal: %w", err)
 	}
-	result.Plan = plan
+	state.plan = plan
+	state.result.Plan = plan
+	state.execution.Plan = plan
+	return agentOrderTasksNodeName, nil
+}
 
-	ordered, err := r.scheduler.Order(plan.Tasks)
+func (r *AgentRunner) agentOrderNode(ctx context.Context, state *appRunState) (string, error) {
+	ordered, err := r.scheduler.Order(state.plan.Tasks)
 	if err != nil {
-		execution := domain.ExecutionContext{
-			Goal:             goal,
-			Project:          project,
-			Plan:             plan,
-			StartedAt:        start,
-			DryRun:           opts.DryRun,
-			ReviewStrictness: strictness,
-		}
-		return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+		return "", err
 	}
-	result.Plan.Tasks = ordered
-
-	execution := domain.ExecutionContext{
-		Goal:             goal,
-		Project:          project,
-		Plan:             result.Plan,
-		StartedAt:        start,
-		DryRun:           opts.DryRun,
-		ReviewStrictness: strictness,
-		ApprovalPolicy: domain.ApprovalPolicy{
-			RequirePlanApproval: true,
-		},
+	state.ordered = ordered
+	state.result.Plan.Tasks = ordered
+	state.execution.Plan = state.result.Plan
+	state.execution.ApprovalPolicy = domain.ApprovalPolicy{
+		RequirePlanApproval: true,
 	}
-	if err := r.saveCheckpoint(ctx, result, execution, "planned"); err != nil {
-		return r.finish(result, start, domain.StateFailed, err), err
+	if err := r.saveCheckpoint(ctx, state.result, state.execution, "planned"); err != nil {
+		return "", err
 	}
 
-	maxIterations := opts.MaxIterations
+	maxIterations := state.agentOptions.MaxIterations
 	if maxIterations == 0 {
 		maxIterations = r.deps.MaxIterations
 	}
@@ -150,91 +165,102 @@ func (r *AgentRunner) RunWithOptions(ctx context.Context, goal domain.Goal, opts
 		maxIterations = defaultAgentMaxIterations
 	}
 	if len(ordered) > maxIterations {
-		err := fmt.Errorf("max iterations (%d) reached", maxIterations)
-		return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+		return "", fmt.Errorf("max iterations (%d) reached", maxIterations)
 	}
+	return agentDryRunOrExecuteNodeName, nil
+}
 
-	if opts.DryRun {
-		result.Summary = fmt.Sprintf("Dry run planned %d task(s); no orchestration side effects were executed.", len(ordered))
-		result = r.finish(result, start, domain.StateComplete, nil)
-		if err := r.saveCheckpoint(ctx, result, execution, "complete"); err != nil {
-			return result, err
-		}
-		_ = reportProgress(ctx, r.deps.ProgressSink, domain.Progress{
-			State:          domain.StateComplete,
-			CompletedTasks: 0,
-			TotalTasks:     len(ordered),
-			Progress:       100,
-			Message:        "Dry run complete",
-			Timestamp:      r.clock.Now(),
-		})
-		return result, nil
+func (r *AgentRunner) agentDryRunOrExecuteNode(ctx context.Context, state *appRunState) (string, error) {
+	if !state.agentOptions.DryRun {
+		return agentExecuteTasksNodeName, nil
 	}
+	state.result.Summary = fmt.Sprintf("Dry run planned %d task(s); no orchestration side effects were executed.", len(state.ordered))
+	state.result = r.finish(state.result, state.startedAt, domain.StateComplete, nil)
+	if err := r.saveCheckpoint(ctx, state.result, state.execution, "complete"); err != nil {
+		return "", err
+	}
+	_ = reportProgress(ctx, r.deps.ProgressSink, domain.Progress{
+		State:          domain.StateComplete,
+		CompletedTasks: 0,
+		TotalTasks:     len(state.ordered),
+		Progress:       100,
+		Message:        "Dry run complete",
+		Timestamp:      r.clock.Now(),
+	})
+	return graphEndNode, nil
+}
 
-	for i, task := range ordered {
+func (r *AgentRunner) agentExecuteNode(ctx context.Context, state *appRunState) (string, error) {
+	for i, task := range state.ordered {
 		if err := ctx.Err(); err != nil {
-			return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+			return "", err
 		}
-		result.State = domain.StateExecuting
-		execution.Iteration = i + 1
-		execution.Completed = append([]domain.TaskResult(nil), result.Tasks...)
+		state.result.State = domain.StateExecuting
+		state.execution.Iteration = i + 1
+		state.execution.Completed = append([]domain.TaskResult(nil), state.result.Tasks...)
 		if err := reportProgress(ctx, r.deps.ProgressSink, domain.Progress{
 			State:          domain.StateExecuting,
 			CurrentTask:    task.Name,
 			CompletedTasks: i,
-			TotalTasks:     len(ordered),
-			Progress:       percent(i, len(ordered)),
+			TotalTasks:     len(state.ordered),
+			Progress:       percent(i, len(state.ordered)),
 			Message:        "Executing task",
 			Timestamp:      r.clock.Now(),
 		}); err != nil {
-			return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+			return "", err
 		}
 
-		taskResult, err := r.deps.TaskExecutor.ExecuteTask(ctx, task, execution)
+		taskResult, err := r.deps.TaskExecutor.ExecuteTask(ctx, task, state.execution)
 		if taskResult != nil {
-			result.Tasks = append(result.Tasks, *taskResult)
-			result.Artifacts = append(result.Artifacts, taskResult.Artifacts...)
+			state.result.Tasks = append(state.result.Tasks, *taskResult)
+			state.result.Artifacts = append(state.result.Artifacts, taskResult.Artifacts...)
 		}
-		execution.Completed = append([]domain.TaskResult(nil), result.Tasks...)
+		state.execution.Completed = append([]domain.TaskResult(nil), state.result.Tasks...)
 		if err != nil {
-			return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
+			return "", err
 		}
-		if err := r.saveCheckpoint(ctx, result, execution, "task"); err != nil {
-			return r.finish(result, start, domain.StateFailed, err), err
+		if err := r.saveCheckpoint(ctx, state.result, state.execution, "task"); err != nil {
+			return "", err
 		}
 	}
+	return agentReviewNodeName, nil
+}
 
-	result.State = domain.StateReviewing
-	if r.deps.Reviewer != nil {
-		execution.Completed = append([]domain.TaskResult(nil), result.Tasks...)
-		review, err := r.deps.Reviewer.Review(ctx, execution)
-		if err != nil {
-			return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
-		}
-		if review != nil && review.ChangesRequested {
-			err := fmt.Errorf("review requested changes: %s", review.Summary)
-			return r.finishWithCheckpoint(ctx, result, start, domain.StateFailed, err, execution, "failed"), err
-		}
+func (r *AgentRunner) agentReviewNode(ctx context.Context, state *appRunState) (string, error) {
+	state.result.State = domain.StateReviewing
+	if r.deps.Reviewer == nil {
+		return agentCompleteNodeName, nil
 	}
+	state.execution.Completed = append([]domain.TaskResult(nil), state.result.Tasks...)
+	review, err := r.deps.Reviewer.Review(ctx, state.execution)
+	if err != nil {
+		return "", err
+	}
+	if review != nil && review.ChangesRequested {
+		return "", fmt.Errorf("review requested changes: %s", review.Summary)
+	}
+	return agentCompleteNodeName, nil
+}
 
-	result = r.finish(result, start, domain.StateComplete, nil)
+func (r *AgentRunner) agentCompleteNode(ctx context.Context, state *appRunState) (string, error) {
+	state.result = r.finish(state.result, state.startedAt, domain.StateComplete, nil)
 	if r.deps.MemoryStore != nil {
-		if err := r.deps.MemoryStore.RecordResult(ctx, *result); err != nil {
-			return result, err
+		if err := r.deps.MemoryStore.RecordResult(ctx, *state.result); err != nil {
+			return "", err
 		}
 	}
 	_ = reportProgress(ctx, r.deps.ProgressSink, domain.Progress{
 		State:          domain.StateComplete,
-		CompletedTasks: len(result.Tasks),
-		TotalTasks:     len(result.Tasks),
+		CompletedTasks: len(state.result.Tasks),
+		TotalTasks:     len(state.result.Tasks),
 		Progress:       100,
 		Message:        "Complete",
 		Timestamp:      r.clock.Now(),
 	})
-	if err := r.saveCheckpoint(ctx, result, execution, "complete"); err != nil {
-		return result, err
+	if err := r.saveCheckpoint(ctx, state.result, state.execution, "complete"); err != nil {
+		return "", err
 	}
-	return result, nil
+	return graphEndNode, nil
 }
 
 func (r *AgentRunner) analyze(ctx context.Context, goal domain.Goal) (*domain.ProjectContext, error) {

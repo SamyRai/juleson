@@ -63,6 +63,36 @@ func TestJulesTaskExecutorRequiresPlanApprovalForCreatedSessions(t *testing.T) {
 	}
 }
 
+func TestJulesTaskExecutorHonorsAutoApprovePolicy(t *testing.T) {
+	gateway := &recordingSessionGateway{
+		created: &domain.Session{ID: "session-1", URL: "https://jules.example/session-1"},
+	}
+	executor := NewJulesTaskExecutor(gateway, nil)
+
+	result, err := executor.ExecuteTask(context.Background(), domain.Task{
+		ID:          "task-1",
+		Name:        "Task",
+		Description: "Do work",
+	}, domain.ExecutionContext{
+		Goal: domain.Goal{Context: domain.GoalContext{SourceID: "source-1"}},
+		ApprovalPolicy: domain.ApprovalPolicy{
+			AutoApprove: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ExecuteTask() error = %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("result success = false: %+v", result)
+	}
+	if gateway.request.RequirePlanApproval {
+		t.Fatal("created session required plan approval despite auto-approve policy")
+	}
+	if result.Metrics["require_plan_approval"] != false {
+		t.Fatalf("require approval metric = %v, want false", result.Metrics["require_plan_approval"])
+	}
+}
+
 type recordingSessionGateway struct {
 	calls   int
 	request domain.SessionRequest

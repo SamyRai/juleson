@@ -25,6 +25,9 @@ Flags:
 ```
 
 `--source` is required. `--gemini-key` can be omitted when `GEMINI_API_KEY` is set.
+`--max-iterations` bounds the AI decision loop. By default Jules sessions require
+plan approval; `--auto-approve` disables that approval gate for sessions created
+by this command.
 
 ## MCP Tools
 
@@ -43,6 +46,10 @@ Gemini-backed MCP tools are registered when a Jules client is available and
 3. Execute one step at a time.
 4. Adapt the plan based on results.
 5. Stop when the goal is complete or the iteration limit is reached.
+
+When Gemini is configured, orchestration expects structured JSON from planning
+and decision prompts. Malformed or unsupported responses fail the run instead of
+falling back to a generic task.
 
 ## Use Carefully
 

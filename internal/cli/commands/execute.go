@@ -3,14 +3,17 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/SamyRai/juleson/internal/automation"
+	"github.com/SamyRai/juleson/internal/orchestration"
+	"github.com/SamyRai/juleson/internal/orchestration/domain"
+	"github.com/SamyRai/juleson/internal/presentation"
 
 	"github.com/spf13/cobra"
 )
 
 // NewExecuteCommand creates the execute command
-func NewExecuteCommand(initializeEngine func() (*automation.Engine, error), displayExecutionResult func(*automation.ExecutionResult)) *cobra.Command {
+func NewExecuteCommand(initializeRuntime func() (*orchestration.Runtime, error), displayExecutionResult func(*presentation.ExecutionResult)) *cobra.Command {
 	executeCmd := &cobra.Command{
 		Use:   "execute",
 		Short: "Execute automation tasks",
@@ -27,26 +30,17 @@ func NewExecuteCommand(initializeEngine func() (*automation.Engine, error), disp
 			templateName := args[0]
 			projectPath := args[1]
 
-			// Initialize automation engine
-			engine, err := initializeEngine()
+			runtime, err := initializeRuntime()
 			if err != nil {
-				return fmt.Errorf("failed to initialize automation engine: %w", err)
+				return fmt.Errorf("failed to initialize orchestration runtime: %w", err)
 			}
 
-			// Analyze project first
-			_, err = engine.AnalyzeProject(projectPath)
-			if err != nil {
-				return fmt.Errorf("failed to analyze project: %w", err)
-			}
-
-			// Execute template
-			result, err := engine.ExecuteTemplate(cmd.Context(), templateName, make(map[string]string))
+			result, outputFiles, err := runtime.TemplateRunner().Run(cmd.Context(), templateName, projectPath, make(map[string]string))
 			if err != nil {
 				return fmt.Errorf("failed to execute template: %w", err)
 			}
 
-			// Display results
-			displayExecutionResult(result)
+			displayExecutionResult(executionResultFromDomain(templateName, projectPath, result, outputFiles))
 
 			return nil
 		},
@@ -71,30 +65,61 @@ func NewExecuteCommand(initializeEngine func() (*automation.Engine, error), disp
 				}
 			}
 
-			// Initialize automation engine
-			engine, err := initializeEngine()
+			runtime, err := initializeRuntime()
 			if err != nil {
-				return fmt.Errorf("failed to initialize automation engine: %w", err)
+				return fmt.Errorf("failed to initialize orchestration runtime: %w", err)
 			}
 
-			// Analyze project first
-			_, err = engine.AnalyzeProject(projectPath)
-			if err != nil {
-				return fmt.Errorf("failed to analyze project: %w", err)
-			}
-
-			// Execute template with custom parameters
-			result, err := engine.ExecuteTemplate(cmd.Context(), templateName, customParams)
+			result, outputFiles, err := runtime.TemplateRunner().Run(cmd.Context(), templateName, projectPath, customParams)
 			if err != nil {
 				return fmt.Errorf("failed to execute template: %w", err)
 			}
 
-			// Display results
-			displayExecutionResult(result)
+			displayExecutionResult(executionResultFromDomain(templateName, projectPath, result, outputFiles))
 
 			return nil
 		},
 	})
 
 	return executeCmd
+}
+
+func executionResultFromDomain(templateName, projectPath string, result *domain.Result, outputFiles []string) *presentation.ExecutionResult {
+	converted := &presentation.ExecutionResult{
+		TemplateName: templateName,
+		ProjectPath:  projectPath,
+		OutputFiles:  outputFiles,
+		Metrics:      map[string]any{},
+	}
+	if result == nil {
+		converted.Error = "no execution result"
+		return converted
+	}
+	converted.Recommendations = append([]string(nil), result.Learnings...)
+	converted.EndTime = time.Now()
+	converted.StartTime = converted.EndTime.Add(-result.Duration)
+	converted.Duration = result.Duration
+	converted.Success = result.Success
+	if result.Error != nil {
+		converted.Error = result.Error.Error()
+	}
+	converted.TasksExecuted = make([]presentation.TaskExecutionResult, 0, len(result.Tasks))
+	for _, task := range result.Tasks {
+		taskResult := presentation.TaskExecutionResult{
+			TaskName:       task.TaskName,
+			TaskType:       task.TaskType,
+			StartTime:      task.StartTime,
+			EndTime:        task.EndTime,
+			Duration:       task.Duration,
+			Success:        task.Success,
+			JulesSessionID: task.SessionID,
+			Output:         task.Output,
+			Metrics:        task.Metrics,
+		}
+		if task.Error != nil {
+			taskResult.Error = task.Error.Error()
+		}
+		converted.TasksExecuted = append(converted.TasksExecuted, taskResult)
+	}
+	return converted
 }

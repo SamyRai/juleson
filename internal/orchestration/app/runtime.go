@@ -90,6 +90,7 @@ func (r *Runtime) AIWorkflowRunner() *AIWorkflowRunner {
 		TaskExecutor:    r.deps.TaskExecutor,
 		Reviewer:        r.deps.Reviewer,
 		MemoryStore:     r.deps.MemoryStore,
+		CheckpointStore: r.deps.CheckpointStore,
 		ProgressSink:    r.deps.ProgressSink,
 		Clock:           r.deps.Clock,
 	})

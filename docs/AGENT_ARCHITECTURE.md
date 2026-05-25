@@ -16,7 +16,8 @@ Gemini, analyzer, filesystem, or template implementation details with it.
 - `internal/orchestration/ports`: consumer-owned interfaces used by the
   application layer.
 - `internal/orchestration/app`: `AgentRunner`, `TemplateRunner`,
-  `SessionWorkflowRunner`, and `AIWorkflowRunner`.
+  `SessionWorkflowRunner`, `AIWorkflowRunner`, and a small private graph runner
+  used to make agent control flow explicit.
 - `internal/orchestration/adapters`: Jules, Gemini, analyzer, template, source
   matching, clock, progress, and tool execution adapters.
 - `internal/orchestration`: runtime construction facade exposed as `orchestration.NewRuntime(deps)`.
@@ -43,17 +44,36 @@ Import rules are enforced by `internal/architecture` tests:
 The service container is the composition root for runtime construction. CLI and
 MCP paths should call the runtime instead of manually constructing legacy
 `core.NewAgent`, `automation.NewEngine`, `automation.NewAIOrchestrator`, or
-`automation.NewSessionOrchestrator` instances.
+`automation.NewSessionOrchestrator` instances. CLI orchestration command
+constructors receive runtime factories from the composition root; active
+orchestration paths should use `internal/orchestration/domain` and presentation
+DTOs instead of legacy `internal/automation` workflow or execution-result types.
 
 ## Agent Loop
 
-The application runner follows these stages:
+The application runner uses a simple in-process graph runner inspired by
+LangGraph's node/state routing model. It is intentionally not a full LangGraph
+port: there are no reducers, nested graphs, streaming, interrupts, or external
+graph dependencies.
+
+The standard agent graph follows these stages:
 
 1. Perceive the goal and context.
 2. Plan the task sequence.
 3. Execute tasks through registered tools.
 4. Review the result.
 5. Reflect and update memory.
+
+The AI workflow runner uses the same graph primitive with a decision loop:
+analyze, plan, decide, route the decision, then execute, review, adapt, complete,
+or abort.
+
+`TemplateRunner` also uses the private graph for its sequential template
+execution path: load template, analyze project, render and order tasks, execute,
+write outputs, and complete. `SessionWorkflowRunner` intentionally remains
+imperative for now because session phases support parallel execution and
+`ContinueOnError`; modeling those correctly would require graph features the
+private runner deliberately does not have.
 
 The CLI entrypoint is:
 
@@ -84,12 +104,15 @@ Useful flags:
   execution context for review adapters.
 - Runner checkpoints are saved through `ports.CheckpointStore` after planning,
   after each task, and at final success or failure when a store is configured.
+  AI workflows also checkpoint decisions and review passes.
+- The default service container wires a local JSON checkpoint store using
+  `automation.checkpoint_path`.
 - Prefer small goals that map to one reviewable change.
 
 ## Current Limits
 
 - Some legacy `internal/agent` and `internal/automation` APIs remain for tests
   and older callers.
-- Review, memory, persistent checkpoint, and telemetry adapters need follow-up extraction from legacy packages.
+- Review, memory, checkpoint resume, and telemetry adapters need follow-up extraction from legacy packages.
 - MCP and CLI adapters should continue moving toward runtime-only construction
   as legacy commands are retired.

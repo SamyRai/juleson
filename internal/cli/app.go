@@ -95,16 +95,16 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 		commands.DisplayTemplateDetails,
 	))
 	a.rootCmd.AddCommand(commands.NewExecuteCommand(
-		a.container.AutomationEngine,
+		a.container.OrchestrationRuntime,
 		commands.DisplayExecutionResult,
 	))
 	a.rootCmd.AddCommand(commands.NewSyncCommand())
 	a.rootCmd.AddCommand(commands.NewPRCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewGitHubCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewActionsCommand(a.container.Config()))
-	a.rootCmd.AddCommand(commands.NewOrchestrateCommand(a.container.Config()))
-	a.rootCmd.AddCommand(commands.NewAIOrchestCommand(a.container.Config()))
-	a.rootCmd.AddCommand(commands.NewAgentCommand(a.container.Config()))
+	a.rootCmd.AddCommand(commands.NewOrchestrateCommand(a.container.OrchestrationRuntime))
+	a.rootCmd.AddCommand(commands.NewAIOrchestCommand(a.container.Config(), a.container.OrchestrationRuntime))
+	a.rootCmd.AddCommand(commands.NewAgentCommand(a.container.Config(), a.container.OrchestrationRuntime))
 	a.rootCmd.AddCommand(commands.NewDevCommand())
 	a.rootCmd.AddCommand(commands.NewOfficialCommand())
 	a.rootCmd.AddCommand(commands.NewConfigCommand(a.container.Config()))

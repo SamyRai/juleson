@@ -3,9 +3,37 @@ package presentation
 import (
 	"fmt"
 	"strings"
-
-	"github.com/SamyRai/juleson/internal/automation"
+	"time"
 )
+
+// ExecutionResult is the presentation boundary for template execution output.
+type ExecutionResult struct {
+	TemplateName    string
+	ProjectPath     string
+	StartTime       time.Time
+	EndTime         time.Time
+	Duration        time.Duration
+	Success         bool
+	TasksExecuted   []TaskExecutionResult
+	OutputFiles     []string
+	Recommendations []string
+	Error           string
+	Metrics         map[string]any
+}
+
+// TaskExecutionResult is the presentation boundary for a single executed task.
+type TaskExecutionResult struct {
+	TaskName       string
+	TaskType       string
+	StartTime      time.Time
+	EndTime        time.Time
+	Duration       time.Duration
+	Success        bool
+	JulesSessionID string
+	Output         string
+	Error          string
+	Metrics        map[string]any
+}
 
 // ExecutionFormatter formats execution results
 type ExecutionFormatter struct{}
@@ -16,7 +44,7 @@ func NewExecutionFormatter() *ExecutionFormatter {
 }
 
 // Format displays execution results
-func (f *ExecutionFormatter) Format(result *automation.ExecutionResult) string {
+func (f *ExecutionFormatter) Format(result *ExecutionResult) string {
 	var sb strings.Builder
 
 	sb.WriteString("🎯 Execution Results\n")

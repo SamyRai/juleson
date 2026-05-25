@@ -254,6 +254,10 @@ Gemini, review, memory, checkpointing, and dry-run planning availability.
 --auto-approve
 ```
 
+`--max-iterations` controls the AI decision loop limit. AI-created Jules
+sessions require plan approval unless `--auto-approve` is set, in which case the
+created session is allowed to proceed without the plan approval gate.
+
 ## Project And Git Sync
 
 ```bash

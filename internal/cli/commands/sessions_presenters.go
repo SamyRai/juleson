@@ -7,38 +7,6 @@ import (
 	"github.com/SamyRai/juleson/pkg/jules"
 )
 
-// getSessionStatusIcon returns the appropriate icon for a session state
-func getSessionStatusIcon(state jules.SessionState) string {
-	switch state {
-	case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
-		return "⚡"
-	case jules.SessionStateAwaitingPlanApproval, jules.SessionStateAwaitingUserFeedback:
-		return "⏸"
-	case jules.SessionStateCompleted:
-		return "✅"
-	case jules.SessionStateFailed:
-		return "❌"
-	default:
-		return "📋"
-	}
-}
-
-// getSessionStatusText returns the status text for a session state
-func getSessionStatusText(state jules.SessionState) string {
-	switch state {
-	case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
-		return "ACTIVE"
-	case jules.SessionStateAwaitingPlanApproval, jules.SessionStateAwaitingUserFeedback:
-		return "NEEDS_USER_ACTION"
-	case jules.SessionStateCompleted:
-		return "COMPLETED"
-	case jules.SessionStateFailed:
-		return "FAILED"
-	default:
-		return string(state)
-	}
-}
-
 // previewActivityArtifactsContent displays artifact content based on type
 func previewActivityArtifactsContent(artifacts []jules.Artifact) error {
 	for i, artifact := range artifacts {

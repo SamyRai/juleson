@@ -75,6 +75,9 @@ automation:
   # Timeout for individual tasks
   task_timeout: "300s"
 
+  # Local JSON checkpoint directory for agent/orchestration runs
+  checkpoint_path: "./data/checkpoints"
+
 # Project Management Configuration
 projects:
   # Default path for projects

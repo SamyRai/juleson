@@ -110,6 +110,125 @@ func TestCLIMCPAdaptersUseOrchestrationRuntimeForAgentAutomation(t *testing.T) {
 	}
 }
 
+func TestCLIOrchestrationAdaptersDependOnRuntimeBoundary(t *testing.T) {
+	root := repoRoot(t)
+	files := []string{
+		"internal/cli/commands/agent.go",
+		"internal/cli/commands/ai_orchestrate.go",
+		"internal/cli/commands/execute.go",
+		"internal/cli/commands/orchestrate.go",
+	}
+
+	for _, file := range files {
+		t.Run(file, func(t *testing.T) {
+			content, err := os.ReadFile(filepath.Join(root, file))
+			if err != nil {
+				t.Fatalf("read file: %v", err)
+			}
+			text := string(content)
+			forbidden := []string{
+				"github.com/SamyRai/juleson/internal/automation",
+				"github.com/SamyRai/juleson/internal/services",
+			}
+			for _, pattern := range forbidden {
+				if strings.Contains(text, pattern) {
+					t.Fatalf("%s imports orchestration-owned dependency %q; receive runtime/presentation boundaries from composition root", file, pattern)
+				}
+			}
+		})
+	}
+}
+
+func TestPresentationDoesNotDependOnJulesSDK(t *testing.T) {
+	root := repoRoot(t)
+	presentationDir := filepath.Join(root, "internal/presentation")
+	entries, err := os.ReadDir(presentationDir)
+	if err != nil {
+		t.Fatalf("read presentation dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		file := filepath.Join(presentationDir, entry.Name())
+		content, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("read file: %v", err)
+		}
+		if strings.Contains(string(content), "github.com/SamyRai/juleson/pkg/jules") {
+			t.Fatalf("%s imports Jules SDK types; presentation should receive DTOs from adapters", filepath.Join("internal/presentation", entry.Name()))
+		}
+	}
+}
+
+func TestSessionAdaptersDoNotOwnSharedSessionPolicy(t *testing.T) {
+	root := repoRoot(t)
+	files := []string{
+		"internal/cli/commands/sessions_handlers.go",
+		"internal/cli/commands/sessions_create.go",
+		"internal/cli/commands/sessions_patch.go",
+		"internal/cli/commands/sessions_watch.go",
+		"internal/cli/commands/sessions_artifacts.go",
+		"internal/mcp/tools/session_handlers.go",
+		"internal/mcp/tools/session_create_watch_handlers.go",
+		"internal/mcp/tools/session_patch_handlers.go",
+	}
+
+	for _, file := range files {
+		t.Run(file, func(t *testing.T) {
+			content, err := os.ReadFile(filepath.Join(root, file))
+			if err != nil {
+				t.Fatalf("read file: %v", err)
+			}
+			text := string(content)
+			forbidden := []string{
+				"julesops.SessionHasDeliverables",
+				"julesops.IsGitWorkingTreeClean",
+				"jules.NormalizeSourceName",
+				"normalizeMCPSourceID",
+				"hasJulesAgentMessageAfter",
+				"defaultWatchWakeReason",
+				"stateCounts :=",
+				"documentedOutputs := make",
+			}
+			for _, pattern := range forbidden {
+				if strings.Contains(text, pattern) {
+					t.Fatalf("%s owns shared session policy %q; use internal/sessionops", file, pattern)
+				}
+			}
+			if !strings.Contains(text, "internal/sessionops") {
+				t.Fatalf("%s should delegate shared session policy to internal/sessionops", file)
+			}
+		})
+	}
+}
+
+func TestCLISessionHandlersUseSingleClientFactory(t *testing.T) {
+	root := repoRoot(t)
+	entries, err := os.ReadDir(filepath.Join(root, "internal/cli/commands"))
+	if err != nil {
+		t.Fatalf("read commands dir: %v", err)
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasPrefix(name, "sessions_") || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		if name == "client.go" {
+			continue
+		}
+		file := filepath.Join(root, "internal/cli/commands", name)
+		content, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("read file: %v", err)
+		}
+		if strings.Contains(string(content), "jules.NewClient") {
+			t.Fatalf("%s constructs Jules clients directly; use newJulesClient", filepath.Join("internal/cli/commands", name))
+		}
+	}
+}
+
 func TestOrchestratorDoesNotOwnGoToolCommandConstruction(t *testing.T) {
 	root := repoRoot(t)
 	orchestratorDir := filepath.Join(root, "internal/orchestrator")

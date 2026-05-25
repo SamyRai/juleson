@@ -18,6 +18,9 @@ const (
 	DefaultTaskWaitTime    = 2 * time.Second
 )
 
+// SessionOrchestrator is a legacy compatibility surface. New CLI and MCP
+// workflows should use internal/orchestration.Runtime and SessionWorkflowRunner.
+//
 // SessionOrchestrator manages multi-phase workflows within a single Jules session
 // It ensures efficient session usage by:
 // 1. Running multiple tasks in one session

@@ -94,3 +94,22 @@ func TestAutomationEngine(t *testing.T) {
 		assert.Equal(t, engine, engine2)
 	})
 }
+
+func TestOrchestrationRuntimeWiresCheckpointStore(t *testing.T) {
+	cfg := &config.Config{
+		Automation: config.AutomationConfig{
+			CheckpointPath: t.TempDir(),
+		},
+		Templates: config.TemplatesConfig{
+			BuiltinPath:  "../../templates/builtin",
+			CustomPath:   "../../templates/custom",
+			EnableCustom: false,
+		},
+	}
+	container := NewContainer(cfg)
+
+	runtime, err := container.OrchestrationRuntime()
+	require.NoError(t, err)
+	require.NotNil(t, runtime)
+	assert.True(t, runtime.Capabilities().Checkpointing)
+}

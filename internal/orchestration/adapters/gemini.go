@@ -27,9 +27,9 @@ func (p *GeminiPlanner) Plan(ctx context.Context, goal domain.Goal, project *dom
 	if err != nil {
 		return nil, err
 	}
-	tasks := parseTasks(response)
-	if len(tasks) == 0 {
-		tasks = fallbackPlan(goal).Tasks
+	tasks, err := parseTasks(response)
+	if err != nil {
+		return nil, fmt.Errorf("parse Gemini plan: %w", err)
 	}
 	return &domain.Plan{
 		ID:        goal.ID,
@@ -53,9 +53,9 @@ func (p *GeminiPlanner) AdaptPlan(ctx context.Context, execution domain.Executio
 	if err != nil {
 		return nil, err
 	}
-	tasks := parseTasks(response)
-	if len(tasks) == 0 {
-		tasks = fallbackPlan(goal).Tasks
+	tasks, err := parseTasks(response)
+	if err != nil {
+		return nil, fmt.Errorf("parse Gemini adapted plan: %w", err)
 	}
 	return &domain.Plan{
 		ID:        goal.ID,
@@ -82,11 +82,11 @@ func (d *GeminiDecisionMaker) Decide(ctx context.Context, execution domain.Execu
 	if err != nil {
 		return nil, err
 	}
-	decision := parseDecision(response)
-	decision.Timestamp = time.Now()
-	if decision.Type == "" {
-		return fallbackDecision(execution), nil
+	decision, err := parseDecision(response)
+	if err != nil {
+		return nil, fmt.Errorf("parse Gemini decision: %w", err)
 	}
+	decision.Timestamp = time.Now()
 	return decision, nil
 }
 
@@ -161,7 +161,7 @@ func fallbackDecision(execution domain.ExecutionContext) *domain.Decision {
 	}
 }
 
-func parseTasks(response string) []domain.Task {
+func parseTasks(response string) ([]domain.Task, error) {
 	var wrapper struct {
 		Tasks []struct {
 			ID           string   `json:"id"`
@@ -173,7 +173,10 @@ func parseTasks(response string) []domain.Task {
 		} `json:"tasks"`
 	}
 	if err := json.Unmarshal([]byte(extractJSON(response)), &wrapper); err != nil {
-		return nil
+		return nil, err
+	}
+	if len(wrapper.Tasks) == 0 {
+		return nil, fmt.Errorf("Gemini response did not include any tasks")
 	}
 	tasks := make([]domain.Task, 0, len(wrapper.Tasks))
 	for i, task := range wrapper.Tasks {
@@ -191,10 +194,10 @@ func parseTasks(response string) []domain.Task {
 			State:        domain.TaskStatePending,
 		})
 	}
-	return tasks
+	return tasks, nil
 }
 
-func parseDecision(response string) *domain.Decision {
+func parseDecision(response string) (*domain.Decision, error) {
 	var payload struct {
 		DecisionType string   `json:"decision_type"`
 		TaskID       string   `json:"task_id"`
@@ -204,16 +207,20 @@ func parseDecision(response string) *domain.Decision {
 		NextSteps    []string `json:"next_steps"`
 	}
 	if err := json.Unmarshal([]byte(extractJSON(response)), &payload); err != nil {
-		return &domain.Decision{}
+		return nil, err
+	}
+	decisionType := normalizeDecisionType(payload.DecisionType)
+	if decisionType == "" {
+		return nil, fmt.Errorf("unsupported decision type %q", payload.DecisionType)
 	}
 	return &domain.Decision{
-		Type:       normalizeDecisionType(payload.DecisionType),
+		Type:       decisionType,
 		TaskID:     payload.TaskID,
 		Reasoning:  payload.Reasoning,
 		Action:     payload.Action,
 		Confidence: payload.Confidence,
 		NextSteps:  payload.NextSteps,
-	}
+	}, nil
 }
 
 func normalizeDecisionType(value string) domain.DecisionType {

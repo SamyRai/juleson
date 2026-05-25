@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/orchestration"
+	"github.com/SamyRai/juleson/internal/orchestration/app"
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
-	"github.com/SamyRai/juleson/internal/services"
 	"github.com/spf13/cobra"
 )
 
 // NewAIOrchest rateCommand creates the AI orchestrate command
-func NewAIOrchestCommand(cfg *config.Config) *cobra.Command {
+func NewAIOrchestCommand(cfg *config.Config, initializeRuntime func() (*orchestration.Runtime, error)) *cobra.Command {
 	var (
 		sourceID    string
 		projectPath string
@@ -79,8 +80,7 @@ Examples:
 			cfg.Jules.Timeout = 30 * time.Second
 			cfg.Jules.RetryAttempts = 3
 
-			container := services.NewContainer(cfg)
-			runtime, err := container.OrchestrationRuntime()
+			runtime, err := initializeRuntime()
 			if err != nil {
 				return fmt.Errorf("failed to create orchestration runtime: %w", err)
 			}
@@ -114,7 +114,10 @@ Examples:
 			fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 			fmt.Println()
 
-			result, err := runtime.AIWorkflowRunner().Run(ctx, domain.Goal{
+			runOptions := aiWorkflowOptionsFromFlags(maxIters, autoApprove)
+			fmt.Printf("Approval: %s\n", approvalModeText(runOptions.ApprovalPolicy))
+
+			result, err := runtime.AIWorkflowRunner().RunWithOptions(ctx, domain.Goal{
 				ID:          fmt.Sprintf("ai-goal-%d", time.Now().Unix()),
 				Description: goal,
 				Constraints: constraints,
@@ -123,7 +126,7 @@ Examples:
 					ProjectPath: projectPath,
 				},
 				Priority: domain.PriorityMedium,
-			})
+			}, runOptions)
 			if err != nil {
 				fmt.Printf("\n❌ AI orchestration failed: %v\n", err)
 				return err
@@ -154,4 +157,21 @@ Examples:
 	cmd.MarkFlagRequired("source")
 
 	return cmd
+}
+
+func aiWorkflowOptionsFromFlags(maxIterations int, autoApprove bool) app.AIWorkflowRunOptions {
+	return app.AIWorkflowRunOptions{
+		MaxIterations: maxIterations,
+		ApprovalPolicy: domain.ApprovalPolicy{
+			RequirePlanApproval: !autoApprove,
+			AutoApprove:         autoApprove,
+		},
+	}
+}
+
+func approvalModeText(policy domain.ApprovalPolicy) string {
+	if policy.AutoApprove {
+		return "auto-approve enabled"
+	}
+	return "plan approval required"
 }

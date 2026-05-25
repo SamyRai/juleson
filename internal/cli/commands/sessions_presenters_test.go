@@ -3,6 +3,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/SamyRai/juleson/internal/presentation"
 	"github.com/SamyRai/juleson/pkg/jules"
 )
 
@@ -20,8 +21,8 @@ func TestGetSessionStatusText(t *testing.T) {
 
 	for state, want := range tests {
 		t.Run(string(state), func(t *testing.T) {
-			if got := getSessionStatusText(state); got != want {
-				t.Fatalf("getSessionStatusText(%q) = %q, want %q", state, got, want)
+			if got := presentation.SessionStatusText(string(state)); got != want {
+				t.Fatalf("SessionStatusText(%q) = %q, want %q", state, got, want)
 			}
 		})
 	}
@@ -38,8 +39,8 @@ func TestGetSessionStatusIcon(t *testing.T) {
 
 	for state, want := range tests {
 		t.Run(string(state), func(t *testing.T) {
-			if got := getSessionStatusIcon(state); got != want {
-				t.Fatalf("getSessionStatusIcon(%q) = %q, want %q", state, got, want)
+			if got := presentation.SessionStatusIcon(string(state)); got != want {
+				t.Fatalf("SessionStatusIcon(%q) = %q, want %q", state, got, want)
 			}
 		})
 	}

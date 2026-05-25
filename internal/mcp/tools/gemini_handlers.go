@@ -142,42 +142,15 @@ func orchestrateWorkflow(ctx context.Context, req *mcp.CallToolRequest, input Or
 	issues := []string{}
 
 	for _, step := range input.WorkflowSteps {
-		result := StepResult{
-			StepName: step.Name,
-			Status:   "pending",
-		}
-
-		// Execute step based on tool
-		switch step.Tool {
-		case "analyze_project":
-			result.Status = "completed"
-			result.Output = "Project analysis completed successfully"
-			result.Duration = "2 minutes"
-		case "execute_template":
-			templateName := step.Parameters["template_name"]
-			if templateName == "" {
-				result.Status = "failed"
-				result.Error = "template_name parameter required"
-				issues = append(issues, fmt.Sprintf("Step %s failed: missing template_name", step.Name))
-			} else {
-				result.Status = "completed"
-				result.Output = fmt.Sprintf("Template %s executed successfully", templateName)
-				result.Duration = "5 minutes"
-			}
-		case "create_github_issue":
-			result.Status = "completed"
-			result.Output = "GitHub issue created successfully"
-			result.Duration = "1 minute"
-		default:
-			result.Status = "skipped"
-			result.Output = fmt.Sprintf("Unknown tool: %s", step.Tool)
-		}
+		result := executeWorkflowStep(ctx, req, input, step, container)
 
 		results = append(results, result)
 
-		// Stop on error if not continuing
-		if result.Status == "failed" && !input.ContinueOnError {
-			break
+		if result.Status == "failed" {
+			issues = append(issues, fmt.Sprintf("Step %s failed: %s", step.Name, result.Error))
+			if !input.ContinueOnError {
+				break
+			}
 		}
 	}
 
@@ -203,6 +176,73 @@ func orchestrateWorkflow(ctx context.Context, req *mcp.CallToolRequest, input Or
 	}
 
 	return nil, output, nil
+}
+
+func executeWorkflowStep(ctx context.Context, req *mcp.CallToolRequest, input OrchestrateWorkflowInput, step WorkflowStep, container *services.Container) StepResult {
+	start := time.Now()
+	result := StepResult{
+		StepName: step.Name,
+		Status:   "pending",
+	}
+	setFailed := func(err error) StepResult {
+		result.Status = "failed"
+		result.Error = err.Error()
+		result.Duration = time.Since(start).String()
+		return result
+	}
+
+	switch step.Tool {
+	case "analyze_project":
+		projectPath := firstStepValue(input.ProjectPath, step.Parameters["project_path"])
+		analysis, err := container.AnalyzeProject(projectPath)
+		if err != nil {
+			return setFailed(fmt.Errorf("failed to analyze project: %w", err))
+		}
+		result.Status = "completed"
+		result.Output = fmt.Sprintf("Project analysis completed for %s (%s)", analysis.ProjectName, analysis.ProjectType)
+	case "execute_template":
+		templateName := step.Parameters["template_name"]
+		if templateName == "" {
+			return setFailed(fmt.Errorf("template_name parameter required"))
+		}
+		projectPath := firstStepValue(input.ProjectPath, step.Parameters["project_path"])
+		runtime, err := container.OrchestrationRuntime()
+		if err != nil {
+			return setFailed(fmt.Errorf("failed to initialize orchestration runtime: %w", err))
+		}
+		resultValue, outputFiles, err := runtime.TemplateRunner().Run(ctx, templateName, projectPath, input.Parameters)
+		if err != nil {
+			return setFailed(fmt.Errorf("failed to execute template: %w", err))
+		}
+		result.Status = "completed"
+		result.Output = fmt.Sprintf("Template %s executed: success=%t tasks=%d outputs=%d", templateName, resultValue.Success, len(resultValue.Tasks), len(outputFiles))
+	case "create_github_issue":
+		_, output, err := manageGitHubProject(ctx, req, ManageGitHubProjectInput{
+			Action:      "create_issue",
+			Repository:  firstStepValue(input.Parameters["repository"], step.Parameters["repository"]),
+			Parameters:  step.Parameters,
+			Description: firstStepValue(step.Parameters["description"], input.Parameters["description"]),
+		}, container)
+		if err != nil {
+			return setFailed(fmt.Errorf("failed to create GitHub issue: %w", err))
+		}
+		result.Status = "completed"
+		result.Output = output.Message
+	default:
+		return setFailed(fmt.Errorf("unsupported workflow tool: %s", step.Tool))
+	}
+
+	result.Duration = time.Since(start).String()
+	return result
+}
+
+func firstStepValue(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // manageGitHubProject manages GitHub issues, milestones, and projects through natural language commands

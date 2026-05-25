@@ -276,6 +276,237 @@ func TestAIWorkflowRunnerDecisionRouting(t *testing.T) {
 	}
 }
 
+func TestRuntimeWiresAIWorkflowCheckpointStore(t *testing.T) {
+	store := &recordingCheckpointStore{}
+	runtime := NewRuntime(RuntimeDeps{CheckpointStore: store})
+
+	runner := runtime.AIWorkflowRunner()
+	if runner.deps.CheckpointStore != store {
+		t.Fatal("AI workflow runner checkpoint store was not wired from runtime")
+	}
+}
+
+func TestAIWorkflowRunnerOptionsOverrideMaxIterationsAndApprovalPolicy(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	executor := &recordingTaskExecutor{}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeNextTask, TaskID: "one"},
+			{Type: domain.DecisionTypeComplete},
+		}},
+		TaskExecutor:  executor,
+		Clock:         fixedClock{now: time.Unix(100, 0)},
+		MaxIterations: 1,
+	})
+
+	result, err := runner.RunWithOptions(context.Background(), goal, AIWorkflowRunOptions{
+		MaxIterations: 3,
+		ApprovalPolicy: domain.ApprovalPolicy{
+			AutoApprove: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunWithOptions() error = %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("result success = false: %+v", result)
+	}
+	if !executor.execution.ApprovalPolicy.AutoApprove {
+		t.Fatal("auto-approve policy was not passed to task execution")
+	}
+	if executor.execution.ApprovalPolicy.RequirePlanApproval {
+		t.Fatal("plan approval should not be required when auto-approve is set")
+	}
+}
+
+func TestAIWorkflowRunnerDefaultsToPlanApproval(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	executor := &recordingTaskExecutor{}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeNextTask, TaskID: "one"},
+			{Type: domain.DecisionTypeComplete},
+		}},
+		TaskExecutor: executor,
+		Clock:        fixedClock{now: time.Unix(100, 0)},
+	})
+
+	_, err := runner.Run(context.Background(), goal)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !executor.execution.ApprovalPolicy.RequirePlanApproval {
+		t.Fatal("plan approval policy was not required by default")
+	}
+}
+
+func TestAIWorkflowRunnerMaxIterations(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeNextTask, TaskID: "one"},
+		}},
+		TaskExecutor:  fakeTaskExecutor{},
+		Clock:         fixedClock{now: time.Unix(100, 0)},
+		MaxIterations: 1,
+	})
+
+	result, err := runner.Run(context.Background(), goal)
+	if err == nil {
+		t.Fatal("Run() error = nil, want max iteration error")
+	}
+	if !strings.Contains(err.Error(), "max iterations (1) reached") {
+		t.Fatalf("error = %v, want max iteration error", err)
+	}
+	if result.State != domain.StateFailed {
+		t.Fatalf("state = %s, want failed", result.State)
+	}
+}
+
+func TestAIWorkflowRunnerSavesCheckpoints(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	store := &recordingCheckpointStore{}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeNextTask, TaskID: "one"},
+			{Type: domain.DecisionTypeComplete},
+		}},
+		TaskExecutor:    fakeTaskExecutor{},
+		CheckpointStore: store,
+		Clock:           fixedClock{now: time.Unix(100, 0)},
+		MaxIterations:   4,
+	})
+
+	result, err := runner.Run(context.Background(), goal)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("result success = false: %+v", result)
+	}
+	assertPhasesPresent(t, store.phases(), []string{"planned", "decision", "task", "complete"})
+}
+
+func TestAIWorkflowRunnerSavesReviewAndFailedCheckpoints(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	store := &recordingCheckpointStore{}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeReviewNeeded},
+			{Type: domain.DecisionTypeAbort, Reasoning: "stop"},
+		}},
+		TaskExecutor:    fakeTaskExecutor{},
+		Reviewer:        approvingReviewer{},
+		CheckpointStore: store,
+		Clock:           fixedClock{now: time.Unix(100, 0)},
+		MaxIterations:   4,
+	})
+
+	result, err := runner.Run(context.Background(), goal)
+	if err == nil {
+		t.Fatal("Run() error = nil, want abort error")
+	}
+	if result.State != domain.StateFailed {
+		t.Fatalf("state = %s, want failed", result.State)
+	}
+	assertPhasesPresent(t, store.phases(), []string{"planned", "decision", "review", "failed"})
+}
+
+func TestAIWorkflowRunnerReportsProgress(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	progress := &recordingProgressSink{}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeNextTask, TaskID: "one"},
+			{Type: domain.DecisionTypeReviewNeeded},
+			{Type: domain.DecisionTypeComplete},
+		}},
+		TaskExecutor:  fakeTaskExecutor{},
+		Reviewer:      approvingReviewer{},
+		ProgressSink:  progress,
+		Clock:         fixedClock{now: time.Unix(100, 0)},
+		MaxIterations: 4,
+	})
+
+	result, err := runner.Run(context.Background(), goal)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("result success = false: %+v", result)
+	}
+	assertProgressStatesPresent(t, progress.states(), []domain.AgentState{
+		domain.StatePlanning,
+		domain.StateExecuting,
+		domain.StateReviewing,
+		domain.StateComplete,
+	})
+}
+
+func TestAIWorkflowRunnerRecordsFinalResultToMemory(t *testing.T) {
+	goal := domain.Goal{ID: "goal-1", Description: "ship change"}
+	memory := &recordingMemoryStore{}
+	runner := NewAIWorkflowRunner(AIWorkflowRunnerDeps{
+		Planner: fakePlanner{plan: &domain.Plan{
+			ID:    "plan-1",
+			Goal:  goal,
+			Tasks: []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		DecisionMaker: &scriptedDecisionMaker{decisions: []domain.Decision{
+			{Type: domain.DecisionTypeNextTask, TaskID: "one"},
+			{Type: domain.DecisionTypeComplete},
+		}},
+		TaskExecutor:  fakeTaskExecutor{},
+		MemoryStore:   memory,
+		Clock:         fixedClock{now: time.Unix(100, 0)},
+		MaxIterations: 4,
+	})
+
+	result, err := runner.Run(context.Background(), goal)
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("result success = false: %+v", result)
+	}
+	if len(memory.results) != 1 {
+		t.Fatalf("recorded results = %d, want 1", len(memory.results))
+	}
+	if !memory.results[0].Success || memory.results[0].State != domain.StateComplete {
+		t.Fatalf("recorded result = %+v", memory.results[0])
+	}
+}
+
 func TestTemplateRunnerRendersSchedulesExecutesAndWritesOutput(t *testing.T) {
 	runner := NewTemplateRunner(TemplateRunnerDeps{
 		TemplateStore: fakeTemplateStore{template: &domain.Template{
@@ -308,6 +539,61 @@ func TestTemplateRunnerRendersSchedulesExecutesAndWritesOutput(t *testing.T) {
 	}
 	if result.Plan.Tasks[0].Prompt != "plan work" {
 		t.Fatalf("rendered prompt = %q", result.Plan.Tasks[0].Prompt)
+	}
+}
+
+func TestTemplateRunnerTaskErrorReturnsPartialFailedResult(t *testing.T) {
+	taskErr := errors.New("task failed")
+	runner := NewTemplateRunner(TemplateRunnerDeps{
+		TemplateStore: fakeTemplateStore{template: &domain.Template{
+			Name:        "tmpl",
+			Description: "Template",
+			Tasks: []domain.Task{
+				{ID: "one", Name: "One"},
+				{ID: "two", Name: "Two"},
+			},
+		}},
+		TaskExecutor: failingTaskExecutor{err: taskErr},
+		Clock:        fixedClock{now: time.Unix(100, 0)},
+	})
+
+	result, outputs, err := runner.Run(context.Background(), "tmpl", "/repo", nil)
+	if !errors.Is(err, taskErr) {
+		t.Fatalf("Run() error = %v, want task error", err)
+	}
+	if result == nil || result.State != domain.StateFailed || result.Error == nil {
+		t.Fatalf("result = %+v, want failed result", result)
+	}
+	if len(result.Tasks) != 1 {
+		t.Fatalf("tasks = %d, want partial task result", len(result.Tasks))
+	}
+	if outputs != nil {
+		t.Fatalf("outputs = %v, want nil", outputs)
+	}
+}
+
+func TestTemplateRunnerOutputErrorReturnsResultAndOutputs(t *testing.T) {
+	outputErr := errors.New("write failed")
+	runner := NewTemplateRunner(TemplateRunnerDeps{
+		TemplateStore: fakeTemplateStore{template: &domain.Template{
+			Name:        "tmpl",
+			Description: "Template",
+			Tasks:       []domain.Task{{ID: "one", Name: "One"}},
+		}},
+		TaskExecutor: fakeTaskExecutor{},
+		OutputWriter: fakeOutputWriter{outputs: []string{"out.md"}, err: outputErr},
+		Clock:        fixedClock{now: time.Unix(100, 0)},
+	})
+
+	result, outputs, err := runner.Run(context.Background(), "tmpl", "/repo", nil)
+	if !errors.Is(err, outputErr) {
+		t.Fatalf("Run() error = %v, want output error", err)
+	}
+	if result == nil || !result.Success || result.State != domain.StateComplete || !errors.Is(result.Error, outputErr) {
+		t.Fatalf("result = %+v, want complete result with output error", result)
+	}
+	if strings.Join(outputs, ",") != "out.md" {
+		t.Fatalf("outputs = %v, want [out.md]", outputs)
 	}
 }
 
@@ -358,12 +644,22 @@ func (approvingReviewer) Review(ctx context.Context, execution domain.ExecutionC
 }
 
 type recordingProgressSink struct {
-	last domain.Progress
+	last       domain.Progress
+	progresses []domain.Progress
 }
 
 func (s *recordingProgressSink) ReportProgress(ctx context.Context, progress domain.Progress) error {
 	s.last = progress
+	s.progresses = append(s.progresses, progress)
 	return nil
+}
+
+func (s *recordingProgressSink) states() []domain.AgentState {
+	states := make([]domain.AgentState, 0, len(s.progresses))
+	for _, progress := range s.progresses {
+		states = append(states, progress.State)
+	}
+	return states
 }
 
 type recordingCheckpointStore struct {
@@ -434,8 +730,63 @@ func (fakePromptRenderer) RenderPrompt(ctx context.Context, template string, val
 
 type fakeOutputWriter struct {
 	outputs []string
+	err     error
 }
 
 func (w fakeOutputWriter) WriteOutputs(ctx context.Context, template domain.Template, result domain.Result) ([]string, error) {
-	return w.outputs, nil
+	return w.outputs, w.err
+}
+
+type failingTaskExecutor struct {
+	err error
+}
+
+func (e failingTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, execution domain.ExecutionContext) (*domain.TaskResult, error) {
+	return &domain.TaskResult{
+		TaskID:   task.ID,
+		TaskName: task.Name,
+		Success:  false,
+		Error:    e.err,
+	}, e.err
+}
+
+type recordingMemoryStore struct {
+	decisions []domain.Decision
+	results   []domain.Result
+}
+
+func (s *recordingMemoryStore) RecordDecision(ctx context.Context, decision domain.Decision) error {
+	s.decisions = append(s.decisions, decision)
+	return nil
+}
+
+func (s *recordingMemoryStore) RecordResult(ctx context.Context, result domain.Result) error {
+	s.results = append(s.results, result)
+	return nil
+}
+
+func assertPhasesPresent(t *testing.T, got, want []string) {
+	t.Helper()
+	seen := map[string]bool{}
+	for _, phase := range got {
+		seen[phase] = true
+	}
+	for _, phase := range want {
+		if !seen[phase] {
+			t.Fatalf("checkpoint phases = %v, missing %q", got, phase)
+		}
+	}
+}
+
+func assertProgressStatesPresent(t *testing.T, got, want []domain.AgentState) {
+	t.Helper()
+	seen := map[domain.AgentState]bool{}
+	for _, state := range got {
+		seen[state] = true
+	}
+	for _, state := range want {
+		if !seen[state] {
+			t.Fatalf("progress states = %v, missing %s", got, state)
+		}
+	}
 }

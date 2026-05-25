@@ -73,12 +73,13 @@ func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, e
 		return resultWithError(result, err), err
 	}
 	branch := firstNonEmpty(execution.Goal.Context.Branch, defaultBranchName)
+	requirePlanApproval := requirePlanApproval(execution.ApprovalPolicy)
 	session, err := e.gateway.CreateSession(ctx, domain.SessionRequest{
 		Prompt:              firstNonEmpty(task.Prompt, task.Description),
 		Title:               title,
 		Source:              *source,
 		Branch:              branch,
-		RequirePlanApproval: true,
+		RequirePlanApproval: requirePlanApproval,
 		AutomationMode:      defaultAutomationMode,
 	})
 	if err != nil {
@@ -89,10 +90,17 @@ func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, e
 	result.Output = fmt.Sprintf("Session created: %s", session.URL)
 	result.Success = true
 	result.Metrics["session_action"] = "created"
-	result.Metrics["require_plan_approval"] = true
+	result.Metrics["require_plan_approval"] = requirePlanApproval
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(start)
 	return result, nil
+}
+
+func requirePlanApproval(policy domain.ApprovalPolicy) bool {
+	if policy.AutoApprove {
+		return false
+	}
+	return true
 }
 
 func (e *JulesTaskExecutor) resolveSource(ctx context.Context, execution domain.ExecutionContext) (*domain.Source, error) {
