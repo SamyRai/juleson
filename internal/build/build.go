@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,14 +13,19 @@ import (
 )
 
 type Config struct {
-	Name      string
-	Path      string
-	OutputDir string
-	Version   string
-	GOOS      string
-	GOARCH    string
-	Race      bool
-	LDFlags   []string
+	Name          string
+	Path          string
+	OutputDir     string
+	Version       string
+	GOOS          string
+	GOARCH        string
+	Race          bool
+	LDFlags       []string
+	BuildFlags    []string
+	Tags          []string
+	TrimPath      bool
+	CGOEnabled    bool
+	CGOConfigured bool
 }
 
 type BuildResult struct {
@@ -77,13 +83,20 @@ func (b *Builder) BuildWithResult(ctx context.Context) *BuildResult {
 		return result
 	}
 
-	args := []string{"build", "-o", outputPath}
+	args := append([]string{"build"}, b.config.BuildFlags...)
+	if len(b.config.Tags) > 0 {
+		args = append(args, "-tags", strings.Join(b.config.Tags, ","))
+	}
+	if b.config.TrimPath {
+		args = append(args, "-trimpath")
+	}
 	if b.config.Race {
 		args = append(args, "-race")
 	}
 	if len(b.config.LDFlags) > 0 {
 		args = append(args, "-ldflags", strings.Join(b.config.LDFlags, " "))
 	}
+	args = append(args, "-o", outputPath)
 	args = append(args, b.config.Path)
 
 	cmd := exec.CommandContext(ctx, "go", args...)
@@ -93,6 +106,13 @@ func (b *Builder) BuildWithResult(ctx context.Context) *BuildResult {
 	}
 	if b.config.GOARCH != "" {
 		cmd.Env = append(cmd.Env, "GOARCH="+b.config.GOARCH)
+	}
+	if b.config.CGOConfigured {
+		cgoEnabled := "0"
+		if b.config.CGOEnabled {
+			cgoEnabled = "1"
+		}
+		cmd.Env = append(cmd.Env, "CGO_ENABLED="+cgoEnabled)
 	}
 	out, err := cmd.CombinedOutput()
 
@@ -396,13 +416,23 @@ func (m *ModuleManager) Verify(ctx context.Context) error {
 	return runGo(ctx, "mod", "verify")
 }
 
+func (m *ModuleManager) Vendor(ctx context.Context) error {
+	return runGo(ctx, "mod", "vendor")
+}
+
 func (m *ModuleManager) Graph(ctx context.Context) error {
 	return runGo(ctx, "mod", "graph")
+}
+
+func (m *ModuleManager) Why(ctx context.Context, packages ...string) error {
+	args := append([]string{"mod", "why"}, packages...)
+	return runGo(ctx, args...)
 }
 
 type InstallResult struct {
 	InstallDir string
 	Installed  []string
+	Failed     []string
 }
 
 type Installer struct {
@@ -461,11 +491,45 @@ func (i *Installer) InstallTo(ctx context.Context, installDir string) (*InstallR
 	return result, nil
 }
 
+func (i *Installer) Uninstall(ctx context.Context) error {
+	installDir, err := i.GetInstallPath()
+	if err != nil {
+		return err
+	}
+	return i.UninstallFrom(ctx, installDir)
+}
+
+func (i *Installer) UninstallFrom(ctx context.Context, installDir string) error {
+	_ = ctx
+	for _, binary := range i.binaries {
+		binPath := filepath.Join(installDir, binary)
+		if runtime.GOOS == "windows" && !strings.HasSuffix(binPath, ".exe") {
+			binPath += ".exe"
+		}
+		if err := os.Remove(binPath); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i *Installer) IsInPath(dir string) bool {
+	for _, pathDir := range filepath.SplitList(os.Getenv("PATH")) {
+		if pathDir == dir {
+			return true
+		}
+	}
+	return false
+}
+
 func runGo(ctx context.Context, args ...string) error {
 	cmd := exec.CommandContext(ctx, "go", args...)
-	out, err := cmd.CombinedOutput()
+	var output strings.Builder
+	cmd.Stdout = io.MultiWriter(os.Stdout, &output)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &output)
+	err := cmd.Run()
 	if err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(output.String()))
 	}
 	return nil
 }

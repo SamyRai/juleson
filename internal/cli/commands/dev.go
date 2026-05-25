@@ -422,11 +422,35 @@ func newModCommand() *cobra.Command {
 	})
 
 	modCmd.AddCommand(&cobra.Command{
+		Use:   "vendor",
+		Short: "Vendor dependencies",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("📦 Vendoring dependencies...")
+			manager := build.NewModuleManager()
+			if err := manager.Vendor(context.Background()); err != nil {
+				return err
+			}
+			fmt.Println("✅ Dependencies vendored")
+			return nil
+		},
+	})
+
+	modCmd.AddCommand(&cobra.Command{
 		Use:   "graph",
 		Short: "Print dependency graph",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			manager := build.NewModuleManager()
 			return manager.Graph(context.Background())
+		},
+	})
+
+	modCmd.AddCommand(&cobra.Command{
+		Use:   "why [packages...]",
+		Short: "Explain why packages are needed",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			manager := build.NewModuleManager()
+			return manager.Why(context.Background(), args...)
 		},
 	})
 

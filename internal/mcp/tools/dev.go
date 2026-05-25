@@ -135,7 +135,8 @@ type QualityCheckOutput struct {
 }
 
 type ModuleMaintenanceInput struct {
-	Operation string `json:"operation" jsonschema:"Operation: tidy, download, verify, graph"`
+	Operation string   `json:"operation" jsonschema:"Operation: tidy, download, verify, vendor, graph, why"`
+	Packages  []string `json:"packages,omitempty" jsonschema:"Packages for the why operation"`
 }
 
 type ModuleMaintenanceOutput struct {
@@ -466,8 +467,12 @@ func moduleMaintenanceHandler(ctx context.Context, req *mcp.CallToolRequest, inp
 		err = manager.Download(ctx)
 	case "verify":
 		err = manager.Verify(ctx)
+	case "vendor":
+		err = manager.Vendor(ctx)
 	case "graph":
 		err = manager.Graph(ctx)
+	case "why":
+		err = manager.Why(ctx, input.Packages...)
 	default:
 		return &mcp.CallToolResult{
 			IsError: true,
