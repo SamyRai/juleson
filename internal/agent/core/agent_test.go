@@ -131,6 +131,84 @@ func TestPrepareToolParameters(t *testing.T) {
 	}
 }
 
+func TestGetProgressReportsCurrentTask(t *testing.T) {
+	registry := tools.NewToolRegistry()
+	coreAgent := newTestCoreAgent(t, registry, &Config{
+		MaxIterations:   10,
+		Logger:          nil,
+		RetryConfig:     DefaultRetryStrategy(),
+		CheckpointDir:   "./test_checkpoints",
+		AutoSave:        false,
+		SaveInterval:    5 * time.Minute,
+		EnableTelemetry: false,
+	})
+	coreAgent.state = agent.StateExecuting
+	coreAgent.currentPlan = []agent.Task{
+		{ID: "done", Name: "Done", State: agent.TaskStateComplete},
+		{ID: "active", Name: "Active", State: agent.TaskStateInProgress},
+		{ID: "next", Name: "Next", State: agent.TaskStatePending},
+	}
+
+	progress := coreAgent.GetProgress()
+
+	if progress.State != agent.StateExecuting {
+		t.Fatalf("State = %s, want %s", progress.State, agent.StateExecuting)
+	}
+	if progress.CurrentTask != "Active" {
+		t.Fatalf("CurrentTask = %q, want Active", progress.CurrentTask)
+	}
+	if progress.CompletedTasks != 1 || progress.TotalTasks != 3 {
+		t.Fatalf("task counts = %d/%d, want 1/3", progress.CompletedTasks, progress.TotalTasks)
+	}
+	if progress.Progress != float64(1)/float64(3)*100 {
+		t.Fatalf("Progress = %v, want one third", progress.Progress)
+	}
+}
+
+func TestNeedsMoreWork(t *testing.T) {
+	registry := tools.NewToolRegistry()
+	coreAgent := newTestCoreAgent(t, registry, &Config{
+		MaxIterations:   10,
+		Logger:          nil,
+		RetryConfig:     DefaultRetryStrategy(),
+		CheckpointDir:   "./test_checkpoints",
+		AutoSave:        false,
+		SaveInterval:    5 * time.Minute,
+		EnableTelemetry: false,
+	})
+
+	tests := []struct {
+		name  string
+		tasks []agent.Task
+		want  bool
+	}{
+		{
+			name:  "all complete",
+			tasks: []agent.Task{{State: agent.TaskStateComplete}},
+			want:  false,
+		},
+		{
+			name:  "pending task",
+			tasks: []agent.Task{{State: agent.TaskStatePending}},
+			want:  true,
+		},
+		{
+			name:  "failed task",
+			tasks: []agent.Task{{State: agent.TaskStateFailed}},
+			want:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			coreAgent.currentPlan = tt.tasks
+			if got := coreAgent.needsMoreWork(&agent.Result{}); got != tt.want {
+				t.Fatalf("needsMoreWork() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
