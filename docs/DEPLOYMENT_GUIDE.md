@@ -163,11 +163,11 @@ brew install Juleson
 
 ```bash
 # Install latest version
-go install github.com/SamyRai/Juleson/cmd/juleson@latest
-go install github.com/SamyRai/Juleson/cmd/jules-mcp@latest
+go install github.com/SamyRai/juleson/cmd/juleson@latest
+go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 
 # Install specific version
-go install github.com/SamyRai/Juleson/cmd/juleson@v0.1.0
+go install github.com/SamyRai/juleson/cmd/juleson@v0.1.0
 ```
 
 ---

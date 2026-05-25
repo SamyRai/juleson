@@ -22,7 +22,7 @@ method that best fits your needs.
 # Using pre-built binaries
 curl -L https://github.com/SamyRai/juleson/releases/latest/download/install.sh | bash
 
-# Or using Go (requires Go 1.23+)
+# Or using Go (requires Go 1.25+)
 go install github.com/SamyRai/juleson/cmd/juleson@latest
 go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
@@ -33,7 +33,7 @@ go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 # Using PowerShell
 irm https://github.com/SamyRai/juleson/releases/latest/download/install.ps1 | iex
 
-# Or using Go (requires Go 1.23+)
+# Or using Go (requires Go 1.25+)
 go install github.com/SamyRai/juleson/cmd/juleson@latest
 go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
@@ -140,7 +140,7 @@ jules-mcp --version
 
 ## Method 2: Go Install
 
-Requires Go 1.23 or higher.
+Requires Go 1.25 or higher.
 
 ### All Platforms
 
@@ -184,7 +184,7 @@ $goPath = go env GOPATH
 
 ### Prerequisites
 
-- Go 1.23 or higher
+- Go 1.25 or higher
 - Git
 - Make (Linux/macOS) or PowerShell (Windows)
 
