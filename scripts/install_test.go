@@ -76,7 +76,7 @@ func TestInstallShellInstallsBothBinariesFromLocalRelease(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected installed binary %s: %v\ninstaller output:\n%s", path, err, output)
 		}
-		if info.Mode()&0111 == 0 {
+		if info.Mode()&0o111 == 0 {
 			t.Fatalf("expected %s to be executable, mode %s", path, info.Mode())
 		}
 		contents, err := os.ReadFile(path)
@@ -135,7 +135,7 @@ func TestInstallationDocsReferenceInstallableAssets(t *testing.T) {
 	files := []string{
 		filepath.Join("..", "README.md"),
 		filepath.Join("..", "docs", "INSTALLATION_GUIDE.md"),
-		filepath.Join("README.md"),
+		"README.md",
 	}
 	for _, file := range files {
 		contents, err := os.ReadFile(file)
@@ -152,8 +152,7 @@ func TestInstallationDocsReferenceInstallableAssets(t *testing.T) {
 	}
 }
 
-func installerPlatform() (string, string, bool) {
-	var goos string
+func installerPlatform() (goos, goarch string, ok bool) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 		goos = runtime.GOOS
@@ -161,7 +160,6 @@ func installerPlatform() (string, string, bool) {
 		return "", "", false
 	}
 
-	var goarch string
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
 		goarch = runtime.GOARCH
@@ -186,7 +184,7 @@ func writeTarGz(path, name string, contents []byte) error {
 
 	header := &tar.Header{
 		Name: name,
-		Mode: 0755,
+		Mode: 0o755,
 		Size: int64(len(contents)),
 	}
 	if err := tarWriter.WriteHeader(header); err != nil {

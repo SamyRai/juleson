@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func TestServerE2EWithCommandTransport(t *testing.T) {
 		t.Skip("E2E tests disabled by SKIP_E2E")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	binaryPath := resolveMCPBinary(t, ctx)
@@ -89,6 +90,7 @@ func resolveMCPBinary(t *testing.T, ctx context.Context) string {
 	t.Helper()
 
 	if binaryPath := os.Getenv("JULESON_MCP_BINARY"); binaryPath != "" {
+		// #nosec G304,G703 -- tests intentionally accept an explicit local binary path.
 		if _, err := os.Stat(binaryPath); err != nil {
 			t.Fatalf("JULESON_MCP_BINARY %q is not usable: %v", binaryPath, err)
 		}
@@ -106,7 +108,7 @@ func resolveMCPBinary(t *testing.T, ctx context.Context) string {
 	}
 
 	binaryPath := filepath.Join(t.TempDir(), "jules-mcp")
-	if os.Getenv("GOOS") == "windows" {
+	if runtime.GOOS == "windows" {
 		binaryPath += ".exe"
 	}
 

@@ -90,7 +90,7 @@ func TestGet(t *testing.T) {
 	registry := NewToolRegistry()
 
 	tool := &mockTool{name: "test-tool"}
-	registry.Register(tool)
+	mustRegister(t, registry, tool)
 
 	// Get existing tool
 	retrieved, err := registry.Get("test-tool")
@@ -115,9 +115,9 @@ func TestList(t *testing.T) {
 	tool2 := &mockTool{name: "tool2"}
 	tool3 := &mockTool{name: "tool3"}
 
-	registry.Register(tool1)
-	registry.Register(tool2)
-	registry.Register(tool3)
+	mustRegister(t, registry, tool1)
+	mustRegister(t, registry, tool2)
+	mustRegister(t, registry, tool3)
 
 	tools := registry.List()
 	if len(tools) != 3 {
@@ -158,9 +158,9 @@ func TestFindForTask(t *testing.T) {
 		},
 	}
 
-	registry.Register(tool1)
-	registry.Register(tool2)
-	registry.Register(toolAll)
+	mustRegister(t, registry, tool1)
+	mustRegister(t, registry, tool2)
+	mustRegister(t, registry, toolAll)
 
 	// Test finding tools for task1
 	task1 := agent.Task{Name: "task1"}
@@ -195,7 +195,9 @@ func TestConcurrentAccess(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(n int) {
 			tool := &mockTool{name: fmt.Sprintf("tool%d", n)}
-			registry.Register(tool)
+			if err := registry.Register(tool); err != nil {
+				t.Errorf("register tool: %v", err)
+			}
 			done <- true
 		}(i)
 	}
@@ -207,5 +209,12 @@ func TestConcurrentAccess(t *testing.T) {
 	tools := registry.List()
 	if len(tools) != 10 {
 		t.Errorf("expected 10 tools after concurrent registration, got %d", len(tools))
+	}
+}
+
+func mustRegister(t *testing.T, registry ToolRegistry, tool Tool) {
+	t.Helper()
+	if err := registry.Register(tool); err != nil {
+		t.Fatalf("register %q: %v", tool.Name(), err)
 	}
 }

@@ -26,8 +26,7 @@ func TestExecuteSingleTask(t *testing.T) {
 		EnableTelemetry: false,
 	}
 
-	// Create agent
-	coreAgent := NewAgent(registry, config).(*CoreAgent)
+	coreAgent := newTestCoreAgent(t, registry, config)
 
 	// Create a test task
 	task := &agent.Task{
@@ -77,7 +76,7 @@ func TestPrepareToolParameters(t *testing.T) {
 
 	// Create agent
 	registry := tools.NewToolRegistry()
-	coreAgent := NewAgent(registry, config).(*CoreAgent)
+	coreAgent := newTestCoreAgent(t, registry, config)
 
 	// Create a test task
 	task := &agent.Task{
@@ -174,4 +173,13 @@ func TestNewAgent(t *testing.T) {
 	if coreAgent.maxIterations != DefaultMaxIterations {
 		t.Errorf("Expected maxIterations %d, got %d", DefaultMaxIterations, coreAgent.maxIterations)
 	}
+}
+
+func newTestCoreAgent(t *testing.T, registry tools.ToolRegistry, config *Config) *CoreAgent {
+	t.Helper()
+	coreAgent, ok := NewAgent(registry, config).(*CoreAgent)
+	if !ok {
+		t.Fatal("Expected CoreAgent type")
+	}
+	return coreAgent
 }
