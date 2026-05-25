@@ -122,6 +122,9 @@ func (a *CoreAgent) GetProgress() *agent.Progress {
 func (a *CoreAgent) SetConstraints(constraints []string) {
 	if a.validator != nil {
 		a.validator = NewConstraintValidator(constraints)
+		if a.executor != nil {
+			a.executor.setValidator(a.validator)
+		}
 	}
 }
 

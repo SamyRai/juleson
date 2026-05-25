@@ -39,6 +39,7 @@ type CoreAgent struct {
 	telemetry     *Metrics
 	validator     *ConstraintValidator
 	geminiClient  *gemini.Client
+	executor      *taskExecutor
 
 	// Current execution context
 	currentGoal    *agent.Goal
@@ -119,6 +120,7 @@ func NewAgent(toolRegistry tools.ToolRegistry, config *Config) agent.Agent {
 
 	// Initialize validator with empty constraints (can be set later)
 	agent.validator = NewConstraintValidator([]string{})
+	agent.executor = newTaskExecutor(agent.toolRegistry, agent.validator, agent.telemetry, agent.logger, agent.dryRun)
 
 	return agent
 }
