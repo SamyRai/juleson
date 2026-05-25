@@ -10,30 +10,31 @@ known gaps without committing to release dates.
 - Improve MCP and CLI error messages with request context.
 - Add debug logging for Jules API requests and responses, with secret redaction.
 - Expand unit coverage for `internal/github`, `internal/events`, and CLI command behavior.
-- Add a config validation command.
 
 ## Next Jules Sprint Objective
 
-Implement `juleson config validate` as a low-risk operator safety command.
-The command should validate the effective Juleson configuration without printing
-secret values, report clear next steps for missing Jules, GitHub, or Gemini
-credentials, and distinguish hard validation failures from optional integration
-warnings.
+Add opt-in debug logging for Jules API requests and responses with secret
+redaction. Operators should be able to troubleshoot Jules API behavior without
+ever exposing API keys, bearer tokens, or other credential material in logs.
 
 Acceptance criteria:
 
-- Add the command to the existing Cobra command tree without breaking current
-  `setup`, `sessions`, `sources`, or local `dev` commands.
-- Reuse the existing `internal/config` loading and validation behavior where
-  possible; keep validation ownership in the config package or a directly
-  adjacent CLI handler.
-- Never print API keys, tokens, or config file secret values.
-- Cover success, missing optional credentials, invalid MCP port, and invalid
-  automation concurrency with focused tests.
-- Update `docs/CLI_REFERENCE.md` and `docs/CONFIGURATION.md` with the new
-  command semantics.
-- Verify with `go test ./...`, `go run ./cmd/juleson config validate`, and
-  `go run ./cmd/juleson --help`.
+- Keep logging opt-in through configuration, environment, or an explicit client
+  option; default behavior should remain quiet.
+- Log method, URL path, status code, duration, retry attempt context, and concise
+  error details for Jules API calls.
+- Redact `X-Goog-Api-Key`, `Authorization`, API key query params, and obvious
+  token-like values in request/response metadata before logging.
+- Avoid logging full response bodies by default; if body snippets are added,
+  bound their size and apply redaction first.
+- Reuse existing `slog` patterns where practical and keep ownership close to
+  `pkg/jules` client request handling.
+- Cover redaction, disabled-by-default behavior, enabled request/response
+  logging, retry logging, and error-path logging with focused tests.
+- Update `docs/CONFIGURATION.md` and `docs/JULES_API.md` if new user-visible
+  options or troubleshooting workflows are added.
+- Verify with `go test ./...`, `git diff --check`, and a local Juleson command
+  that exercises the client without printing secrets.
 
 ## Next Sprint Track
 
