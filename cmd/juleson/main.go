@@ -10,8 +10,10 @@ import (
 )
 
 func main() {
-	// Load configuration
-	cfg, err := config.Load()
+	// Load configuration. Commands that require Jules API access validate
+	// credentials at use time; local commands such as version/help should work
+	// without JULES_API_KEY.
+	cfg, err := config.LoadOptional()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}

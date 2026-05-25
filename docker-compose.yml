@@ -14,7 +14,8 @@ services:
       - .:/workspace
       - ./configs:/home/juleson/configs
     working_dir: /workspace
-    command: ["./juleson", "analyze", "/workspace"]
+    entrypoint: ["juleson"]
+    command: ["analyze", "/workspace"]
     networks:
       - juleson-network
 
@@ -31,7 +32,8 @@ services:
       - "8080:8080"
     volumes:
       - ./configs:/home/juleson/configs
-    command: ["./juleson-mcp"]
+    entrypoint: ["jules-mcp"]
+    command: []
     networks:
       - juleson-network
     restart: unless-stopped
