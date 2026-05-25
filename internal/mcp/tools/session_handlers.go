@@ -577,7 +577,15 @@ func currentWatchSessionOutput(ctx context.Context, sessionID string, client *ju
 	case session.State == jules.SessionStateAwaitingUserFeedback:
 		output.NextAction = "inspect recent activities, then call send_session_message"
 	case session.State == jules.SessionStateCompleted:
-		output.NextAction = "call preview_session_changes, then apply_session_patches with confirm_apply=true if acceptable"
+		hasDeliverables, err := julesops.SessionHasDeliverables(ctx, client, session)
+		switch {
+		case err != nil:
+			output.NextAction = "inspect list_session_activities and list_session_artifacts; deliverable check failed"
+		case !hasDeliverables:
+			output.NextAction = "no retrievable deliverable was produced; inspect list_session_artifacts or create a follow-up session"
+		default:
+			output.NextAction = "call preview_session_changes, then apply_session_patches with confirm_apply=true if acceptable"
+		}
 	case session.State == jules.SessionStateFailed:
 		output.NextAction = "inspect get_session and list_session_activities for failure details"
 	case len(session.Outputs) > 0:

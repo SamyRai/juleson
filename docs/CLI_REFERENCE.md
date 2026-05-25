@@ -109,6 +109,9 @@ resumable watches. Use
 `--initial-state` or the first observed state. Use `--wake-on-agent-message` to
 stop when Jules posts a new agent message after `--since`; without `--since`,
 the first poll establishes the activity baseline.
+When a completed session has no pull request output and only empty changeset
+artifacts, watch reports that no retrievable deliverable was produced instead
+of directing operators to apply an empty patch.
 
 `sessions apply` dry-runs by default. Use `--confirm` to apply patches; dirty
 worktrees are blocked unless `--allow-dirty` is passed. `--activity-id` and
@@ -119,7 +122,9 @@ worktrees are blocked unless `--allow-dirty` is passed. `--activity-id` and
 `sessions artifacts list` prints an artifact manifest with activity ID, artifact
 index, type, changed files, base commit, suggested commit message, media MIME
 type, and bash exit code. `sessions outputs` prints documented session outputs
-such as Jules-created pull requests.
+such as Jules-created pull requests. Completed sessions can validly expose no
+retrievable deliverables; in that case artifact manifests show empty changesets
+and outputs report that no supported documented payloads were found.
 
 `sessions delete` calls the Jules API delete endpoint. Without `--force`, it
 asks for the exact session ID before deleting. Session cancel is not exposed by

@@ -240,6 +240,80 @@ func TestWatchSessionReturnsOnJulesAgentMessage(t *testing.T) {
 	assert.Len(t, output.RecentActivities, 1)
 }
 
+func TestCurrentWatchSessionOutputCompletedWithoutDeliverables(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateCompleted,
+			})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=25",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
+				Activities: []jules.Activity{
+					{
+						ID: "activity-1",
+						Artifacts: []jules.Artifact{
+							{ChangeSet: &jules.ChangeSet{GitPatch: &jules.GitPatch{UnidiffPatch: " \n"}}},
+						},
+					},
+				},
+			})
+		})
+
+	output, err := currentWatchSessionOutput(context.Background(), "session-1", client, time.Time{})
+
+	require.NoError(t, err)
+	assert.Equal(t, string(jules.SessionStateCompleted), output.State)
+	assert.Contains(t, output.NextAction, "no retrievable deliverable")
+}
+
+func TestCurrentWatchSessionOutputCompletedWithDeliverables(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateCompleted,
+			})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=25",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
+				Activities: []jules.Activity{
+					{
+						ID: "activity-1",
+						Artifacts: []jules.Artifact{
+							{ChangeSet: &jules.ChangeSet{GitPatch: &jules.GitPatch{UnidiffPatch: "diff --git a/file b/file\n"}}},
+						},
+					},
+				},
+			})
+		})
+
+	output, err := currentWatchSessionOutput(context.Background(), "session-1", client, time.Time{})
+
+	require.NoError(t, err)
+	assert.Equal(t, string(jules.SessionStateCompleted), output.State)
+	assert.Contains(t, output.NextAction, "preview_session_changes")
+}
+
 func TestApplySessionPatchesRequiresCleanWorktreeForMutation(t *testing.T) {
 	tmpDir := t.TempDir()
 	cmd := exec.Command("git", "init")

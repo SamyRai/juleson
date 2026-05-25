@@ -10,3 +10,5 @@ type BashOutput = jules.BashOutput
 type ChangeSet = jules.ChangeSet
 type GitPatch = jules.GitPatch
 type Media = jules.Media
+type Output = jules.Output
+type PullRequest = jules.PullRequest

@@ -131,3 +131,32 @@ func DownloadAllSessionArtifacts(ctx context.Context, client *jules.Client, sess
 func DownloadAllArtifacts(ctx context.Context, client *jules.Client, sessionID string, options *ArtifactDownloadOptions) ([]string, error) {
 	return DownloadAllSessionArtifacts(ctx, client, sessionID, options)
 }
+
+// SessionHasDeliverables reports whether a completed session exposes anything
+// an operator can retrieve or act on through documented Jules API fields.
+func SessionHasDeliverables(ctx context.Context, client *jules.Client, session *jules.Session) (bool, error) {
+	if session == nil {
+		return false, nil
+	}
+	for _, output := range session.Outputs {
+		if output.PullRequest != nil && strings.TrimSpace(output.PullRequest.URL) != "" {
+			return true, nil
+		}
+	}
+
+	activities, err := client.ListAllActivities(ctx, session.ID, 100)
+	if err != nil {
+		return false, fmt.Errorf("failed to list activities for deliverable check: %w", err)
+	}
+	for _, activity := range activities {
+		for _, artifact := range activity.Artifacts {
+			if artifact.ChangeSet == nil || artifact.ChangeSet.GitPatch == nil {
+				continue
+			}
+			if strings.TrimSpace(artifact.ChangeSet.GitPatch.UnidiffPatch) != "" {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}

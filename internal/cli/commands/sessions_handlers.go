@@ -567,6 +567,18 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 		update.Stop = true
 		return update, nil
 	case session.State == jules.SessionStateCompleted:
+		hasDeliverables, err := julesops.SessionHasDeliverables(ctx, client, session)
+		if err != nil {
+			fmt.Printf("⚠️  Could not check deliverables: %v\n", err)
+			fmt.Printf("Next action: inspect activities with 'juleson sessions artifacts list %s', then preview changes with 'juleson sessions apply %s <project-path>'.\n", sessionID, sessionID)
+			update.Stop = true
+			return update, nil
+		}
+		if !hasDeliverables {
+			fmt.Printf("Next action: no retrievable deliverable was produced. Inspect activities with 'juleson sessions artifacts list %s' or create a follow-up session.\n", sessionID)
+			update.Stop = true
+			return update, nil
+		}
 		fmt.Printf("Next action: preview changes with 'juleson sessions apply %s <project-path>'.\n", sessionID)
 		if len(session.Outputs) > 0 {
 			fmt.Printf("Next output action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)

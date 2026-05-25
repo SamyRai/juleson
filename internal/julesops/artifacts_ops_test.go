@@ -295,6 +295,102 @@ func (suite *ArtifactsTestSuite) TestGetExtensionFromMimeType() {
 	}
 }
 
+func (suite *ArtifactsTestSuite) TestSessionHasDeliverablesNilSession() {
+	hasDeliverables, err := SessionHasDeliverables(context.Background(), suite.client, nil)
+
+	require.NoError(suite.T(), err)
+	assert.False(suite.T(), hasDeliverables)
+}
+
+func (suite *ArtifactsTestSuite) TestSessionHasDeliverablesPullRequestOutput() {
+	hasDeliverables, err := SessionHasDeliverables(context.Background(), suite.client, &jules.Session{
+		ID: "session-1",
+		Outputs: []jules.Output{
+			{PullRequest: &jules.PullRequest{URL: "https://github.com/SamyRai/juleson/pull/1"}},
+		},
+	})
+
+	require.NoError(suite.T(), err)
+	assert.True(suite.T(), hasDeliverables)
+}
+
+func (suite *ArtifactsTestSuite) TestSessionHasDeliverablesNonEmptyPatch() {
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, ActivitiesResponse{
+				Activities: []Activity{
+					{
+						ID: "activity-1",
+						Artifacts: []Artifact{
+							{ChangeSet: &ChangeSet{GitPatch: &GitPatch{UnidiffPatch: "diff --git a/file b/file\n"}}},
+						},
+					},
+				},
+			})
+		})
+
+	hasDeliverables, err := SessionHasDeliverables(context.Background(), suite.client, &jules.Session{ID: "session-1"})
+
+	require.NoError(suite.T(), err)
+	assert.True(suite.T(), hasDeliverables)
+}
+
+func (suite *ArtifactsTestSuite) TestSessionHasDeliverablesEmptyPatch() {
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, ActivitiesResponse{
+				Activities: []Activity{
+					{
+						ID: "activity-1",
+						Artifacts: []Artifact{
+							{ChangeSet: &ChangeSet{GitPatch: &GitPatch{UnidiffPatch: "   \n"}}},
+						},
+					},
+				},
+			})
+		})
+
+	hasDeliverables, err := SessionHasDeliverables(context.Background(), suite.client, &jules.Session{ID: "session-1"})
+
+	require.NoError(suite.T(), err)
+	assert.False(suite.T(), hasDeliverables)
+}
+
+func (suite *ArtifactsTestSuite) TestSessionHasDeliverablesFindsPatchOnLaterPage() {
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, ActivitiesResponse{
+				NextPageToken: "next",
+				Activities: []Activity{
+					{
+						ID: "activity-1",
+						Artifacts: []Artifact{
+							{ChangeSet: &ChangeSet{GitPatch: &GitPatch{UnidiffPatch: ""}}},
+						},
+					},
+				},
+			})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100&pageToken=next",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, ActivitiesResponse{
+				Activities: []Activity{
+					{
+						ID: "activity-2",
+						Artifacts: []Artifact{
+							{ChangeSet: &ChangeSet{GitPatch: &GitPatch{UnidiffPatch: "diff --git a/file b/file\n"}}},
+						},
+					},
+				},
+			})
+		})
+
+	hasDeliverables, err := SessionHasDeliverables(context.Background(), suite.client, &jules.Session{ID: "session-1"})
+
+	require.NoError(suite.T(), err)
+	assert.True(suite.T(), hasDeliverables)
+}
+
 // TestRunArtifactsTestSuite runs the test suite
 func TestArtifactsTestSuite(t *testing.T) {
 	suite.Run(t, new(ArtifactsTestSuite))

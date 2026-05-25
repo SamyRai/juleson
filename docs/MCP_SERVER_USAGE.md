@@ -131,11 +131,17 @@ next session state transition. Set `return_on_jules_agent_message=true` to retur
 when Jules posts a new agent message after `since`; without `since`, the first
 poll establishes the activity baseline. Returned watch wakeups include
 `wake_reason`.
+When a completed session has no pull request output and only empty changeset
+artifacts, `next_action` reports that no retrievable deliverable was produced
+instead of directing callers to apply an empty patch.
 
 `list_session_artifacts` returns an artifact manifest containing activity ID,
 artifact index, type, file count, changed files, base commit, suggested commit
 message, media MIME type, bash command, and bash exit code.
 `get_session_outputs` returns documented session outputs such as pull requests.
+Completed sessions can validly expose no retrievable deliverables; artifact
+manifests show empty changesets and `get_session_outputs` reports when no
+supported documented payloads were found.
 When a pull request output exists, inspect GitHub Actions with the existing
 GitHub tools instead of duplicating Jules CI-fix behavior.
 
