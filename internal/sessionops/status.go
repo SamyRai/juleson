@@ -3,7 +3,7 @@ package sessionops
 import (
 	"fmt"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 type StatusSummary struct {

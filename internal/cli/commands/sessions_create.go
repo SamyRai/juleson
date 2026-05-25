@@ -54,7 +54,7 @@ func createSession(cfg *config.Config, sourceID string, prompt string, options C
 		return err
 	}
 
-	session, err := julesClient.CreateSession(ctx, req)
+	session, err := julesClient.Sessions().Create(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
@@ -126,7 +126,7 @@ func batchCreateSessions(cfg *config.Config, sourceID, taskFileOrPrompt string, 
 			return err
 		}
 
-		session, err := julesClient.CreateSession(ctx, req)
+		session, err := julesClient.Sessions().Create(ctx, req)
 		if err != nil {
 			return fmt.Errorf("created %d/%d sessions before failure: %w", i-1, options.Parallel, err)
 		}

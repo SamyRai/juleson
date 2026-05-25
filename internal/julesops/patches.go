@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // PatchApplicationOptions represents options for applying patches
@@ -59,7 +59,7 @@ func ApplySessionPatches(ctx context.Context, client *jules.Client, sessionID st
 	}
 
 	// Get all activities for the session
-	activities, err := client.ListActivities(ctx, sessionID, 100)
+	response, err := client.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
@@ -69,7 +69,7 @@ func ApplySessionPatches(ctx context.Context, client *jules.Client, sessionID st
 	}
 
 	// Process each activity looking for patches
-	for _, activity := range activities {
+	for _, activity := range response.Activities {
 		activityResult, err := applyActivityPatches(ctx, client, sessionID, activity.ID, options)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("Activity %s: %v", activity.ID, err))
@@ -112,7 +112,7 @@ func ApplyActivityPatches(ctx context.Context, client *jules.Client, sessionID, 
 // applyActivityPatches is the internal implementation for applying patches from an activity
 func applyActivityPatches(ctx context.Context, client *jules.Client, sessionID, activityID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
 	// Get the activity to access its artifacts
-	activity, err := client.GetActivity(ctx, sessionID, activityID)
+	activity, err := client.Activities().Get(ctx, sessionID, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get activity: %w", err)
 	}
@@ -341,19 +341,19 @@ func GetSessionChangesWithOptions(ctx context.Context, client *jules.Client, ses
 		options = &PatchApplicationOptions{}
 	}
 	if options.ActivityID != "" {
-		activity, err := client.GetActivity(ctx, sessionID, options.ActivityID)
+		activity, err := client.Activities().Get(ctx, sessionID, options.ActivityID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get activity: %w", err)
 		}
 		return changesFromActivities(sessionID, []jules.Activity{*activity}, options), nil
 	}
 
-	activities, err := client.ListActivities(ctx, sessionID, 100)
+	response, err := client.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
 
-	return changesFromActivities(sessionID, activities, options), nil
+	return changesFromActivities(sessionID, response.Activities, options), nil
 }
 
 func changesFromActivities(sessionID string, activities []jules.Activity, options *PatchApplicationOptions) *SessionChanges {

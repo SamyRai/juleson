@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func (ao *AIOrchestrator) buildAIPrompt() string {

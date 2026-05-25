@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/SamyRai/juleson/internal/sessionops"
@@ -58,7 +59,7 @@ func listSessionArtifacts(cfg *config.Config, sessionID string) error {
 
 func showSessionOutputs(cfg *config.Config, sessionID string) error {
 	julesClient := newJulesClient(cfg)
-	session, err := julesClient.GetSession(context.Background(), sessionID)
+	session, err := julesClient.Sessions().Get(context.Background(), sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -162,10 +163,11 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	fmt.Printf("👁️  Previewing artifacts from session: %s\n", sessionID)
 	fmt.Println(strings.Repeat("=", 60))
 
-	activities, err := julesClient.ListActivities(ctx, sessionID, 100)
+	response, err := julesClient.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
 	if err != nil {
 		return fmt.Errorf("failed to list activities: %w", err)
 	}
+	activities := response.Activities
 
 	if len(activities) == 0 {
 		fmt.Println("📭 No activities found in this session.")
@@ -203,7 +205,7 @@ func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID s
 	fmt.Printf("📁 Session: %s\n", sessionID)
 	fmt.Println(strings.Repeat("=", 60))
 
-	activity, err := julesClient.GetActivity(ctx, sessionID, activityID)
+	activity, err := julesClient.Activities().Get(ctx, sessionID, activityID)
 	if err != nil {
 		return fmt.Errorf("failed to get activity: %w", err)
 	}

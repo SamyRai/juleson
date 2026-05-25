@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // matchGitRepoToSource matches the current git repository to a Jules source.

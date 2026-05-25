@@ -156,8 +156,32 @@ func TestPresentationDoesNotDependOnJulesSDK(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read file: %v", err)
 		}
-		if strings.Contains(string(content), "github.com/SamyRai/juleson/pkg/jules") {
+		if strings.Contains(string(content), "github.com/SamyRai/go-jules") {
 			t.Fatalf("%s imports Jules SDK types; presentation should receive DTOs from adapters", filepath.Join("internal/presentation", entry.Name()))
+		}
+	}
+}
+
+func TestNoLegacyJulesSDKImportPath(t *testing.T) {
+	root := repoRoot(t)
+	cmd := exec.Command("git", "ls-files")
+	cmd.Dir = root
+	output, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("list tracked files: %v", err)
+	}
+
+	legacyImport := "github.com/SamyRai/juleson/" + "pkg/" + "jules"
+	for _, file := range strings.Fields(string(output)) {
+		if !strings.HasSuffix(file, ".go") && !strings.HasSuffix(file, ".md") && file != "go.mod" && file != "go.sum" {
+			continue
+		}
+		content, err := os.ReadFile(filepath.Join(root, file))
+		if err != nil {
+			t.Fatalf("read %s: %v", file, err)
+		}
+		if strings.Contains(string(content), legacyImport) {
+			t.Fatalf("%s contains legacy Jules SDK import path %q", file, legacyImport)
 		}
 	}
 }

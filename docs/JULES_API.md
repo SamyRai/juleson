@@ -6,10 +6,9 @@ Juleson targets the Jules API v1alpha endpoints under:
 https://jules.googleapis.com/v1alpha
 ```
 
-The public Go SDK is implemented under `pkg/jules` and can be imported as
-`github.com/SamyRai/juleson/pkg/jules`. Local filesystem and `git apply`
-operations live in `internal/julesops` so the SDK remains reusable without app
-side effects.
+The public Go SDK is published as `github.com/SamyRai/go-jules`. Local
+filesystem and `git apply` operations live in Juleson's `internal/julesops` so
+the SDK remains reusable without app side effects.
 
 Official references:
 
@@ -33,6 +32,8 @@ Official references:
 ## Go SDK
 
 ```go
+import jules "github.com/SamyRai/go-jules"
+
 client := jules.NewClient(
     "api-key",
     jules.WithBaseURL("https://jules.googleapis.com/v1alpha"),

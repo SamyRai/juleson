@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // previewActivityArtifactsContent displays artifact content based on type

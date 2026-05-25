@@ -3,6 +3,7 @@ module github.com/SamyRai/juleson
 go 1.25.0
 
 require (
+	github.com/SamyRai/go-jules v0.2.0
 	github.com/google/go-github/v76 v76.0.0
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/modelcontextprotocol/go-sdk v1.6.1

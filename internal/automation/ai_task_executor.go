@@ -5,25 +5,34 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 type aiTaskSessionClient interface {
 	SendMessage(ctx context.Context, sessionID string, req *jules.SendMessageRequest) error
-	ListActivities(ctx context.Context, sessionID string, pageSize int) ([]jules.Activity, error)
+}
+
+type aiTaskActivityClient interface {
+	List(ctx context.Context, sessionID string, options *jules.ListActivitiesOptions) (*jules.ActivitiesResponse, error)
 }
 
 type aiTaskExecutor struct {
-	client         aiTaskSessionClient
+	sessions       aiTaskSessionClient
+	activities     aiTaskActivityClient
 	sessionID      func() string
 	currentTime    func() time.Time
 	sleep          func(time.Duration)
 	executionDelay time.Duration
 }
 
-func newAITaskExecutor(client aiTaskSessionClient, sessionID func() string) *aiTaskExecutor {
+func newAITaskExecutor(client *jules.Client, sessionID func() string) *aiTaskExecutor {
+	return newAITaskExecutorWithServices(client.Sessions(), client.Activities(), sessionID)
+}
+
+func newAITaskExecutorWithServices(sessions aiTaskSessionClient, activities aiTaskActivityClient, sessionID func() string) *aiTaskExecutor {
 	return &aiTaskExecutor{
-		client:         client,
+		sessions:       sessions,
+		activities:     activities,
 		sessionID:      sessionID,
 		currentTime:    time.Now,
 		sleep:          time.Sleep,
@@ -32,16 +41,20 @@ func newAITaskExecutor(client aiTaskSessionClient, sessionID func() string) *aiT
 }
 
 func (e *aiTaskExecutor) execute(ctx context.Context, task PendingTask) (CompletedTask, error) {
-	if err := e.client.SendMessage(ctx, e.sessionID(), &jules.SendMessageRequest{Prompt: task.Prompt}); err != nil {
+	if err := e.sessions.SendMessage(ctx, e.sessionID(), &jules.SendMessageRequest{Prompt: task.Prompt}); err != nil {
 		return CompletedTask{}, fmt.Errorf("failed to send task to session: %w", err)
 	}
 
 	e.sleep(e.executionDelay)
 
-	activities, err := e.client.ListActivities(ctx, e.sessionID(), 5)
+	response, err := e.activities.List(ctx, e.sessionID(), &jules.ListActivitiesOptions{PageSize: 5})
 	if err != nil {
 		return CompletedTask{}, fmt.Errorf("failed to list activities: %w", err)
 	}
+	if response == nil {
+		return CompletedTask{}, fmt.Errorf("failed to list activities: empty response")
+	}
+	activities := response.Activities
 
 	result := AITaskResult{Success: true}
 	completed := CompletedTask{

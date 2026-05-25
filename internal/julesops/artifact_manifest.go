@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // ArtifactManifest summarizes a documented Jules activity artifact without
@@ -28,7 +28,7 @@ type ArtifactManifest struct {
 
 // ListSessionArtifactManifests returns manifests for all artifacts in a session.
 func ListSessionArtifactManifests(ctx context.Context, client *jules.Client, sessionID string) ([]ArtifactManifest, error) {
-	activities, err := client.ListAllActivities(ctx, sessionID, 100)
+	activities, err := client.Activities().ListAll(ctx, sessionID, 100)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/google/go-github/v76/github"
 )
 
@@ -52,13 +52,13 @@ func (s *RepositoryService) ListConnectedRepos(ctx context.Context) ([]*Reposito
 		return nil, fmt.Errorf("Jules client not available")
 	}
 
-	sources, err := s.julesClient.ListSources(ctx, 100)
+	response, err := s.julesClient.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: 100})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Jules sources: %w", err)
 	}
 
 	var repos []*Repository
-	for _, source := range sources {
+	for _, source := range response.Sources {
 		// Parse GitHub sources (format: sources/github/owner/repo)
 		if strings.HasPrefix(source.Name, "sources/github/") {
 			parts := strings.Split(source.Name, "/")
@@ -122,12 +122,12 @@ func (s *RepositoryService) SyncRepoWithJules(ctx context.Context, owner, repo s
 	sourceID := fmt.Sprintf("sources/github/%s/%s", owner, repo)
 
 	// Check if source already exists
-	sources, err := s.julesClient.ListSources(ctx, 100)
+	response, err := s.julesClient.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: 100})
 	if err != nil {
 		return fmt.Errorf("failed to list sources: %w", err)
 	}
 
-	for _, source := range sources {
+	for _, source := range response.Sources {
 		if source.Name == sourceID {
 			// Source already exists
 			return nil

@@ -1,6 +1,6 @@
 package julesops
 
-import "github.com/SamyRai/juleson/pkg/jules"
+import "github.com/SamyRai/go-jules"
 
 type ActivitiesResponse = jules.ActivitiesResponse
 type Activity = jules.Activity

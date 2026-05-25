@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/github"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // Helper functions

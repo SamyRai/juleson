@@ -1,8 +1,8 @@
 package commands
 
 import (
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 func newJulesClient(cfg *config.Config) *jules.Client {

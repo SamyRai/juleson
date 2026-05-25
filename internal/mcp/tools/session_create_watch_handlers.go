@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/sessionops"
-	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -80,7 +80,7 @@ func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSe
 		}, CreateSessionOutput{}, err
 	}
 
-	session, err := client.CreateSession(ctx, createReq)
+	session, err := client.Sessions().Create(ctx, createReq)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,

@@ -3,7 +3,7 @@ package sessionops
 import (
 	"testing"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func TestSummarizeSessions(t *testing.T) {

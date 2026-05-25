@@ -3,7 +3,7 @@ package automation
 import (
 	"testing"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func TestNewSessionOrchestrator(t *testing.T) {

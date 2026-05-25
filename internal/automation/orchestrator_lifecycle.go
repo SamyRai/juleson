@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // Start initiates the workflow orchestration.
@@ -17,7 +17,7 @@ func (o *SessionOrchestrator) Start(ctx context.Context, sourceID string) error 
 
 	initialPrompt := o.buildInitialPrompt()
 
-	session, err := o.client.CreateSession(ctx, &jules.CreateSessionRequest{
+	session, err := o.client.Sessions().Create(ctx, &jules.CreateSessionRequest{
 		Prompt: initialPrompt,
 		SourceContext: &jules.SourceContext{
 			Source: fmt.Sprintf("sources/%s", sourceID),

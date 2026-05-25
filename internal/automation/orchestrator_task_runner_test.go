@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func TestOrchestrationTaskRunnerExecutesPlanGateAndRecordsActivity(t *testing.T) {
@@ -24,7 +24,8 @@ func TestOrchestrationTaskRunnerExecutesPlanGateAndRecordsActivity(t *testing.T)
 	now := time.Unix(100, 0)
 
 	runner := &orchestrationTaskRunner{
-		client:        client,
+		sessions:      client,
+		activities:    client,
 		monitor:       monitor,
 		sessionID:     "session-1",
 		autoApprove:   false,
@@ -94,8 +95,8 @@ func (f *fakeOrchestrationSessionClient) ApprovePlan(context.Context, string) er
 	return nil
 }
 
-func (f *fakeOrchestrationSessionClient) ListActivities(context.Context, string, int) ([]jules.Activity, error) {
-	return f.activities, nil
+func (f *fakeOrchestrationSessionClient) List(context.Context, string, *jules.ListActivitiesOptions) (*jules.ActivitiesResponse, error) {
+	return &jules.ActivitiesResponse{Activities: f.activities}, nil
 }
 
 type fakePlanWaiter struct {

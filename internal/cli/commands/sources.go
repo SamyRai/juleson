@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/spf13/cobra"
 )
@@ -65,7 +65,7 @@ func listSources(cfg *config.Config, filter string) error {
 
 	ctx := context.Background()
 
-	response, err := julesClient.ListSourcesWithPagination(ctx, 100, "", filter)
+	response, err := julesClient.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: 100, Filter: filter})
 	if err != nil {
 		return fmt.Errorf("failed to list sources: %w", err)
 	}
@@ -134,7 +134,7 @@ func getSource(cfg *config.Config, sourceID string) error {
 
 	ctx := context.Background()
 
-	source, err := julesClient.GetSource(ctx, sourceID)
+	source, err := julesClient.Sources().Get(ctx, sourceID)
 	if err != nil {
 		return fmt.Errorf("failed to get source: %w", err)
 	}

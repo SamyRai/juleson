@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/SamyRai/juleson/internal/sessionops"
-	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -22,7 +22,7 @@ func listSessions(ctx context.Context, req *mcp.CallToolRequest, input ListSessi
 		limit = 50
 	}
 
-	response, err := client.ListSessionsWithPagination(ctx, limit, input.Cursor)
+	response, err := client.Sessions().List(ctx, &jules.ListSessionsOptions{PageSize: limit, PageToken: input.Cursor})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -57,7 +57,7 @@ func getSessionStatus(ctx context.Context, req *mcp.CallToolRequest, input GetSe
 		limit = 100
 	}
 
-	response, err := client.ListSessionsWithPagination(ctx, limit, "")
+	response, err := client.Sessions().List(ctx, &jules.ListSessionsOptions{PageSize: limit})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -87,7 +87,7 @@ func approveSessionPlan(ctx context.Context, req *mcp.CallToolRequest, input App
 	ApproveSessionPlanOutput,
 	error,
 ) {
-	err := client.ApprovePlan(ctx, input.SessionID)
+	err := client.Sessions().ApprovePlan(ctx, input.SessionID)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -120,7 +120,7 @@ func deleteSession(ctx context.Context, req *mcp.CallToolRequest, input DeleteSe
 		}, DeleteSessionOutput{}, err
 	}
 
-	if err := client.DeleteSession(ctx, input.SessionID); err != nil {
+	if err := client.Sessions().Delete(ctx, input.SessionID); err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
@@ -148,7 +148,7 @@ func sendSessionMessage(ctx context.Context, req *mcp.CallToolRequest, input Sen
 		Prompt: input.Message,
 	}
 
-	err := client.SendMessage(ctx, input.SessionID, sendReq)
+	err := client.Sessions().SendMessage(ctx, input.SessionID, sendReq)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -173,7 +173,7 @@ func getSession(ctx context.Context, req *mcp.CallToolRequest, input GetSessionI
 	GetSessionOutput,
 	error,
 ) {
-	session, err := client.GetSession(ctx, input.SessionID)
+	session, err := client.Sessions().Get(ctx, input.SessionID)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -254,7 +254,7 @@ func getSessionOutputs(ctx context.Context, req *mcp.CallToolRequest, input GetS
 	GetSessionOutputsOutput,
 	error,
 ) {
-	session, err := client.GetSession(ctx, input.SessionID)
+	session, err := client.Sessions().Get(ctx, input.SessionID)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,

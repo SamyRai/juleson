@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // SessionService handles Jules session operations with GitHub integration
@@ -46,7 +46,7 @@ func (s *SessionService) CreateSessionFromRepo(ctx context.Context, prompt, owne
 		branch = ghRepo.GetDefaultBranch()
 	}
 
-	session, err := s.julesClient.CreateSession(ctx, &jules.CreateSessionRequest{
+	session, err := s.julesClient.Sessions().Create(ctx, &jules.CreateSessionRequest{
 		Prompt: prompt,
 		SourceContext: &jules.SourceContext{
 			Source: sourceID,
@@ -87,7 +87,7 @@ func (s *SessionService) CreateSessionFromCurrentRepo(ctx context.Context, promp
 		branch = repo.DefaultBranch
 	}
 
-	session, err := s.julesClient.CreateSession(ctx, &jules.CreateSessionRequest{
+	session, err := s.julesClient.Sessions().Create(ctx, &jules.CreateSessionRequest{
 		Prompt: prompt,
 		SourceContext: &jules.SourceContext{
 			Source: sourceID,

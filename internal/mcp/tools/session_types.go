@@ -1,8 +1,8 @@
 package tools
 
 import (
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/julesops"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // ListSessionsInput represents input for list_sessions tool

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/gemini"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // AIOrchestrator is a legacy compatibility surface. New CLI and MCP workflows
@@ -215,7 +215,7 @@ func (ao *AIOrchestrator) Execute(ctx context.Context, sourceID, goal, projectPa
 	ao.setState(AIStateExecuting)
 	initialPrompt := ao.buildAIPrompt()
 
-	session, err := ao.julesClient.CreateSession(ctx, &jules.CreateSessionRequest{
+	session, err := ao.julesClient.Sessions().Create(ctx, &jules.CreateSessionRequest{
 		Prompt: initialPrompt,
 		SourceContext: &jules.SourceContext{
 			Source: fmt.Sprintf("sources/%s", sourceID),
@@ -391,7 +391,7 @@ func (ao *AIOrchestrator) makeNextDecision(ctx context.Context) (*AIDecision, er
 	ao.mu.RUnlock()
 
 	// Get latest session status
-	session, err := ao.julesClient.GetSession(ctx, ao.sessionID)
+	session, err := ao.julesClient.Sessions().Get(ctx, ao.sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}

@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // InferSourceFromGitRemote matches a local git repository's origin remote to a
@@ -20,7 +20,7 @@ func InferSourceFromGitRemote(ctx context.Context, client *jules.Client, project
 		return nil, err
 	}
 
-	sources, err := client.ListAllSources(ctx, 100, "")
+	sources, err := client.Sources().ListAll(ctx, 100, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list Jules sources: %w", err)
 	}

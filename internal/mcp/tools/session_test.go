@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -184,7 +185,7 @@ func TestWatchSessionReturnsOnStatusChange(t *testing.T) {
 				State: jules.SessionStateInProgress,
 			})
 		})
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=25",
+	httpmock.RegisterRegexpResponder("GET", regexp.MustCompile(`^https://jules\.googleapis\.com/v1alpha/sessions/session-1/activities\?.*`),
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
 		})
@@ -214,7 +215,7 @@ func TestWatchSessionReturnsOnJulesAgentMessage(t *testing.T) {
 				State: jules.SessionStateInProgress,
 			})
 		})
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=25",
+	httpmock.RegisterRegexpResponder("GET", regexp.MustCompile(`^https://jules\.googleapis\.com/v1alpha/sessions/session-1/activities\?.*`),
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
 				Activities: []jules.Activity{

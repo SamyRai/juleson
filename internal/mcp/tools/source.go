@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/julesops"
-	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -77,7 +77,11 @@ func listSourcesMCP(ctx context.Context, input ListSourcesInput, client *jules.C
 		pageSize = 50
 	}
 
-	response, err := client.ListSourcesWithPagination(ctx, pageSize, input.PageToken, input.Filter)
+	response, err := client.Sources().List(ctx, &jules.ListSourcesOptions{
+		PageSize:  pageSize,
+		PageToken: input.PageToken,
+		Filter:    input.Filter,
+	})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -99,7 +103,7 @@ func listSourcesMCP(ctx context.Context, input ListSourcesInput, client *jules.C
 }
 
 func getSourceMCP(ctx context.Context, input GetSourceInput, client *jules.Client) (*mcp.CallToolResult, GetSourceOutput, error) {
-	source, err := client.GetSource(ctx, input.SourceID)
+	source, err := client.Sources().Get(ctx, input.SourceID)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,

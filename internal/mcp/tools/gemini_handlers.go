@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/github"
 	"github.com/SamyRai/juleson/internal/services"
 
@@ -426,7 +427,7 @@ func synthesizeSessionResults(ctx context.Context, req *mcp.CallToolRequest, inp
 	}
 
 	// Get session details
-	session, err := julesClient.GetSession(ctx, input.SessionID)
+	session, err := julesClient.Sessions().Get(ctx, input.SessionID)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -437,7 +438,7 @@ func synthesizeSessionResults(ctx context.Context, req *mcp.CallToolRequest, inp
 	}
 
 	// Get session activities
-	activities, err := julesClient.ListActivities(ctx, input.SessionID, 50)
+	response, err := julesClient.Activities().List(ctx, input.SessionID, &jules.ListActivitiesOptions{PageSize: 50})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -446,6 +447,7 @@ func synthesizeSessionResults(ctx context.Context, req *mcp.CallToolRequest, inp
 			},
 		}, SynthesizeSessionResultsOutput{}, err
 	}
+	activities := response.Activities
 
 	// Build analysis prompt for Gemini
 	geminiClient := container.GeminiClient()

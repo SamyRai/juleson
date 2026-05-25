@@ -3,7 +3,7 @@ package sessionops
 import (
 	"errors"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 var ErrStartingBranchRequiresSource = errors.New("starting branch requires source")

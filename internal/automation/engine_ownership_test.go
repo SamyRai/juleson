@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/analyzer"
 	"github.com/SamyRai/juleson/internal/templates"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 func TestExecuteTasksDetectsCircularDependencyBeforeSideEffects(t *testing.T) {

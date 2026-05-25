@@ -3,7 +3,7 @@ package github
 import (
 	"context"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/google/go-github/v76/github"
 	"golang.org/x/oauth2"
 )

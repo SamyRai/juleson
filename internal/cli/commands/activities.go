@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/spf13/cobra"
 )
@@ -72,9 +72,13 @@ func listActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutp
 	var activities []jules.Activity
 	var err error
 	if since.IsZero() {
-		activities, err = julesClient.ListActivities(ctx, sessionID, 100)
+		var response *jules.ActivitiesResponse
+		response, err = julesClient.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
+		if response != nil {
+			activities = response.Activities
+		}
 	} else {
-		activities, err = julesClient.ListActivitiesSince(ctx, sessionID, since, 100)
+		activities, err = julesClient.Activities().ListSince(ctx, sessionID, since, 100)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to list activities: %w", err)
@@ -145,7 +149,7 @@ func getActivity(cfg *config.Config, sessionID string, activityID string) error 
 	fmt.Printf("📁 Session: %s\n", sessionID)
 	fmt.Println(strings.Repeat("=", 60))
 
-	activity, err := julesClient.GetActivity(ctx, sessionID, activityID)
+	activity, err := julesClient.Activities().Get(ctx, sessionID, activityID)
 	if err != nil {
 		return fmt.Errorf("failed to get activity: %w", err)
 	}

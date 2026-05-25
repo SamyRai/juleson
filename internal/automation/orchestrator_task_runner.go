@@ -5,13 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 type orchestrationSessionClient interface {
 	SendMessage(ctx context.Context, sessionID string, req *jules.SendMessageRequest) error
 	ApprovePlan(ctx context.Context, sessionID string) error
-	ListActivities(ctx context.Context, sessionID string, pageSize int) ([]jules.Activity, error)
+}
+
+type orchestrationActivityClient interface {
+	List(ctx context.Context, sessionID string, options *jules.ListActivitiesOptions) (*jules.ActivitiesResponse, error)
 }
 
 type planWaiter interface {
@@ -19,7 +22,8 @@ type planWaiter interface {
 }
 
 type orchestrationTaskRunner struct {
-	client           orchestrationSessionClient
+	sessions         orchestrationSessionClient
+	activities       orchestrationActivityClient
 	monitor          planWaiter
 	sessionID        string
 	autoApprove      bool
@@ -34,7 +38,8 @@ type orchestrationTaskRunner struct {
 
 func (o *SessionOrchestrator) newOrchestrationTaskRunner() *orchestrationTaskRunner {
 	return &orchestrationTaskRunner{
-		client:           o.client,
+		sessions:         o.client.Sessions(),
+		activities:       o.client.Activities(),
 		monitor:          o.monitor,
 		sessionID:        o.sessionID,
 		autoApprove:      o.autoApprove,
@@ -106,7 +111,7 @@ func (r *orchestrationTaskRunner) execute(ctx context.Context, phaseIndex, taskI
 }
 
 func (r *orchestrationTaskRunner) sendTaskMessage(ctx context.Context, task Task) error {
-	if err := r.client.SendMessage(ctx, r.sessionID, &jules.SendMessageRequest{Prompt: task.Prompt}); err != nil {
+	if err := r.sessions.SendMessage(ctx, r.sessionID, &jules.SendMessageRequest{Prompt: task.Prompt}); err != nil {
 		return err
 	}
 	return nil
@@ -122,7 +127,7 @@ func (r *orchestrationTaskRunner) waitForPlan(ctx context.Context) error {
 
 func (r *orchestrationTaskRunner) approvePlanIfNeeded(ctx context.Context, task Task) error {
 	if task.AutoApprove || r.autoApprove {
-		if err := r.client.ApprovePlan(ctx, r.sessionID); err != nil {
+		if err := r.sessions.ApprovePlan(ctx, r.sessionID); err != nil {
 			return err
 		}
 	}
@@ -135,12 +140,12 @@ func (r *orchestrationTaskRunner) completePlanGate(phaseIndex, taskIndex int, ta
 }
 
 func (r *orchestrationTaskRunner) attachLatestActivity(ctx context.Context, result TaskResult, record ExecutionRecord) (TaskResult, ExecutionRecord) {
-	activities, err := r.client.ListActivities(ctx, r.sessionID, r.activityPageSize)
-	if err != nil || len(activities) == 0 {
+	response, err := r.activities.List(ctx, r.sessionID, &jules.ListActivitiesOptions{PageSize: r.activityPageSize})
+	if err != nil || response == nil || len(response.Activities) == 0 {
 		return result, record
 	}
 
-	latestActivity := activities[0]
+	latestActivity := response.Activities[0]
 	record.ActivityID = latestActivity.ID
 	record.ArtifactCount = len(latestActivity.Artifacts)
 	result.ActivityID = latestActivity.ID

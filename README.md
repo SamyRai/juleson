@@ -3,7 +3,7 @@
 Juleson is a Go command-line tool and MCP server for working with Google's Jules
 coding agent. It provides local commands for session management, source discovery,
 GitHub integration, template execution, project analysis, and development tasks.
-The reusable Jules REST API client is available as `github.com/SamyRai/juleson/pkg/jules`.
+The reusable Jules REST API client is available as `github.com/SamyRai/go-jules`.
 
 The repository contains three binaries:
 
@@ -155,6 +155,8 @@ go run ./cmd/juleson --help
 Go applications can import the SDK package directly:
 
 ```go
+import jules "github.com/SamyRai/go-jules"
+
 client := jules.NewClient(
     "api-key",
     jules.WithBaseURL("https://jules.googleapis.com/v1alpha"),

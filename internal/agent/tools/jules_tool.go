@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/agent"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // JulesTool provides integration with Jules AI
@@ -172,7 +172,7 @@ func (j *JulesTool) createSession(ctx context.Context, params map[string]interfa
 		},
 	}
 
-	session, err := j.client.CreateSession(ctx, req)
+	session, err := j.client.Sessions().Create(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Jules session: %w", err)
 	}
@@ -205,7 +205,7 @@ func (j *JulesTool) sendMessage(ctx context.Context, params map[string]interface
 		Prompt: prompt,
 	}
 
-	err := j.client.SendMessage(ctx, sessionID, req)
+	err := j.client.Sessions().SendMessage(ctx, sessionID, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send message to Jules: %w", err)
 	}
@@ -236,7 +236,7 @@ func (j *JulesTool) reviewPlan(ctx context.Context, params map[string]interface{
 	}
 
 	// Get session status
-	session, err := j.client.GetSession(ctx, sessionID)
+	session, err := j.client.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -266,13 +266,13 @@ func (j *JulesTool) applyPatches(ctx context.Context, params map[string]interfac
 	}
 
 	// Get activity to extract patches
-	activities, err := j.client.ListActivities(ctx, sessionID, 100)
+	response, err := j.client.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
 
 	var targetActivity *jules.Activity
-	for _, activity := range activities {
+	for _, activity := range response.Activities {
 		if activity.ID == activityID {
 			targetActivity = &activity
 			break
@@ -319,10 +319,11 @@ func (j *JulesTool) getActivities(ctx context.Context, params map[string]interfa
 		limit = l
 	}
 
-	activities, err := j.client.ListActivities(ctx, sessionID, limit)
+	response, err := j.client.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: limit})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
+	activities := response.Activities
 
 	return &ToolResult{
 		Success: true,

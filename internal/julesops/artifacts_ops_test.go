@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -165,7 +165,7 @@ func (suite *ArtifactsTestSuite) TestGetArtifactsFromActivity() {
 			return resp, nil
 		})
 
-	artifacts, err := suite.client.GetArtifactsFromActivity(context.Background(), "session-1", "activity-1")
+	artifacts, err := suite.client.Artifacts().ListFromActivity(context.Background(), "session-1", "activity-1")
 
 	require.NoError(suite.T(), err)
 	assert.Len(suite.T(), artifacts, 2)
@@ -195,7 +195,7 @@ func (suite *ArtifactsTestSuite) TestGetAllSessionArtifacts() {
 			return resp, nil
 		})
 
-	artifacts, err := suite.client.GetAllSessionArtifacts(context.Background(), "session-1")
+	artifacts, err := suite.client.Artifacts().ListFromSession(context.Background(), "session-1")
 
 	require.NoError(suite.T(), err)
 	assert.Len(suite.T(), artifacts, 2)

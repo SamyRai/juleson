@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/julesops"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 type WatchDecisionKind string
@@ -41,7 +41,7 @@ type WatchSnapshot struct {
 }
 
 func CurrentWatchSnapshot(ctx context.Context, client *jules.Client, sessionID string, cursor time.Time, options CurrentWatchOptions) (WatchSnapshot, error) {
-	session, err := client.GetSession(ctx, sessionID)
+	session, err := client.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return WatchSnapshot{}, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -52,7 +52,7 @@ func CurrentWatchSnapshot(ctx context.Context, client *jules.Client, sessionID s
 	}
 
 	if options.FetchActivities {
-		activities, err := client.ListActivitiesSince(ctx, sessionID, cursor, 25)
+		activities, err := client.Activities().ListSince(ctx, sessionID, cursor, 25)
 		if err != nil {
 			snapshot.ActivityError = err
 		} else {

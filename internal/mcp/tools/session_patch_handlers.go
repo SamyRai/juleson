@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/SamyRai/juleson/internal/sessionops"
-	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

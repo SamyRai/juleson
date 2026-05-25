@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func TestBuildCreateSessionRequest(t *testing.T) {

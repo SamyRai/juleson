@@ -28,7 +28,7 @@ Acceptance criteria:
 - Avoid logging full response bodies by default; if body snippets are added,
   bound their size and apply redaction first.
 - Reuse existing `slog` patterns where practical and keep ownership close to
-  `pkg/jules` client request handling.
+  `github.com/SamyRai/go-jules` client request handling.
 - Cover redaction, disabled-by-default behavior, enabled request/response
   logging, retry logging, and error-path logging with focused tests.
 - Update `docs/CONFIGURATION.md` and `docs/JULES_API.md` if new user-visible

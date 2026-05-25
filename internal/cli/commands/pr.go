@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
 	ghclient "github.com/SamyRai/juleson/internal/github"
-	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/google/go-github/v76/github"
 	"github.com/spf13/cobra"
 )
@@ -95,10 +95,11 @@ func runPRList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get recent sessions
-	sessions, err := julesClient.ListSessions(ctx, prListLimit*2) // Get more to account for sessions without PRs
+	response, err := julesClient.Sessions().List(ctx, &jules.ListSessionsOptions{PageSize: prListLimit * 2}) // Get more to account for sessions without PRs
 	if err != nil {
 		return fmt.Errorf("failed to list sessions: %w", err)
 	}
+	sessions := response.Sessions
 
 	fmt.Println("🔍 Jules Session Pull Requests")
 	fmt.Println("================================")
@@ -146,7 +147,7 @@ func runPRGet(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get session details
-	_, err = julesClient.GetSession(ctx, sessionID)
+	_, err = julesClient.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to get session %s: %w", sessionID, err)
 	}

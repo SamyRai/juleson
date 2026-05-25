@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // Default configuration constants

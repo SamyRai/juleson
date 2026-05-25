@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/analyzer"
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
@@ -12,7 +13,6 @@ import (
 	"github.com/SamyRai/juleson/internal/orchestration"
 	"github.com/SamyRai/juleson/internal/orchestration/adapters"
 	"github.com/SamyRai/juleson/internal/templates"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // Container manages application dependencies and services

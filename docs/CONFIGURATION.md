@@ -105,10 +105,10 @@ Agent and AI orchestration checkpoints are written as local JSON files under
 project-specific or user-specific directory if multiple workspaces share the
 same working directory.
 
-The Go SDK in `pkg/jules` does not load this configuration directly. Applications
-pass credentials and options explicitly with `jules.NewClient` and client
-options such as `jules.WithBaseURL`, `jules.WithTimeout`, and
-`jules.WithRetryAttempts`. SDK-only options also include retry backoff, custom
-`http.Client`, user agent, debug logging via `jules.WithDebugLog`, and sleep
-injection for deterministic tests. Debug logging requires the logging level to be
-set to debug, for example `slog.LevelDebug`.
+The Go SDK at `github.com/SamyRai/go-jules` does not load this configuration
+directly. Applications pass credentials and options explicitly with
+`jules.NewClient` and client options such as `jules.WithBaseURL`,
+`jules.WithTimeout`, and `jules.WithRetryAttempts`. SDK-only options also
+include retry backoff, custom `http.Client`, user agent, debug logging via
+`jules.WithDebugLog`, and sleep injection for deterministic tests. Debug logging
+requires the logging level to be set to debug, for example `slog.LevelDebug`.

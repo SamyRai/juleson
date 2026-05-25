@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 const defaultSessionListLimit = 10
@@ -22,12 +22,12 @@ func (g *JulesSessionGateway) ListSources(ctx context.Context, limit int) ([]dom
 	if g.client == nil {
 		return nil, fmt.Errorf("jules client is required")
 	}
-	sources, err := g.client.ListSources(ctx, limit)
+	response, err := g.client.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: limit})
 	if err != nil {
 		return nil, err
 	}
-	result := make([]domain.Source, 0, len(sources))
-	for _, source := range sources {
+	result := make([]domain.Source, 0, len(response.Sources))
+	for _, source := range response.Sources {
 		result = append(result, sourceToDomain(source))
 	}
 	return result, nil
@@ -37,11 +37,11 @@ func (g *JulesSessionGateway) FindReusableSession(ctx context.Context, title str
 	if g.client == nil {
 		return nil, fmt.Errorf("jules client is required")
 	}
-	sessions, err := g.client.ListSessions(ctx, defaultSessionListLimit)
+	response, err := g.client.Sessions().List(ctx, &jules.ListSessionsOptions{PageSize: defaultSessionListLimit})
 	if err != nil {
 		return nil, err
 	}
-	for _, session := range sessions {
+	for _, session := range response.Sessions {
 		if session.Title == title && session.State.IsActive() {
 			converted := sessionToDomain(session)
 			return &converted, nil
@@ -54,7 +54,7 @@ func (g *JulesSessionGateway) CreateSession(ctx context.Context, request domain.
 	if g.client == nil {
 		return nil, fmt.Errorf("jules client is required")
 	}
-	session, err := g.client.CreateSession(ctx, &jules.CreateSessionRequest{
+	session, err := g.client.Sessions().Create(ctx, &jules.CreateSessionRequest{
 		Prompt: request.Prompt,
 		Title:  request.Title,
 		SourceContext: &jules.SourceContext{
@@ -77,7 +77,7 @@ func (g *JulesSessionGateway) GetSession(ctx context.Context, sessionID string) 
 	if g.client == nil {
 		return nil, fmt.Errorf("jules client is required")
 	}
-	session, err := g.client.GetSession(ctx, sessionID)
+	session, err := g.client.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ The project is pre-1.0. Changes are tracked here until a tagged release process 
 
 ### Added
 
-- Public Go SDK package at `github.com/SamyRai/juleson/pkg/jules` with
+- Public Go SDK package at `github.com/SamyRai/go-jules` with
   option-based client construction.
 - Internal Jules CLI command composer for core Jules commands.
 - SDK boundary and CLI composition tests.
@@ -26,6 +26,9 @@ The project is pre-1.0. Changes are tracked here until a tagged release process 
 
 ### Changed
 
+- The reusable Go SDK moved to the standalone public module
+  `github.com/SamyRai/go-jules`; Juleson now consumes it as an external
+  dependency.
 - Local artifact download and patch application behavior moved out of the SDK
   into internal app operations.
 - CLI configuration can load without a Jules API key for local commands such as
@@ -42,4 +45,4 @@ The project is pre-1.0. Changes are tracked here until a tagged release process 
 
 - Jules API session cancel is not exposed because the API reference used by this
   project does not provide that lifecycle operation.
-- The public module path is `github.com/SamyRai/juleson`.
+- The Juleson application module path remains `github.com/SamyRai/juleson`.

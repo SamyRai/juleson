@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/google/go-github/v76/github"
 )
 
@@ -29,7 +29,7 @@ func (s *PullRequestService) GetSessionPullRequest(ctx context.Context, sessionI
 		return nil, fmt.Errorf("Jules client not available")
 	}
 
-	session, err := s.julesClient.GetSession(ctx, sessionID)
+	session, err := s.julesClient.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -83,7 +83,7 @@ func (s *PullRequestService) GetPullRequestDiff(ctx context.Context, sessionID s
 		return "", fmt.Errorf("Jules client not available")
 	}
 
-	session, err := s.julesClient.GetSession(ctx, sessionID)
+	session, err := s.julesClient.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get session: %w", err)
 	}

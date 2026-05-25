@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/presentation"
 	"github.com/SamyRai/juleson/internal/sessionops"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 type CreateSessionOptions struct {
@@ -46,7 +46,7 @@ func approveSessionPlan(cfg *config.Config, sessionID string) error {
 
 	fmt.Printf("✅ Approving plan for session: %s\n", sessionID)
 
-	err := julesClient.ApprovePlan(ctx, sessionID)
+	err := julesClient.Sessions().ApprovePlan(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to approve plan: %w", err)
 	}
@@ -73,7 +73,7 @@ func deleteSession(cfg *config.Config, sessionID string, force bool) error {
 		}
 	}
 
-	if err := julesClient.DeleteSession(context.Background(), sessionID); err != nil {
+	if err := julesClient.Sessions().Delete(context.Background(), sessionID); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
@@ -86,7 +86,7 @@ func listSessions(cfg *config.Config) error {
 	fmt.Println("🔍 Listing Jules sessions...")
 	fmt.Println("============================")
 
-	response, err := julesClient.ListSessionsWithPagination(context.Background(), 50, "")
+	response, err := julesClient.Sessions().List(context.Background(), &jules.ListSessionsOptions{PageSize: 50})
 	if err != nil {
 		return fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -136,7 +136,7 @@ func showSessionStatus(cfg *config.Config) error {
 	fmt.Println("📊 Jules Session Status")
 	fmt.Println("=======================")
 
-	response, err := julesClient.ListSessionsWithPagination(context.Background(), 100, "")
+	response, err := julesClient.Sessions().List(context.Background(), &jules.ListSessionsOptions{PageSize: 100})
 	if err != nil {
 		return fmt.Errorf("failed to get session status: %w", err)
 	}
@@ -186,7 +186,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 	fmt.Println(strings.Repeat("=", 60))
 
 	// Get session details
-	session, err := julesClient.GetSession(ctx, sessionID)
+	session, err := julesClient.Sessions().Get(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -228,11 +228,12 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 
 	// Get activities
 	fmt.Printf("\n📋 Activities:\n")
-	activities, err := julesClient.ListActivities(ctx, sessionID, 100)
+	response, err := julesClient.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
 	if err != nil {
 		fmt.Printf("⚠️  Could not fetch activities: %v\n", err)
 		return nil
 	}
+	activities := response.Activities
 
 	if len(activities) == 0 {
 		fmt.Println("  No activities yet - session is still initializing")
@@ -308,7 +309,7 @@ func sendSessionMessage(cfg *config.Config, sessionID string, message string) er
 		Prompt: message,
 	}
 
-	err := julesClient.SendMessage(ctx, sessionID, req)
+	err := julesClient.Sessions().SendMessage(ctx, sessionID, req)
 	if err != nil {
 		return fmt.Errorf("failed to send message: %w", err)
 	}

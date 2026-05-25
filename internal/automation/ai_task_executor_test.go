@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func TestAITaskExecutorSendsTaskAndBuildsCompletedTask(t *testing.T) {
@@ -19,7 +19,7 @@ func TestAITaskExecutorSendsTaskAndBuildsCompletedTask(t *testing.T) {
 			},
 		},
 	}
-	executor := newAITaskExecutor(client, func() string { return "session-1" })
+	executor := newAITaskExecutorWithServices(client, client, func() string { return "session-1" })
 	executor.currentTime = func() time.Time { return time.Unix(100, 0) }
 	executor.sleep = func(time.Duration) {}
 
@@ -61,6 +61,6 @@ func (f *fakeAITaskSessionClient) SendMessage(_ context.Context, sessionID strin
 	return nil
 }
 
-func (f *fakeAITaskSessionClient) ListActivities(context.Context, string, int) ([]jules.Activity, error) {
-	return f.activities, nil
+func (f *fakeAITaskSessionClient) List(context.Context, string, *jules.ListActivitiesOptions) (*jules.ActivitiesResponse, error) {
+	return &jules.ActivitiesResponse{Activities: f.activities}, nil
 }

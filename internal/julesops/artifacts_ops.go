@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 // ArtifactDownloadOptions represents options for downloading artifacts.
@@ -19,7 +19,7 @@ type ArtifactDownloadOptions struct {
 
 // DownloadArtifactFromActivity downloads artifacts from a specific activity.
 func DownloadArtifactFromActivity(ctx context.Context, client *jules.Client, sessionID, activityID string, options *ArtifactDownloadOptions) ([]string, error) {
-	activity, err := client.GetActivity(ctx, sessionID, activityID)
+	activity, err := client.Activities().Get(ctx, sessionID, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get activity: %w", err)
 	}
@@ -107,13 +107,13 @@ func extensionFromMimeType(mimeType string) string {
 
 // DownloadAllSessionArtifacts downloads all artifacts from all activities in a session.
 func DownloadAllSessionArtifacts(ctx context.Context, client *jules.Client, sessionID string, options *ArtifactDownloadOptions) ([]string, error) {
-	activities, err := client.ListActivities(ctx, sessionID, 100)
+	response, err := client.Activities().List(ctx, sessionID, &jules.ListActivitiesOptions{PageSize: 100})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
 
 	var allDownloadedFiles []string
-	for _, activity := range activities {
+	for _, activity := range response.Activities {
 		if len(activity.Artifacts) == 0 {
 			continue
 		}
@@ -144,7 +144,7 @@ func SessionHasDeliverables(ctx context.Context, client *jules.Client, session *
 		}
 	}
 
-	activities, err := client.ListAllActivities(ctx, session.ID, 100)
+	activities, err := client.Activities().ListAll(ctx, session.ID, 100)
 	if err != nil {
 		return false, fmt.Errorf("failed to list activities for deliverable check: %w", err)
 	}

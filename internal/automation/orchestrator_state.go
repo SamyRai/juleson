@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 )
 
 func (o *SessionOrchestrator) setState(state OrchestratorState) {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/jarcoal/httpmock"
 )
 

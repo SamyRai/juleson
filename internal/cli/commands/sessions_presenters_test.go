@@ -3,8 +3,8 @@ package commands
 import (
 	"testing"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/presentation"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 func TestGetSessionStatusText(t *testing.T) {

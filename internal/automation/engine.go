@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/analyzer"
 	"github.com/SamyRai/juleson/internal/templates"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // Default configuration constants for automation engine
@@ -163,12 +163,13 @@ func (e *Engine) executeTask(ctx context.Context, task templates.TemplateTask) (
 
 	// Get available sources from Jules API
 	fmt.Fprintf(os.Stderr, "🔍 Fetching available sources from Jules API...\n")
-	sources, err := e.julesClient.ListSources(ctx, DefaultSourceListLimit)
+	sourceResponse, err := e.julesClient.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: DefaultSourceListLimit})
 	if err != nil {
 		result.Error = fmt.Sprintf("failed to list sources: %v", err)
 		result.Success = false
 		return result, fmt.Errorf("failed to list sources: %w", err)
 	}
+	sources := sourceResponse.Sources
 	fmt.Fprintf(os.Stderr, "✅ Found %d sources\n", len(sources))
 
 	if len(sources) == 0 {
@@ -198,8 +199,9 @@ func (e *Engine) executeTask(ctx context.Context, task templates.TemplateTask) (
 
 	// Check for existing active sessions with similar title
 	fmt.Fprintf(os.Stderr, "🔍 Checking for existing active sessions...\n")
-	existingSessions, err := e.julesClient.ListSessions(ctx, DefaultSessionListLimit)
+	sessionResponse, err := e.julesClient.Sessions().List(ctx, &jules.ListSessionsOptions{PageSize: DefaultSessionListLimit})
 	if err == nil {
+		existingSessions := sessionResponse.Sessions
 		taskTitle := fmt.Sprintf("Execute %s task: %s", task.Type, task.Description)
 		for _, existingSession := range existingSessions {
 			if existingSession.Title == taskTitle &&
@@ -258,7 +260,7 @@ func (e *Engine) createJulesSession(ctx context.Context, prompt string, task tem
 		AutomationMode:      DefaultAutomationMode,
 	}
 
-	session, err := e.julesClient.CreateSession(ctx, sessionReq)
+	session, err := e.julesClient.Sessions().Create(ctx, sessionReq)
 	if err != nil {
 		result.Error = err.Error()
 		result.Success = false

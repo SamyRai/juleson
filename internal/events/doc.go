@@ -98,7 +98,8 @@
 //	cb := coordinator.GetCircuitBreaker("jules-api", nil)
 //
 //	err := cb.Execute(ctx, func(ctx context.Context) error {
-//	    return julesClient.CreateSession(ctx, req)
+//	    _, err := julesClient.Sessions().Create(ctx, req)
+//	    return err
 //	})
 //
 // # Event Store

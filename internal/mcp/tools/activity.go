@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/go-jules"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -106,9 +106,9 @@ func listActivities(ctx context.Context, req *mcp.CallToolRequest, input ListAct
 			HasPlan:      input.HasPlan,
 			HasArtifacts: input.HasArtifacts,
 		}
-		activities, err = client.ListActivitiesFiltered(ctx, input.SessionID, filter)
+		activities, err = client.Activities().Filter(ctx, input.SessionID, filter)
 	} else {
-		response, err := client.ListActivitiesWithOptions(ctx, input.SessionID, &jules.ListActivitiesOptions{
+		response, err := client.Activities().List(ctx, input.SessionID, &jules.ListActivitiesOptions{
 			PageSize:   pageSize,
 			PageToken:  input.PageToken,
 			CreateTime: createTime,
@@ -166,7 +166,7 @@ func getActivity(ctx context.Context, req *mcp.CallToolRequest, input GetActivit
 	GetActivityOutput,
 	error,
 ) {
-	activity, err := client.GetActivity(ctx, input.SessionID, input.ActivityID)
+	activity, err := client.Activities().Get(ctx, input.SessionID, input.ActivityID)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -211,7 +211,7 @@ func searchActivities(ctx context.Context, req *mcp.CallToolRequest, input Searc
 		limit = 20
 	}
 
-	activities, err := client.SearchActivities(ctx, input.SessionID, &jules.ActivitySearchOptions{
+	activities, err := client.Activities().Search(ctx, input.SessionID, &jules.ActivitySearchOptions{
 		Query: strings.TrimSpace(input.Query),
 		Limit: limit,
 		Filter: &jules.ActivityFilter{
@@ -258,7 +258,8 @@ func getActivitiesWithPlans(ctx context.Context, req *mcp.CallToolRequest, input
 	GetActivitiesWithPlansOutput,
 	error,
 ) {
-	activities, err := client.GetActivitiesWithPlans(ctx, input.SessionID)
+	hasPlan := true
+	activities, err := client.Activities().Filter(ctx, input.SessionID, &jules.ActivityFilter{HasPlan: &hasPlan})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,

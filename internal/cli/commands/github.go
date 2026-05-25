@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
 	ghclient "github.com/SamyRai/juleson/internal/github"
-	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/google/go-github/v76/github"
 	"github.com/spf13/cobra"
 )

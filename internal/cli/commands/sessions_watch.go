@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/presentation"
 	"github.com/SamyRai/juleson/internal/sessionops"
-	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue string, followActivities bool, sinceValue, cursorOutput, initialState string, wakeOnStatusChange, wakeOnAgentMessage bool) error {
