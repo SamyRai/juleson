@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/SamyRai/juleson/internal/analyzer"
-	"github.com/SamyRai/juleson/internal/jules"
 	"github.com/SamyRai/juleson/internal/templates"
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // Default configuration constants for automation engine

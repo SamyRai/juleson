@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/SamyRai/juleson/internal/github"
 	"github.com/SamyRai/juleson/internal/services"
@@ -629,9 +630,9 @@ Format as a structured analysis.`
 
 	successMetrics := map[string]string{
 		"activities_completed": fmt.Sprintf("%d", len(activities)),
-		"session_state":        session.State,
-		"session_created":      session.CreateTime,
-		"session_updated":      session.UpdateTime,
+		"session_state":        string(session.State),
+		"session_created":      session.CreateTime.Format(time.RFC3339),
+		"session_updated":      session.UpdateTime.Format(time.RFC3339),
 	}
 
 	nextSteps := []string{

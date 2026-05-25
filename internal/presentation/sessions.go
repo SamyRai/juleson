@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // SessionFormatter formats session information
@@ -34,7 +34,7 @@ func (f *SessionFormatter) FormatList(sessions []jules.Session) string {
 		sb.WriteString(fmt.Sprintf("   Title: %s\n", session.Title))
 		sb.WriteString(fmt.Sprintf("   State: %s\n", session.State))
 		sb.WriteString(fmt.Sprintf("   Created: %s\n", session.CreateTime))
-		if session.UpdateTime != "" {
+		if !session.UpdateTime.IsZero() {
 			sb.WriteString(fmt.Sprintf("   Updated: %s\n", session.UpdateTime))
 		}
 		if session.SourceContext != nil && session.SourceContext.Source != "" {
@@ -52,11 +52,11 @@ func (f *SessionFormatter) FormatList(sessions []jules.Session) string {
 
 		// Status indicators
 		switch session.State {
-		case "IN_PROGRESS", "PLANNING":
+		case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
 			sb.WriteString("   ⚡ ACTIVE\n")
-		case "COMPLETED":
+		case jules.SessionStateCompleted:
 			sb.WriteString("   ✅ COMPLETED\n")
-		case "FAILED":
+		case jules.SessionStateFailed:
 			sb.WriteString("   ❌ FAILED\n")
 		}
 		sb.WriteString("\n")
@@ -81,7 +81,7 @@ func (f *SessionFormatter) FormatStatus(sessions []jules.Session) string {
 	// Count sessions by state
 	stateCounts := make(map[string]int)
 	for _, session := range sessions {
-		stateCounts[session.State]++
+		stateCounts[string(session.State)]++
 	}
 
 	sb.WriteString(fmt.Sprintf("Total Sessions: %d\n\n", totalSessions))
@@ -124,11 +124,11 @@ func (f *SessionFormatter) FormatStatus(sessions []jules.Session) string {
 			session := sessions[i]
 			var statusIcon string
 			switch session.State {
-			case "IN_PROGRESS", "PLANNING":
+			case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
 				statusIcon = "⚡"
-			case "COMPLETED":
+			case jules.SessionStateCompleted:
 				statusIcon = "✅"
-			case "FAILED":
+			case jules.SessionStateFailed:
 				statusIcon = "❌"
 			default:
 				statusIcon = "📋"

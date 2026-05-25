@@ -7,7 +7,7 @@ import (
 
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/spf13/cobra"
 )
@@ -148,12 +148,7 @@ func runAPIModernizationWorkflow(cfg *config.Config, sourceID string, autoApprov
 	ctx := context.Background()
 
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	// Define API Modernization workflow
 	workflow := &automation.WorkflowDefinition{
@@ -348,12 +343,7 @@ func runMicroservicesMigrationWorkflow(cfg *config.Config, sourceID string, auto
 	ctx := context.Background()
 
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	// Define Microservices Migration workflow
 	workflow := &automation.WorkflowDefinition{

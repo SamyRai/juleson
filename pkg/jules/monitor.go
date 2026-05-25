@@ -2,21 +2,9 @@ package jules
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
-
-	"errors"
-)
-
-// SessionState represents the current state of a session
-type SessionState string
-
-const (
-	SessionStatePlanning   SessionState = "PLANNING"
-	SessionStateInProgress SessionState = "IN_PROGRESS"
-	SessionStateCompleted  SessionState = "COMPLETED"
-	SessionStateFailed     SessionState = "FAILED"
-	SessionStateCancelled  SessionState = "CANCELLED"
 )
 
 // SessionStatus represents the current status of a session
@@ -87,12 +75,14 @@ func (sm *SessionMonitor) PollUntilComplete(ctx context.Context) (*SessionStatus
 func (sm *SessionMonitor) pollUntilComplete(ctx context.Context, continuous bool) (*SessionStatus, error) {
 	ticker := time.NewTicker(sm.interval)
 	defer ticker.Stop()
+	timeout := time.NewTimer(sm.maxWait)
+	defer timeout.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context cancelled: %w", ctx.Err())
-		case <-time.After(sm.maxWait):
+		case <-timeout.C:
 			return nil, fmt.Errorf("timeout waiting for session completion after %v", sm.maxWait)
 		case <-ticker.C:
 			status, err := sm.getSessionStatus(ctx)
@@ -143,15 +133,13 @@ func (sm *SessionMonitor) getSessionStatus(ctx context.Context) (*SessionStatus,
 	status := &SessionStatus{
 		Session:   session,
 		State:     SessionState(session.State),
-		IsActive:  session.State == "PLANNING" || session.State == "IN_PROGRESS",
-		IsDone:    session.State == "COMPLETED" || session.State == "FAILED" || session.State == "CANCELLED",
-		IsSuccess: session.State == "COMPLETED",
+		IsActive:  session.State.IsActive(),
+		IsDone:    session.State.IsTerminal(),
+		IsSuccess: session.State.IsSuccessful(),
 	}
 
-	if session.State == "FAILED" {
+	if session.State == SessionStateFailed {
 		status.Error = "session failed"
-	} else if session.State == "CANCELLED" {
-		status.Error = "session cancelled"
 	}
 
 	return status, nil
@@ -180,12 +168,14 @@ func (sm *SessionMonitor) WaitForPlan(ctx context.Context) (*SessionStatus, erro
 func (sm *SessionMonitor) pollUntilCondition(ctx context.Context, condition func(*SessionStatus) bool) (*SessionStatus, error) {
 	ticker := time.NewTicker(sm.interval)
 	defer ticker.Stop()
+	timeout := time.NewTimer(sm.maxWait)
+	defer timeout.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context cancelled: %w", ctx.Err())
-		case <-time.After(sm.maxWait):
+		case <-timeout.C:
 			return nil, fmt.Errorf("timeout waiting for condition after %v", sm.maxWait)
 		case <-ticker.C:
 			status, err := sm.getSessionStatus(ctx)

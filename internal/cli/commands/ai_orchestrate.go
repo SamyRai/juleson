@@ -11,7 +11,7 @@ import (
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/gemini"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +68,7 @@ Examples:
 			goal := args[0]
 
 			// Setup Jules client
-			julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, 30*time.Second, 3)
+			julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(3))
 
 			// Setup Gemini client
 			geminiConfig := &gemini.Config{

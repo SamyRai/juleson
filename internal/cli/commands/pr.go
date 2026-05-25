@@ -7,7 +7,7 @@ import (
 
 	"github.com/SamyRai/juleson/internal/config"
 	ghclient "github.com/SamyRai/juleson/internal/github"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/google/go-github/v76/github"
 	"github.com/spf13/cobra"
 )
@@ -85,7 +85,7 @@ func runPRList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, cfg.Jules.Timeout, cfg.Jules.RetryAttempts)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 	if ghClient == nil {
@@ -136,7 +136,7 @@ func runPRGet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, cfg.Jules.Timeout, cfg.Jules.RetryAttempts)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 	if ghClient == nil {
@@ -180,7 +180,7 @@ func runPRMerge(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, cfg.Jules.Timeout, cfg.Jules.RetryAttempts)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 	if ghClient == nil {
@@ -237,7 +237,7 @@ func runPRDiff(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, cfg.Jules.Timeout, cfg.Jules.RetryAttempts)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 	if ghClient == nil {

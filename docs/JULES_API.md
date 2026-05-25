@@ -6,13 +6,17 @@ Juleson targets the Jules API v1alpha endpoints under:
 https://jules.googleapis.com/v1alpha
 ```
 
-The client is implemented under `internal/jules`.
+The public Go SDK is implemented under `pkg/jules` and can be imported as
+`github.com/SamyRai/juleson/pkg/jules`. Local filesystem and `git apply`
+operations live in `internal/julesops` so the SDK remains reusable without app
+side effects.
 
 Official references:
 
 - [Sessions](https://jules.google/docs/api/reference/sessions/)
 - [Activities](https://jules.google/docs/api/reference/activities/)
 - [Sources](https://jules.google/docs/api/reference/sources/)
+- [Types](https://jules.google/docs/api/reference/types/)
 - [January 26, 2026 changelog](https://jules.google/docs/changelog/2026-01-26-4/)
 
 ## Resources Used
@@ -21,7 +25,33 @@ Official references:
 - Sessions: create, list, get, delete, approve plans, and send messages.
 - Activities: list and get activity details. The list call supports the official
   `createTime` filter.
-- Artifacts: download patch, output, and media artifacts from activities.
+- Artifacts: read embedded `changeSet`, `bashOutput`, and base64 `media`
+  payloads from activities.
+
+## Go SDK
+
+```go
+client := jules.NewClient(
+	"api-key",
+	jules.WithBaseURL("https://jules.googleapis.com/v1alpha"),
+	jules.WithTimeout(30*time.Second),
+	jules.WithRetryAttempts(3),
+	jules.WithRetryBackoff(time.Second),
+	jules.WithUserAgent("my-tool/1.0"),
+)
+```
+
+The SDK uses typed session states, automation modes, activity originators, and
+`time.Time` values for documented RFC3339 timestamps. Methods accepting resource
+names normalize both bare IDs and full names, so `123` and `sessions/123` are
+equivalent for sessions, and slash-containing source names are path-escaped for
+API calls.
+
+The SDK exposes documented Jules API resources plus pure helpers for embedded
+artifact payloads. It does not call undocumented artifact `/content`,
+`/download`, `/analyze`, or activity `/search` endpoints. Juleson CLI and MCP
+commands layer local download, preview, backup, and patch application behavior on
+top of the SDK through `internal/julesops`.
 
 ## Authentication
 
@@ -67,6 +97,10 @@ The official activity list endpoint supports pagination and `createTime`.
 Legacy helpers such as type, status, plan, and artifact filters are applied
 client-side after fetching activities; they are not sent as unsupported API
 query parameters.
+
+For immutable activity streams, SDK callers can use `ListActivitiesSince` with a
+stored `createTime` cursor and `ActivityCursor` to compute the next cursor from a
+batch.
 
 Full file outputs are mentioned in the upstream changelog, but the public
 reference does not document a stable typed response shape in the pages above.

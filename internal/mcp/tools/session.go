@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -182,7 +183,7 @@ func getSessionStatus(ctx context.Context, req *mcp.CallToolRequest, input GetSe
 	// Count sessions by state
 	stateCounts := make(map[string]int)
 	for _, session := range sessions {
-		stateCounts[session.State]++
+		stateCounts[string(session.State)]++
 	}
 
 	// Active sessions count
@@ -318,14 +319,14 @@ func applySessionPatches(ctx context.Context, req *mcp.CallToolRequest, input Ap
 	ApplySessionPatchesOutput,
 	error,
 ) {
-	options := &jules.PatchApplicationOptions{
+	options := &julesops.PatchApplicationOptions{
 		WorkingDir:   input.WorkingDir,
 		DryRun:       input.DryRun,
 		Force:        input.Force,
 		CreateBackup: input.CreateBackup,
 	}
 
-	result, err := client.ApplySessionPatches(ctx, input.SessionID, options)
+	result, err := julesops.ApplySessionPatches(ctx, client, input.SessionID, options)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -364,12 +365,12 @@ type PreviewSessionChangesInput struct {
 
 // PreviewSessionChangesOutput represents output for preview_session_changes tool
 type PreviewSessionChangesOutput struct {
-	SessionID    string             `json:"session_id"`
-	TotalPatches int                `json:"total_patches"`
-	Files        []jules.FileChange `json:"files"`
-	CanApply     bool               `json:"can_apply"`
-	Errors       []string           `json:"errors,omitempty"`
-	Summary      string             `json:"summary"`
+	SessionID    string                `json:"session_id"`
+	TotalPatches int                   `json:"total_patches"`
+	Files        []julesops.FileChange `json:"files"`
+	CanApply     bool                  `json:"can_apply"`
+	Errors       []string              `json:"errors,omitempty"`
+	Summary      string                `json:"summary"`
 }
 
 // previewSessionChanges previews what changes would be made if patches were applied
@@ -378,7 +379,7 @@ func previewSessionChanges(ctx context.Context, req *mcp.CallToolRequest, input 
 	PreviewSessionChangesOutput,
 	error,
 ) {
-	changes, err := client.PreviewSessionPatches(ctx, input.SessionID, input.WorkingDir)
+	changes, err := julesops.PreviewSessionPatches(ctx, client, input.SessionID, input.WorkingDir)
 
 	canApply := true
 	var errors []string
@@ -513,7 +514,7 @@ func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSe
 		SourceContext:       sourceContext,
 		Title:               input.Title,
 		RequirePlanApproval: input.RequirePlanApproval,
-		AutomationMode:      input.AutomationMode,
+		AutomationMode:      jules.AutomationMode(input.AutomationMode),
 	}
 
 	session, err := client.CreateSession(ctx, createReq)

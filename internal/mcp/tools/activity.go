@@ -3,8 +3,10 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -79,11 +81,23 @@ func listActivities(ctx context.Context, req *mcp.CallToolRequest, input ListAct
 	var activities []jules.Activity
 	var err error
 	var nextToken string
+	var createTime time.Time
+	if input.CreateTime != "" {
+		createTime, err = time.Parse(time.RFC3339Nano, input.CreateTime)
+		if err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Invalid create_time: %v", err)},
+				},
+			}, ListActivitiesOutput{}, err
+		}
+	}
 
 	// Use filtered list if filters are provided
 	if input.Type != "" || input.CreateTime != "" || input.HasPlan != nil || input.HasArtifacts != nil {
 		filter := &jules.ActivityFilter{
-			CreateTime:   input.CreateTime,
+			CreateTime:   createTime,
 			Type:         input.Type,
 			HasPlan:      input.HasPlan,
 			HasArtifacts: input.HasArtifacts,
@@ -91,8 +105,9 @@ func listActivities(ctx context.Context, req *mcp.CallToolRequest, input ListAct
 		activities, err = client.ListActivitiesFiltered(ctx, input.SessionID, filter)
 	} else {
 		response, err := client.ListActivitiesWithOptions(ctx, input.SessionID, &jules.ListActivitiesOptions{
-			PageSize:  pageSize,
-			PageToken: input.PageToken,
+			PageSize:   pageSize,
+			PageToken:  input.PageToken,
+			CreateTime: createTime,
 		})
 		if err != nil {
 			return &mcp.CallToolResult{
@@ -192,18 +207,13 @@ func searchActivities(ctx context.Context, req *mcp.CallToolRequest, input Searc
 		limit = 20
 	}
 
-	options := &jules.ActivitySearchOptions{
-		Query: input.Query,
+	activities, err := client.SearchActivities(ctx, input.SessionID, &jules.ActivitySearchOptions{
+		Query: strings.TrimSpace(input.Query),
 		Limit: limit,
-	}
-
-	if input.Type != "" {
-		options.Filter = &jules.ActivityFilter{
+		Filter: &jules.ActivityFilter{
 			Type: input.Type,
-		}
-	}
-
-	activities, err := client.SearchActivities(ctx, input.SessionID, options)
+		},
+	})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/spf13/cobra"
 )
@@ -61,12 +61,7 @@ Examples:
 
 // listSources lists all connected sources
 func listSources(cfg *config.Config, filter string) error {
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -135,7 +130,7 @@ func listSources(cfg *config.Config, filter string) error {
 
 // getSource gets details for a specific source
 func getSource(cfg *config.Config, sourceID string) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, cfg.Jules.Timeout, cfg.Jules.RetryAttempts)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 

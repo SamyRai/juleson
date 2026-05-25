@@ -3,6 +3,7 @@ package cli
 import (
 	"github.com/SamyRai/juleson/internal/cli/commands"
 	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/julescli"
 	"github.com/SamyRai/juleson/internal/presentation"
 	"github.com/SamyRai/juleson/internal/services"
 
@@ -79,8 +80,10 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
   {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}
 `)
 
-	// Register commands with their dependencies
-	a.rootCmd.AddCommand(commands.NewSetupCommand())
+	// Register Jules-focused commands.
+	a.rootCmd.AddCommand(julescli.NewCoreCommands(a.container.Config())...)
+
+	// Register Juleson extension commands with their dependencies.
 	a.rootCmd.AddCommand(commands.NewInitCommand(a.formatters.ConfigGen.GenerateProjectConfig))
 	a.rootCmd.AddCommand(commands.NewAnalyzeCommand(
 		a.container.AutomationEngine,
@@ -96,9 +99,6 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 		commands.DisplayExecutionResult,
 	))
 	a.rootCmd.AddCommand(commands.NewSyncCommand())
-	a.rootCmd.AddCommand(commands.NewSessionsCommand(a.container.Config()))
-	a.rootCmd.AddCommand(commands.NewSourcesCommand(a.container.Config()))
-	a.rootCmd.AddCommand(commands.NewActivitiesCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewPRCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewGitHubCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewActionsCommand(a.container.Config()))
@@ -106,6 +106,4 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 	a.rootCmd.AddCommand(commands.NewAIOrchestCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewAgentCommand(a.container.Config()))
 	a.rootCmd.AddCommand(commands.NewDevCommand())
-	a.rootCmd.AddCommand(commands.NewCompletionCommand())
-	a.rootCmd.AddCommand(commands.NewVersionCommand())
 }

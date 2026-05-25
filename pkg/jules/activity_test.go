@@ -21,7 +21,7 @@ type ActivityTestSuite struct {
 // SetupTest is called before each test
 func (suite *ActivityTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
+	suite.client = NewClient("test-api-key", WithBaseURL("https://jules.googleapis.com/v1alpha"), WithTimeout(30*time.Second), WithRetryAttempts(3))
 }
 
 // TearDownTest is called after each test
@@ -36,8 +36,8 @@ func (suite *ActivityTestSuite) TestListActivitiesWithPagination() {
 			{
 				ID:         "activity-1",
 				Name:       "Plan Generated",
-				Originator: "agent",
-				CreateTime: "2024-01-01T00:00:00Z",
+				Originator: ActivityOriginatorAgent,
+				CreateTime: testTime("2024-01-01T00:00:00Z"),
 			},
 		},
 		NextPageToken: "next-token",
@@ -64,8 +64,8 @@ func (suite *ActivityTestSuite) TestListActivitiesWithOptionsCreateTime() {
 			{
 				ID:         "activity-1",
 				Name:       "Plan Generated",
-				Originator: "agent",
-				CreateTime: "2026-01-01T00:00:00Z",
+				Originator: ActivityOriginatorAgent,
+				CreateTime: testTime("2026-01-01T00:00:00Z"),
 			},
 		},
 	}
@@ -78,7 +78,7 @@ func (suite *ActivityTestSuite) TestListActivitiesWithOptionsCreateTime() {
 
 	response, err := suite.client.ListActivitiesWithOptions(context.Background(), "session-1", &ListActivitiesOptions{
 		PageSize:   25,
-		CreateTime: "2026-01-01T00:00:00Z",
+		CreateTime: testTime("2026-01-01T00:00:00Z"),
 	})
 
 	require.NoError(suite.T(), err)
@@ -91,8 +91,8 @@ func (suite *ActivityTestSuite) TestListActivitiesFiltered() {
 	filter := &ActivityFilter{
 		Type:    "message",
 		Status:  "completed",
-		Before:  "2024-01-02T00:00:00Z",
-		After:   "2024-01-01T00:00:00Z",
+		Before:  testTime("2024-01-02T00:00:00Z"),
+		After:   testTime("2024-01-01T00:00:00Z"),
 		HasPlan: &[]bool{true}[0],
 	}
 
@@ -101,8 +101,8 @@ func (suite *ActivityTestSuite) TestListActivitiesFiltered() {
 			{
 				ID:         "activity-1",
 				Name:       "User Message",
-				Originator: "user",
-				CreateTime: "2024-01-01T12:00:00Z",
+				Originator: ActivityOriginatorUser,
+				CreateTime: testTime("2024-01-01T12:00:00Z"),
 				Status:     "completed",
 				PlanGenerated: &PlanGenerated{
 					Plan: Plan{ID: "plan-1"},
@@ -138,16 +138,16 @@ func (suite *ActivityTestSuite) TestSearchActivities() {
 		{
 			ID:         "activity-1",
 			Name:       "User Message",
-			Originator: "user",
+			Originator: ActivityOriginatorUser,
 			UserMessaged: &UserMessaged{
 				UserMessage: "implement feature",
 			},
 		},
 	}
 
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/search?limit=10&q=implement+feature",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
 		func(req *http.Request) (*http.Response, error) {
-			resp, _ := httpmock.NewJsonResponse(200, mockActivities)
+			resp, _ := httpmock.NewJsonResponse(200, ActivitiesResponse{Activities: mockActivities})
 			return resp, nil
 		})
 
@@ -165,7 +165,7 @@ func (suite *ActivityTestSuite) TestGetActivitiesByType() {
 			{
 				ID:         "activity-1",
 				Name:       "Plan Generated",
-				Originator: "agent",
+				Originator: ActivityOriginatorAgent,
 				PlanGenerated: &PlanGenerated{
 					Plan: Plan{ID: "plan-1"},
 				},
@@ -252,8 +252,8 @@ func (suite *ActivityTestSuite) TestGetActivity() {
 	mockActivity := Activity{
 		ID:         "activity-1",
 		Name:       "Plan Generated",
-		Originator: "agent",
-		CreateTime: "2024-01-01T00:00:00Z",
+		Originator: ActivityOriginatorAgent,
+		CreateTime: testTime("2024-01-01T00:00:00Z"),
 		PlanGenerated: &PlanGenerated{
 			Plan: Plan{
 				ID: "plan-1",

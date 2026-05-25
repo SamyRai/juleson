@@ -1,4 +1,4 @@
-package jules
+package julesops
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // PatchApplicationOptions represents options for applying patches
@@ -29,7 +31,7 @@ type PatchApplicationResult struct {
 }
 
 // ApplySessionPatches applies all git patches from a session's activities
-func (c *Client) ApplySessionPatches(ctx context.Context, sessionID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
+func ApplySessionPatches(ctx context.Context, client *jules.Client, sessionID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
 	if options == nil {
 		options = &PatchApplicationOptions{}
 	}
@@ -45,7 +47,7 @@ func (c *Client) ApplySessionPatches(ctx context.Context, sessionID string, opti
 	}
 
 	// Get all activities for the session
-	activities, err := c.ListActivities(ctx, sessionID, 100)
+	activities, err := client.ListActivities(ctx, sessionID, 100)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
@@ -56,7 +58,7 @@ func (c *Client) ApplySessionPatches(ctx context.Context, sessionID string, opti
 
 	// Process each activity looking for patches
 	for _, activity := range activities {
-		activityResult, err := c.applyActivityPatches(ctx, sessionID, activity.ID, options)
+		activityResult, err := applyActivityPatches(ctx, client, sessionID, activity.ID, options)
 		if err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("Activity %s: %v", activity.ID, err))
 			continue
@@ -73,7 +75,7 @@ func (c *Client) ApplySessionPatches(ctx context.Context, sessionID string, opti
 }
 
 // ApplyActivityPatches applies git patches from a specific activity
-func (c *Client) ApplyActivityPatches(ctx context.Context, sessionID, activityID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
+func ApplyActivityPatches(ctx context.Context, client *jules.Client, sessionID, activityID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
 	if options == nil {
 		options = &PatchApplicationOptions{}
 	}
@@ -88,13 +90,13 @@ func (c *Client) ApplyActivityPatches(ctx context.Context, sessionID, activityID
 		options.StripComponents = 1
 	}
 
-	return c.applyActivityPatches(ctx, sessionID, activityID, options)
+	return applyActivityPatches(ctx, client, sessionID, activityID, options)
 }
 
 // applyActivityPatches is the internal implementation for applying patches from an activity
-func (c *Client) applyActivityPatches(ctx context.Context, sessionID, activityID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
+func applyActivityPatches(ctx context.Context, client *jules.Client, sessionID, activityID string, options *PatchApplicationOptions) (*PatchApplicationResult, error) {
 	// Get the activity to access its artifacts
-	activity, err := c.GetActivity(ctx, sessionID, activityID)
+	activity, err := client.GetActivity(ctx, sessionID, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get activity: %w", err)
 	}
@@ -116,7 +118,7 @@ func (c *Client) applyActivityPatches(ctx context.Context, sessionID, activityID
 			}
 
 			// Apply the patch
-			files, err := c.applyGitPatch(ctx, patchContent, options)
+			files, err := applyGitPatch(ctx, patchContent, options)
 			if err != nil {
 				result.Errors = append(result.Errors, fmt.Sprintf("Artifact %d: %v", i, err))
 				result.PatchesFailed++
@@ -132,7 +134,7 @@ func (c *Client) applyActivityPatches(ctx context.Context, sessionID, activityID
 }
 
 // applyGitPatch applies a single git patch using the git apply command
-func (c *Client) applyGitPatch(ctx context.Context, patchContent string, options *PatchApplicationOptions) ([]string, error) {
+func applyGitPatch(ctx context.Context, patchContent string, options *PatchApplicationOptions) ([]string, error) {
 	// Create a temporary file for the patch
 	tmpFile, err := os.CreateTemp("", "jules-patch-*.patch")
 	if err != nil {
@@ -237,8 +239,8 @@ func copyFile(src, dst string) error {
 }
 
 // GetSessionChanges retrieves a summary of all changes in a session
-func (c *Client) GetSessionChanges(ctx context.Context, sessionID string) (*SessionChanges, error) {
-	activities, err := c.ListActivities(ctx, sessionID, 100)
+func GetSessionChanges(ctx context.Context, client *jules.Client, sessionID string) (*SessionChanges, error) {
+	activities, err := client.ListActivities(ctx, sessionID, 100)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
@@ -331,7 +333,7 @@ func parsePatchFiles(patch string) []FileChange {
 }
 
 // PreviewSessionPatches shows what would be changed if patches were applied
-func (c *Client) PreviewSessionPatches(ctx context.Context, sessionID string, workingDir string) (*SessionChanges, error) {
+func PreviewSessionPatches(ctx context.Context, client *jules.Client, sessionID string, workingDir string) (*SessionChanges, error) {
 	if workingDir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -341,13 +343,13 @@ func (c *Client) PreviewSessionPatches(ctx context.Context, sessionID string, wo
 	}
 
 	// Get the changes summary
-	changes, err := c.GetSessionChanges(ctx, sessionID)
+	changes, err := GetSessionChanges(ctx, client, sessionID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Test if patches can be applied (dry-run)
-	result, err := c.ApplySessionPatches(ctx, sessionID, &PatchApplicationOptions{
+	result, err := ApplySessionPatches(ctx, client, sessionID, &PatchApplicationOptions{
 		WorkingDir: workingDir,
 		DryRun:     true,
 	})

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ func TestCreateSessionAllowsRepolessInput(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	client := jules.NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 0)
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
 	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
 		func(req *http.Request) (*http.Response, error) {
 			body, _ := io.ReadAll(req.Body)
@@ -45,7 +45,7 @@ func TestCreateSessionAllowsRepolessInput(t *testing.T) {
 }
 
 func TestDeleteSessionRequiresConfirmation(t *testing.T) {
-	client := jules.NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 0)
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
 
 	result, output, err := deleteSession(context.Background(), nil, DeleteSessionInput{
 		SessionID: "session-1",
@@ -61,7 +61,7 @@ func TestDeleteSessionConfirmed(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	client := jules.NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 0)
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
 	httpmock.RegisterResponder("DELETE", "https://jules.googleapis.com/v1alpha/sessions/session-1",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(200, ""), nil

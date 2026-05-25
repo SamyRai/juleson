@@ -89,3 +89,9 @@ Jules API still require `JULES_API_KEY` or `jules.api_key`.
 `jules-mcp` starts with minimal config when the Jules API key is missing. Tools
 that require Jules, GitHub, or Gemini configuration are skipped or fail with a
 credential error.
+
+The Go SDK in `pkg/jules` does not load this configuration directly. Applications
+pass credentials and options explicitly with `jules.NewClient` and client
+options such as `jules.WithBaseURL`, `jules.WithTimeout`, and
+`jules.WithRetryAttempts`. SDK-only options also include retry backoff,
+custom `http.Client`, user agent, and sleep injection for deterministic tests.

@@ -1,6 +1,10 @@
 # CLI Reference
 
 This reference reflects the current Cobra command tree from `cmd/juleson`.
+Core Jules commands (`setup`, `sessions`, `sources`, `activities`,
+`completion`, and `version`) are composed through the internal Jules CLI package;
+Juleson-specific extensions such as GitHub, templates, agent, and dev commands
+are registered by the application layer.
 
 ## Global Usage
 
@@ -76,6 +80,10 @@ omitting `sourceContext`.
 `sessions delete` calls the Jules API delete endpoint. Without `--force`, it
 asks for the exact session ID before deleting. Session cancel is not exposed by
 the Jules API v1alpha reference used by this project.
+
+`sessions preview` and `sessions download` use documented activity artifacts:
+git patches from `changeSet`, command output from `bashOutput`, and decoded
+base64 media from `media`.
 
 ## Templates
 

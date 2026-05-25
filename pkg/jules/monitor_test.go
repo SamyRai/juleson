@@ -22,7 +22,7 @@ type MonitorTestSuite struct {
 // SetupTest is called before each test
 func (suite *MonitorTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
+	suite.client = NewClient("test-api-key", WithBaseURL("https://jules.googleapis.com/v1alpha"), WithTimeout(30*time.Second), WithRetryAttempts(3))
 	suite.monitor = NewSessionMonitor(suite.client, "test-session-1")
 }
 
@@ -101,7 +101,7 @@ func (suite *MonitorTestSuite) TestOnComplete() {
 func (suite *MonitorTestSuite) TestGetSessionStatus() {
 	mockSession := Session{
 		ID:    "test-session-1",
-		State: "COMPLETED",
+		State: SessionStateCompleted,
 	}
 
 	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
@@ -141,11 +141,11 @@ func (suite *MonitorTestSuite) TestWaitForCompletion() {
 	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			callCount++
-			var state string
+			var state SessionState
 			if callCount >= 3 {
-				state = "COMPLETED"
+				state = SessionStateCompleted
 			} else {
-				state = "IN_PROGRESS"
+				state = SessionStateInProgress
 			}
 
 			mockSession := Session{
@@ -176,7 +176,7 @@ func (suite *MonitorTestSuite) TestWaitForPlan() {
 			callCount++
 			mockSession := Session{
 				ID:    "test-session-1",
-				State: "PLANNING",
+				State: SessionStatePlanning,
 			}
 			resp, _ := httpmock.NewJsonResponse(200, mockSession)
 			return resp, nil
@@ -217,7 +217,7 @@ func (suite *MonitorTestSuite) TestPollUntilCompleteTimeout() {
 		func(req *http.Request) (*http.Response, error) {
 			mockSession := Session{
 				ID:    "test-session-1",
-				State: "IN_PROGRESS", // Never completes
+				State: SessionStateInProgress, // Never completes
 			}
 			resp, _ := httpmock.NewJsonResponse(200, mockSession)
 			return resp, nil
@@ -239,7 +239,7 @@ func (suite *MonitorTestSuite) TestContextCancellation() {
 			time.Sleep(100 * time.Millisecond) // Slow response
 			mockSession := Session{
 				ID:    "test-session-1",
-				State: "IN_PROGRESS",
+				State: SessionStateInProgress,
 			}
 			resp, _ := httpmock.NewJsonResponse(200, mockSession)
 			return resp, nil

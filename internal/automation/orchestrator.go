@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // Default configuration constants

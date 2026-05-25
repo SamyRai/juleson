@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/juleson/internal/gemini"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	"google.golang.org/genai"
 )
 

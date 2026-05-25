@@ -1,4 +1,4 @@
-package jules
+package julesops
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,13 +18,13 @@ import (
 // ArtifactsTestSuite defines the test suite for artifact operations
 type ArtifactsTestSuite struct {
 	suite.Suite
-	client *Client
+	client *jules.Client
 }
 
 // SetupTest is called before each test
 func (suite *ArtifactsTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
+	suite.client = jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(3))
 }
 
 // TearDownTest is called after each test
@@ -51,18 +52,12 @@ func (suite *ArtifactsTestSuite) TestDownloadArtifactFromActivity() {
 			return resp, nil
 		})
 
-	// Mock download endpoint
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/download",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(200, "artifact content"), nil
-		})
-
 	options := &ArtifactDownloadOptions{
 		DestinationDir: tempDir,
 		Overwrite:      true,
 		CreateDir:      true,
 	}
-	files, err := suite.client.DownloadArtifactFromActivity(context.Background(), "session-1", "activity-1", options)
+	files, err := DownloadArtifactFromActivity(context.Background(), suite.client, "session-1", "activity-1", options)
 
 	require.NoError(suite.T(), err)
 	assert.Len(suite.T(), files, 1)
@@ -71,6 +66,10 @@ func (suite *ArtifactsTestSuite) TestDownloadArtifactFromActivity() {
 	// Verify file was created
 	filePath := filepath.Join(tempDir, files[0])
 	assert.FileExists(suite.T(), filePath)
+	content, err := os.ReadFile(filePath)
+	require.NoError(suite.T(), err)
+	assert.Contains(suite.T(), string(content), "echo hello")
+	assert.Contains(suite.T(), string(content), "hello")
 }
 
 // TestDownloadAllSessionArtifacts tests downloading all artifacts from a session
@@ -102,18 +101,12 @@ func (suite *ArtifactsTestSuite) TestDownloadAllSessionArtifacts() {
 			return resp, nil
 		})
 
-	// Mock download endpoint
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/download",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(200, "artifact content"), nil
-		})
-
 	options := &ArtifactDownloadOptions{
 		DestinationDir: tempDir,
 		Overwrite:      true,
 		CreateDir:      true,
 	}
-	files, err := suite.client.DownloadAllSessionArtifacts(context.Background(), "session-1", options)
+	files, err := DownloadAllSessionArtifacts(context.Background(), suite.client, "session-1", options)
 
 	require.NoError(suite.T(), err)
 	assert.Len(suite.T(), files, 1)
@@ -121,6 +114,40 @@ func (suite *ArtifactsTestSuite) TestDownloadAllSessionArtifacts() {
 	// Verify file was created
 	filePath := filepath.Join(tempDir, files[0])
 	assert.FileExists(suite.T(), filePath)
+}
+
+func (suite *ArtifactsTestSuite) TestDownloadMediaFromEmbeddedBase64() {
+	tempDir, err := os.MkdirTemp("", "jules_test_*")
+	require.NoError(suite.T(), err)
+	defer os.RemoveAll(tempDir)
+
+	mockActivity := Activity{
+		ID: "activity-1",
+		Artifacts: []Artifact{
+			{Media: &Media{MimeType: "image/png", Data: "aGVsbG8="}},
+		},
+	}
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1",
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(200, mockActivity)
+			return resp, nil
+		})
+
+	files, err := DownloadArtifactFromActivity(context.Background(), suite.client, "session-1", "activity-1", &ArtifactDownloadOptions{
+		DestinationDir: tempDir,
+		Overwrite:      true,
+		CreateDir:      true,
+	})
+
+	require.NoError(suite.T(), err)
+	require.Len(suite.T(), files, 1)
+	content, err := os.ReadFile(filepath.Join(tempDir, files[0]))
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), []byte("hello"), content)
+
+	for request := range httpmock.GetCallCountInfo() {
+		assert.NotContains(suite.T(), request, "/artifacts/")
+	}
 }
 
 // TestGetArtifactsFromActivity tests getting artifacts from an activity
@@ -176,48 +203,6 @@ func (suite *ArtifactsTestSuite) TestGetAllSessionArtifacts() {
 	assert.Equal(suite.T(), 0, artifacts[0].Index)
 	assert.Equal(suite.T(), "activity-2", artifacts[1].ActivityID)
 	assert.Equal(suite.T(), 0, artifacts[1].Index)
-}
-
-// TestAnalyzeArtifact tests analyzing an artifact
-func (suite *ArtifactsTestSuite) TestAnalyzeArtifact() {
-	mockAnalysis := ArtifactAnalysis{
-		ActivityID:    "activity-1",
-		ArtifactIndex: 0,
-		ContentType:   "text/plain",
-		Size:          1024,
-		Language:      "bash",
-		Summary:       "Bash script output",
-		KeyInsights:   []string{"Command executed successfully"},
-		Issues:        []ArtifactIssue{},
-	}
-
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/analyze",
-		func(req *http.Request) (*http.Response, error) {
-			resp, _ := httpmock.NewJsonResponse(200, mockAnalysis)
-			return resp, nil
-		})
-
-	analysis, err := suite.client.AnalyzeArtifact(context.Background(), "session-1", "activity-1", 0)
-
-	require.NoError(suite.T(), err)
-	assert.Equal(suite.T(), "activity-1", analysis.ActivityID)
-	assert.Equal(suite.T(), 0, analysis.ArtifactIndex)
-	assert.Equal(suite.T(), "text/plain", analysis.ContentType)
-	assert.Equal(suite.T(), "bash", analysis.Language)
-}
-
-// TestGetArtifactContent tests getting raw artifact content
-func (suite *ArtifactsTestSuite) TestGetArtifactContent() {
-	content := "This is the artifact content"
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/content",
-		func(req *http.Request) (*http.Response, error) {
-			return httpmock.NewStringResponse(200, content), nil
-		})
-
-	result, err := suite.client.GetArtifactContent(context.Background(), "session-1", "activity-1", 0)
-
-	require.NoError(suite.T(), err)
-	assert.Equal(suite.T(), content, string(result))
 }
 
 // TestGenerateArtifactFilename tests filename generation for different artifact types
@@ -280,7 +265,7 @@ func (suite *ArtifactsTestSuite) TestGenerateArtifactFilename() {
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			result := suite.client.generateArtifactFilename(tc.artifact, tc.index)
+			result := GenerateArtifactFilename(tc.artifact, tc.index)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
@@ -304,7 +289,7 @@ func (suite *ArtifactsTestSuite) TestGetExtensionFromMimeType() {
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.mimeType, func(t *testing.T) {
-			result := suite.client.getExtensionFromMimeType(tc.mimeType)
+			result := extensionFromMimeType(tc.mimeType)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

@@ -8,19 +8,22 @@ import (
 	"strings"
 
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/spf13/cobra"
 )
 
 // getSessionStatusIcon returns the appropriate icon for a session state
-func getSessionStatusIcon(state string) string {
+func getSessionStatusIcon(state jules.SessionState) string {
 	switch state {
-	case "IN_PROGRESS", "PLANNING":
+	case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
 		return "⚡"
-	case "COMPLETED":
+	case jules.SessionStateAwaitingPlanApproval, jules.SessionStateAwaitingUserFeedback:
+		return "⏸"
+	case jules.SessionStateCompleted:
 		return "✅"
-	case "FAILED":
+	case jules.SessionStateFailed:
 		return "❌"
 	default:
 		return "📋"
@@ -28,16 +31,18 @@ func getSessionStatusIcon(state string) string {
 }
 
 // getSessionStatusText returns the status text for a session state
-func getSessionStatusText(state string) string {
+func getSessionStatusText(state jules.SessionState) string {
 	switch state {
-	case "IN_PROGRESS", "PLANNING":
+	case jules.SessionStateInProgress, jules.SessionStatePlanning, jules.SessionStateQueued:
 		return "ACTIVE"
-	case "COMPLETED":
+	case jules.SessionStateAwaitingPlanApproval, jules.SessionStateAwaitingUserFeedback:
+		return "NEEDS_USER_ACTION"
+	case jules.SessionStateCompleted:
 		return "COMPLETED"
-	case "FAILED":
+	case jules.SessionStateFailed:
 		return "FAILED"
 	default:
-		return state
+		return string(state)
 	}
 }
 
@@ -196,12 +201,7 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 // approveSessionPlan approves a plan in a session
 func approveSessionPlan(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -219,12 +219,7 @@ func approveSessionPlan(cfg *config.Config, sessionID string) error {
 }
 func createSession(cfg *config.Config, sourceID string, prompt string, noSource bool) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -268,12 +263,7 @@ func createSession(cfg *config.Config, sourceID string, prompt string, noSource 
 }
 
 func deleteSession(cfg *config.Config, sessionID string, force bool) error {
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	if !force {
 		fmt.Printf("Type the session ID to confirm deletion (%s): ", sessionID)
@@ -298,21 +288,12 @@ func deleteSession(cfg *config.Config, sessionID string, force bool) error {
 }
 
 func normalizeSourceID(sourceID string) string {
-	sourceID = strings.TrimSpace(sourceID)
-	if strings.HasPrefix(sourceID, "sources/") {
-		return sourceID
-	}
-	return fmt.Sprintf("sources/%s", sourceID)
+	return jules.NormalizeSourceName(sourceID)
 }
 
 func listSessions(cfg *config.Config) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	fmt.Println("🔍 Listing Jules sessions...")
 	fmt.Println("============================")
@@ -335,7 +316,7 @@ func listSessions(cfg *config.Config) error {
 		fmt.Printf("   Title: %s\n", session.Title)
 		fmt.Printf("   State: %s\n", session.State)
 		fmt.Printf("   Created: %s\n", session.CreateTime)
-		if session.UpdateTime != "" {
+		if !session.UpdateTime.IsZero() {
 			fmt.Printf("   Updated: %s\n", session.UpdateTime)
 		}
 		if session.SourceContext != nil && session.SourceContext.Source != "" {
@@ -364,12 +345,7 @@ func listSessions(cfg *config.Config) error {
 // showSessionStatus shows a summary of session statuses
 func showSessionStatus(cfg *config.Config) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	fmt.Println("📊 Jules Session Status")
 	fmt.Println("=======================")
@@ -390,7 +366,7 @@ func showSessionStatus(cfg *config.Config) error {
 	// Count sessions by state
 	stateCounts := make(map[string]int)
 	for _, session := range sessions {
-		stateCounts[session.State]++
+		stateCounts[string(session.State)]++
 	}
 
 	fmt.Printf("Total Sessions: %d\n\n", totalSessions)
@@ -399,7 +375,7 @@ func showSessionStatus(cfg *config.Config) error {
 	fmt.Println("Session States:")
 	for state, count := range stateCounts {
 		percentage := float64(count) / float64(totalSessions) * 100
-		icon := getSessionStatusIcon(state)
+		icon := getSessionStatusIcon(jules.SessionState(state))
 		fmt.Printf("  %s %s: %d (%.1f%%)\n", icon, state, count, percentage)
 	}
 
@@ -432,12 +408,7 @@ func showSessionStatus(cfg *config.Config) error {
 // getSessionDetails gets detailed information about a specific session
 func getSessionDetails(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -456,7 +427,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 	fmt.Printf("Title: %s\n", session.Title)
 	fmt.Printf("State: %s %s\n", getSessionStatusIcon(session.State), session.State)
 	fmt.Printf("Created: %s\n", session.CreateTime)
-	if session.UpdateTime != "" {
+	if !session.UpdateTime.IsZero() {
 		fmt.Printf("Updated: %s\n", session.UpdateTime)
 	}
 	if session.URL != "" {
@@ -559,12 +530,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 // sendSessionMessage sends a message to a session
 func sendSessionMessage(cfg *config.Config, sessionID string, message string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -590,12 +556,7 @@ func sendSessionMessage(cfg *config.Config, sessionID string, message string) er
 // downloadSessionArtifacts downloads all artifacts from all activities in a session
 func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -604,14 +565,14 @@ func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir st
 	fmt.Println("=" + string(make([]byte, 60)))
 
 	// Create output directory if it doesn't exist
-	options := &jules.ArtifactDownloadOptions{
+	options := &julesops.ArtifactDownloadOptions{
 		DestinationDir: outputDir,
 		CreateDir:      true,
 		Overwrite:      false,
 	}
 
 	// Download all artifacts from the session
-	downloadedFiles, err := julesClient.DownloadAllSessionArtifacts(ctx, sessionID, options)
+	downloadedFiles, err := julesops.DownloadAllSessionArtifacts(ctx, julesClient, sessionID, options)
 	if err != nil {
 		return fmt.Errorf("failed to download session artifacts: %w", err)
 	}
@@ -633,12 +594,7 @@ func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir st
 // downloadActivityArtifacts downloads all artifacts from a specific activity
 func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID string, outputDir string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -648,14 +604,14 @@ func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID 
 	fmt.Println("=" + string(make([]byte, 60)))
 
 	// Create output directory if it doesn't exist
-	options := &jules.ArtifactDownloadOptions{
+	options := &julesops.ArtifactDownloadOptions{
 		DestinationDir: outputDir,
 		CreateDir:      true,
 		Overwrite:      false,
 	}
 
 	// Download artifacts from the specific activity
-	downloadedFiles, err := julesClient.DownloadArtifactFromActivity(ctx, sessionID, activityID, options)
+	downloadedFiles, err := julesops.DownloadArtifactFromActivity(ctx, julesClient, sessionID, activityID, options)
 	if err != nil {
 		return fmt.Errorf("failed to download activity artifacts: %w", err)
 	}
@@ -677,12 +633,7 @@ func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID 
 // previewSessionArtifacts previews all artifacts from all activities in a session
 func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -704,7 +655,7 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	for i, activity := range activities {
 		if len(activity.Artifacts) > 0 {
 			fmt.Printf("\n📋 Activity %d: %s\n", i+1, activity.ID)
-			err := previewActivityArtifactsContent(ctx, julesClient, sessionID, activity.ID, activity.Artifacts)
+			err := previewActivityArtifactsContent(activity.Artifacts)
 			if err != nil {
 				fmt.Printf("⚠️  Failed to preview activity %s: %v\n", activity.ID, err)
 			} else {
@@ -725,12 +676,7 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 // previewActivityArtifacts previews all artifacts from a specific activity
 func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -749,7 +695,7 @@ func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID s
 		return nil
 	}
 
-	err = previewActivityArtifactsContent(ctx, julesClient, sessionID, activityID, activity.Artifacts)
+	err = previewActivityArtifactsContent(activity.Artifacts)
 	if err != nil {
 		return err
 	}
@@ -759,7 +705,7 @@ func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID s
 }
 
 // previewActivityArtifactsContent displays artifact content based on type
-func previewActivityArtifactsContent(ctx context.Context, client *jules.Client, sessionID, activityID string, artifacts []jules.Artifact) error {
+func previewActivityArtifactsContent(artifacts []jules.Artifact) error {
 	for i, artifact := range artifacts {
 		fmt.Printf("\n  📄 Artifact %d:\n", i+1)
 
@@ -767,7 +713,7 @@ func previewActivityArtifactsContent(ctx context.Context, client *jules.Client, 
 		if artifact.BashOutput != nil {
 			previewBashOutput(artifact.BashOutput)
 		} else if artifact.ChangeSet != nil && artifact.ChangeSet.GitPatch != nil {
-			err := previewGitPatch(ctx, client, sessionID, activityID, i, artifact.ChangeSet.GitPatch)
+			err := previewGitPatch(artifact.ChangeSet.GitPatch)
 			if err != nil {
 				fmt.Printf("    ⚠️  Failed to preview git patch: %v\n", err)
 			}
@@ -802,7 +748,7 @@ func previewBashOutput(output *jules.BashOutput) error {
 }
 
 // previewGitPatch displays git diff content
-func previewGitPatch(ctx context.Context, client *jules.Client, sessionID, activityID string, artifactIndex int, patch *jules.GitPatch) error {
+func previewGitPatch(patch *jules.GitPatch) error {
 	fmt.Printf("    🔀 Git Patch:\n")
 
 	if patch.SuggestedCommitMessage != "" {
@@ -822,27 +768,6 @@ func previewGitPatch(ctx context.Context, client *jules.Client, sessionID, activ
 		lines := strings.Split(patch.UnidiffPatch, "\n")
 		for _, line := range lines {
 			if len(line) > 120 { // Truncate very long lines
-				line = line[:120] + "..."
-			}
-			fmt.Printf("    %s\n", line)
-		}
-		fmt.Printf("    ```\n")
-	} else {
-		// Try to get content from API
-		content, err := client.GetArtifactContent(ctx, sessionID, activityID, artifactIndex)
-		if err != nil {
-			return fmt.Errorf("failed to get patch content: %w", err)
-		}
-
-		contentStr := string(content)
-		if len(contentStr) > 2000 {
-			contentStr = contentStr[:2000] + "\n... (truncated)"
-		}
-
-		fmt.Printf("    Diff:\n")
-		fmt.Printf("    ```diff\n")
-		for _, line := range strings.Split(contentStr, "\n") {
-			if len(line) > 120 {
 				line = line[:120] + "..."
 			}
 			fmt.Printf("    %s\n", line)

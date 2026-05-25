@@ -8,7 +8,7 @@ import (
 
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/github"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	gh "github.com/google/go-github/v76/github"
 	"github.com/spf13/cobra"
 )
@@ -987,7 +987,7 @@ func newActionsCacheDeleteCommand(cfg *config.Config) *cobra.Command {
 // Helper functions
 
 func getGitHubClientAndRepo(ctx context.Context, cfg *config.Config, args []string, repoFlag string) (*github.Client, string, string, error) {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, cfg.Jules.BaseURL, cfg.Jules.Timeout, cfg.Jules.RetryAttempts)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	client := github.NewClient(cfg.GitHub.Token, julesClient)
 	if client == nil {

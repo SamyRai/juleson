@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/juleson/internal/agent"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // JulesTool provides integration with Jules AI

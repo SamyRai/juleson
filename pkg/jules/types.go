@@ -1,22 +1,71 @@
 package jules
 
+import "time"
+
 // ============================================================================
 // Session Types
 // ============================================================================
 
-// Session represents a Jules coding session
+// SessionState represents the current state of a session.
+type SessionState string
+
+const (
+	SessionStateUnspecified          SessionState = "STATE_UNSPECIFIED"
+	SessionStateQueued               SessionState = "QUEUED"
+	SessionStatePlanning             SessionState = "PLANNING"
+	SessionStateAwaitingPlanApproval SessionState = "AWAITING_PLAN_APPROVAL"
+	SessionStateAwaitingUserFeedback SessionState = "AWAITING_USER_FEEDBACK"
+	SessionStateInProgress           SessionState = "IN_PROGRESS"
+	SessionStatePaused               SessionState = "PAUSED"
+	SessionStateFailed               SessionState = "FAILED"
+	SessionStateCompleted            SessionState = "COMPLETED"
+)
+
+// IsTerminal reports whether the session state represents a finished session.
+func (s SessionState) IsTerminal() bool {
+	return s == SessionStateCompleted || s == SessionStateFailed
+}
+
+// NeedsUserAction reports whether the session is waiting on user input.
+func (s SessionState) NeedsUserAction() bool {
+	return s == SessionStateAwaitingPlanApproval || s == SessionStateAwaitingUserFeedback
+}
+
+// IsActive reports whether Jules is currently queued or working.
+func (s SessionState) IsActive() bool {
+	switch s {
+	case SessionStateQueued, SessionStatePlanning, SessionStateInProgress:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsSuccessful reports whether the session completed successfully.
+func (s SessionState) IsSuccessful() bool {
+	return s == SessionStateCompleted
+}
+
+// AutomationMode controls optional session automation behavior.
+type AutomationMode string
+
+const (
+	AutomationModeAutoCreatePR AutomationMode = "AUTO_CREATE_PR"
+)
+
+// Session represents a Jules coding session.
 type Session struct {
 	Name                string         `json:"name"`
 	Title               string         `json:"title"`
-	State               string         `json:"state"` // PLANNING, IN_PROGRESS, COMPLETED, FAILED
-	CreateTime          string         `json:"createTime"`
-	UpdateTime          string         `json:"updateTime"`
+	State               SessionState   `json:"state"`
+	CreateTime          time.Time      `json:"createTime,omitempty,omitzero"`
+	UpdateTime          time.Time      `json:"updateTime,omitempty,omitzero"`
 	SourceContext       *SourceContext `json:"sourceContext,omitempty"`
 	Prompt              string         `json:"prompt"`
 	URL                 string         `json:"url"`
 	ID                  string         `json:"id"`
 	RequirePlanApproval bool           `json:"requirePlanApproval,omitempty"`
-	AutomationMode      string         `json:"automationMode,omitempty"` // AUTO_CREATE_PR
+	AutomationMode      AutomationMode `json:"automationMode,omitempty"`
 	Outputs             []Output       `json:"outputs,omitempty"`
 }
 
@@ -58,6 +107,7 @@ type Source struct {
 type GithubRepo struct {
 	Owner         string   `json:"owner"`
 	Repo          string   `json:"repo"`
+	IsPrivate     bool     `json:"isPrivate"`
 	DefaultBranch *Branch  `json:"defaultBranch,omitempty"`
 	Branches      []Branch `json:"branches,omitempty"`
 }
@@ -71,22 +121,31 @@ type Branch struct {
 // Activity Types
 // ============================================================================
 
-// Activity represents an activity within a session
+// ActivityOriginator identifies who or what created an activity.
+type ActivityOriginator string
+
+const (
+	ActivityOriginatorSystem ActivityOriginator = "system"
+	ActivityOriginatorAgent  ActivityOriginator = "agent"
+	ActivityOriginatorUser   ActivityOriginator = "user"
+)
+
+// Activity represents an activity within a session.
 type Activity struct {
-	Name             string            `json:"name"`
-	CreateTime       string            `json:"createTime"`
-	Originator       string            `json:"originator"` // "agent" or "user"
-	Description      string            `json:"description,omitempty"`
-	Status           string            `json:"status,omitempty"`
-	PlanGenerated    *PlanGenerated    `json:"planGenerated,omitempty"`
-	PlanApproved     *PlanApproved     `json:"planApproved,omitempty"`
-	UserMessaged     *UserMessaged     `json:"userMessaged,omitempty"`
-	AgentMessaged    *AgentMessaged    `json:"agentMessaged,omitempty"`
-	ProgressUpdated  *ProgressUpdated  `json:"progressUpdated,omitempty"`
-	SessionCompleted *SessionCompleted `json:"sessionCompleted,omitempty"`
-	SessionFailed    *SessionFailed    `json:"sessionFailed,omitempty"`
-	Artifacts        []Artifact        `json:"artifacts,omitempty"`
-	ID               string            `json:"id"`
+	Name             string             `json:"name"`
+	CreateTime       time.Time          `json:"createTime,omitempty,omitzero"`
+	Originator       ActivityOriginator `json:"originator"`
+	Description      string             `json:"description,omitempty"`
+	Status           string             `json:"status,omitempty"`
+	PlanGenerated    *PlanGenerated     `json:"planGenerated,omitempty"`
+	PlanApproved     *PlanApproved      `json:"planApproved,omitempty"`
+	UserMessaged     *UserMessaged      `json:"userMessaged,omitempty"`
+	AgentMessaged    *AgentMessaged     `json:"agentMessaged,omitempty"`
+	ProgressUpdated  *ProgressUpdated   `json:"progressUpdated,omitempty"`
+	SessionCompleted *SessionCompleted  `json:"sessionCompleted,omitempty"`
+	SessionFailed    *SessionFailed     `json:"sessionFailed,omitempty"`
+	Artifacts        []Artifact         `json:"artifacts,omitempty"`
+	ID               string             `json:"id"`
 }
 
 // PlanGenerated represents a generated plan activity
@@ -96,9 +155,9 @@ type PlanGenerated struct {
 
 // Plan represents a coding plan
 type Plan struct {
-	ID         string `json:"id"`
-	Steps      []Step `json:"steps"`
-	CreateTime string `json:"createTime,omitempty"`
+	ID         string    `json:"id"`
+	Steps      []Step    `json:"steps"`
+	CreateTime time.Time `json:"createTime,omitempty,omitzero"`
 }
 
 // Step represents a step in the plan
@@ -184,7 +243,7 @@ type CreateSessionRequest struct {
 	Prompt              string         `json:"prompt"`
 	SourceContext       *SourceContext `json:"sourceContext,omitempty"`
 	Title               string         `json:"title,omitempty"`
-	AutomationMode      string         `json:"automationMode,omitempty"`
+	AutomationMode      AutomationMode `json:"automationMode,omitempty"`
 	RequirePlanApproval bool           `json:"requirePlanApproval,omitempty"`
 }
 

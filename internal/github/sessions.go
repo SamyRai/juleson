@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // SessionService handles Jules session operations with GitHub integration

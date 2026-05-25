@@ -1,4 +1,4 @@
-package jules
+package julesops
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,12 +16,12 @@ import (
 
 type PatchesTestSuite struct {
 	suite.Suite
-	client *Client
+	client *jules.Client
 }
 
 func (suite *PatchesTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://jules.googleapis.com", 30*time.Second, 3)
+	suite.client = jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(3))
 }
 
 func (suite *PatchesTestSuite) TearDownTest() {
@@ -67,7 +68,7 @@ index 1234567..abcdefg 100644
 	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/sessions/session-123/activities",
 		httpmock.NewJsonResponderOrPanic(200, activitiesResponse))
 
-	changes, err := suite.client.GetSessionChanges(context.Background(), sessionID)
+	changes, err := GetSessionChanges(context.Background(), suite.client, sessionID)
 
 	require.NoError(suite.T(), err)
 	require.NotNil(suite.T(), changes)
@@ -229,7 +230,7 @@ func (suite *PatchesTestSuite) TestGetSessionChangesNoPatch() {
 	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/sessions/session-456/activities",
 		httpmock.NewJsonResponderOrPanic(200, activitiesResponse))
 
-	changes, err := suite.client.GetSessionChanges(context.Background(), sessionID)
+	changes, err := GetSessionChanges(context.Background(), suite.client, sessionID)
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), changes)
@@ -288,7 +289,7 @@ func (suite *PatchesTestSuite) TestGetSessionChangesMultiplePatches() {
 	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/sessions/session-789/activities",
 		httpmock.NewJsonResponderOrPanic(200, activitiesResponse))
 
-	changes, err := suite.client.GetSessionChanges(context.Background(), sessionID)
+	changes, err := GetSessionChanges(context.Background(), suite.client, sessionID)
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), changes)

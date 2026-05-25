@@ -13,7 +13,7 @@ import (
 	"github.com/SamyRai/juleson/internal/agent/review"
 	"github.com/SamyRai/juleson/internal/agent/tools"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	"github.com/spf13/cobra"
 )
 
@@ -112,12 +112,7 @@ Examples:
 			registry := tools.NewToolRegistry()
 
 			// Register Jules tool
-			julesClient := jules.NewClient(
-				cfg.Jules.APIKey,
-				cfg.Jules.BaseURL,
-				cfg.Jules.Timeout,
-				cfg.Jules.RetryAttempts,
-			)
+			julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 			julesTool := tools.NewJulesTool(julesClient, &tools.JulesToolConfig{
 				RequireApproval: !dryRun,

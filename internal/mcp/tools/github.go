@@ -7,7 +7,7 @@ import (
 
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/github"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 	ghapi "github.com/google/go-github/v76/github"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )

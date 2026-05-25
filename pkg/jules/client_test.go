@@ -21,10 +21,18 @@ type ClientTestSuite struct {
 	client *Client
 }
 
+func testTime(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		panic(err)
+	}
+	return parsed
+}
+
 // SetupTest is called before each test
 func (suite *ClientTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
+	suite.client = NewClient("test-api-key", WithBaseURL("https://jules.googleapis.com/v1alpha"), WithTimeout(30*time.Second), WithRetryAttempts(3))
 }
 
 // TearDownTest is called after each test
@@ -34,7 +42,7 @@ func (suite *ClientTestSuite) TearDownTest() {
 
 // TestNewClient tests client creation
 func (suite *ClientTestSuite) TestNewClient() {
-	client := NewClient("api-key", "https://api.example.com", 10*time.Second, 2)
+	client := NewClient("api-key", WithBaseURL("https://api.example.com"), WithTimeout(10*time.Second), WithRetryAttempts(2))
 
 	assert.Equal(suite.T(), "api-key", client.APIKey)
 	assert.Equal(suite.T(), "https://api.example.com", client.BaseURL)
@@ -49,7 +57,7 @@ func (suite *ClientTestSuite) TestListSessions() {
 			{
 				ID:    "session-1",
 				Title: "Test Session",
-				State: "COMPLETED",
+				State: SessionStateCompleted,
 			},
 		},
 		NextPageToken: "",
@@ -76,7 +84,7 @@ func (suite *ClientTestSuite) TestListSessionsWithPagination() {
 			{
 				ID:    "session-1",
 				Title: "Test Session",
-				State: "COMPLETED",
+				State: SessionStateCompleted,
 			},
 		},
 		NextPageToken: "next-token",
@@ -100,9 +108,9 @@ func (suite *ClientTestSuite) TestGetSession() {
 	mockSession := Session{
 		ID:         "session-1",
 		Title:      "Test Session",
-		State:      "COMPLETED",
-		CreateTime: "2024-01-01T00:00:00Z",
-		UpdateTime: "2024-01-01T01:00:00Z",
+		State:      SessionStateCompleted,
+		CreateTime: testTime("2024-01-01T00:00:00Z"),
+		UpdateTime: testTime("2024-01-01T01:00:00Z"),
 		Prompt:     "Test prompt",
 		URL:        "https://app.jules.ai/sessions/session-1",
 	}
@@ -118,7 +126,7 @@ func (suite *ClientTestSuite) TestGetSession() {
 	require.NoError(suite.T(), err)
 	assert.Equal(suite.T(), "session-1", session.ID)
 	assert.Equal(suite.T(), "Test Session", session.Title)
-	assert.Equal(suite.T(), "COMPLETED", session.State)
+	assert.Equal(suite.T(), SessionStateCompleted, session.State)
 }
 
 // TestCreateSession tests creating a new session
@@ -126,13 +134,13 @@ func (suite *ClientTestSuite) TestCreateSession() {
 	request := CreateSessionRequest{
 		Prompt:              "Create a new feature",
 		RequirePlanApproval: true,
-		AutomationMode:      "AUTO_CREATE_PR",
+		AutomationMode:      AutomationModeAutoCreatePR,
 	}
 
 	expectedResponse := Session{
 		ID:    "new-session-1",
 		Title: "New Session",
-		State: "PLANNING",
+		State: SessionStatePlanning,
 	}
 
 	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
@@ -170,7 +178,7 @@ func (suite *ClientTestSuite) TestCreateSessionWithSource() {
 	expectedResponse := Session{
 		ID:    "new-session-1",
 		Title: "New Session",
-		State: "PLANNING",
+		State: SessionStatePlanning,
 	}
 
 	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
@@ -246,7 +254,7 @@ func (suite *ClientTestSuite) TestListActivities() {
 			{
 				ID:         "activity-1",
 				Name:       "Plan Generated",
-				Originator: "agent",
+				Originator: ActivityOriginatorAgent,
 				PlanGenerated: &PlanGenerated{
 					Plan: Plan{
 						ID: "plan-1",
@@ -279,8 +287,8 @@ func (suite *ClientTestSuite) TestGetActivity() {
 	mockActivity := Activity{
 		ID:         "activity-1",
 		Name:       "Plan Generated",
-		Originator: "agent",
-		CreateTime: "2024-01-01T00:00:00Z",
+		Originator: ActivityOriginatorAgent,
+		CreateTime: testTime("2024-01-01T00:00:00Z"),
 	}
 
 	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1",

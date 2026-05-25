@@ -8,8 +8,8 @@ import (
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/gemini"
-	"github.com/SamyRai/juleson/internal/jules"
 	"github.com/SamyRai/juleson/internal/templates"
+	"github.com/SamyRai/juleson/pkg/jules"
 )
 
 // Container manages application dependencies and services
@@ -60,12 +60,7 @@ func (c *Container) julesClientLocked() *jules.Client {
 		if c.config.Jules.APIKey == "" {
 			return nil // Return nil to indicate client is not available
 		}
-		c.julesClient = jules.NewClient(
-			c.config.Jules.APIKey,
-			c.config.Jules.BaseURL,
-			c.config.Jules.Timeout,
-			c.config.Jules.RetryAttempts,
-		)
+		c.julesClient = jules.NewClient(c.config.Jules.APIKey, jules.WithBaseURL(c.config.Jules.BaseURL), jules.WithTimeout(c.config.Jules.Timeout), jules.WithRetryAttempts(c.config.Jules.RetryAttempts))
 
 	}
 

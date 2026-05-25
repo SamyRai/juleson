@@ -3,21 +3,33 @@ package jules
 import (
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // APIError represents an error response from the Jules API
 type APIError struct {
+	Method     string
+	Path       string
 	StatusCode int
 	Message    string
 	Body       string
+	RetryAfter time.Duration
 }
 
 // Error implements the error interface
 func (e *APIError) Error() string {
-	if e.Body != "" {
-		return fmt.Sprintf("Jules API error (HTTP %d): %s - %s", e.StatusCode, e.Message, e.Body)
+	location := e.Path
+	if location == "" {
+		location = "request"
 	}
-	return fmt.Sprintf("Jules API error (HTTP %d): %s", e.StatusCode, e.Message)
+	method := e.Method
+	if method != "" {
+		method += " "
+	}
+	if e.Body != "" {
+		return fmt.Sprintf("Jules API error %s%s (HTTP %d): %s - %s", method, location, e.StatusCode, e.Message, e.Body)
+	}
+	return fmt.Sprintf("Jules API error %s%s (HTTP %d): %s", method, location, e.StatusCode, e.Message)
 }
 
 // IsNotFound returns true if the error is a 404 Not Found error

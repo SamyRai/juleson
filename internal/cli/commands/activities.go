@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/jules"
+	"github.com/SamyRai/juleson/pkg/jules"
 
 	"github.com/spf13/cobra"
 )
@@ -46,12 +46,7 @@ func NewActivitiesCommand(cfg *config.Config) *cobra.Command {
 // listActivities lists all activities in a session
 func listActivities(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
@@ -111,12 +106,7 @@ func listActivities(cfg *config.Config, sessionID string) error {
 // getActivity gets details for a specific activity
 func getActivity(cfg *config.Config, sessionID string, activityID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(
-		cfg.Jules.APIKey,
-		cfg.Jules.BaseURL,
-		cfg.Jules.Timeout,
-		cfg.Jules.RetryAttempts,
-	)
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
