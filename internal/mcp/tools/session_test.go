@@ -76,3 +76,55 @@ func TestDeleteSessionConfirmed(t *testing.T) {
 	assert.Equal(t, "session-1", output.SessionID)
 	assert.Equal(t, "deleted", output.Status)
 }
+
+func TestListSessionsSuccessOutput(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions?pageSize=2",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.SessionsResponse{
+				Sessions: []jules.Session{
+					{ID: "session-1", State: jules.SessionStatePlanning},
+					{ID: "session-2", State: jules.SessionStateCompleted},
+				},
+				NextPageToken: "next",
+			})
+		})
+
+	result, output, err := listSessions(context.Background(), nil, ListSessionsInput{Limit: 2}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, 2, output.TotalCount)
+	assert.Equal(t, "next", output.NextCursor)
+	assert.Len(t, output.Sessions, 2)
+}
+
+func TestGetSessionStatusSummarizesSessions(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.SessionsResponse{
+				Sessions: []jules.Session{
+					{ID: "session-1", State: jules.SessionStatePlanning},
+					{ID: "session-2", State: jules.SessionStateInProgress},
+					{ID: "session-3", State: jules.SessionStateCompleted},
+				},
+			})
+		})
+
+	result, output, err := getSessionStatus(context.Background(), nil, GetSessionStatusInput{}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, 3, output.TotalSessions)
+	assert.Equal(t, 2, output.ActiveSessions)
+	assert.Equal(t, 1, output.StateBreakdown[string(jules.SessionStateCompleted)])
+	assert.Len(t, output.RecentSessions, 3)
+	assert.Equal(t, "Found 3 total sessions with 2 currently active", output.Summary)
+}
