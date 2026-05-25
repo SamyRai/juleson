@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/SamyRai/juleson/internal/build"
+	"github.com/SamyRai/juleson/internal/orchestrator"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -160,6 +160,10 @@ type BuildReleaseOutput struct {
 
 // Handler functions
 
+func devToolOrchestrator() *orchestrator.Service {
+	return orchestrator.NewService(orchestrator.DefaultConfig("dev", "", ""))
+}
+
 func buildProjectHandler(ctx context.Context, req *mcp.CallToolRequest, input BuildProjectInput) (
 	*mcp.CallToolResult,
 	BuildProjectOutput,
@@ -179,68 +183,30 @@ func buildProjectHandler(ctx context.Context, req *mcp.CallToolRequest, input Bu
 		input.GOARCH = runtime.GOARCH
 	}
 
-	var results []string
-	buildCLI := input.Target == "cli" || input.Target == "all"
-	buildMCP := input.Target == "mcp" || input.Target == "all"
-
-	successCount := 0
-	totalCount := 0
-
-	// Build CLI
-	if buildCLI {
-		totalCount++
-		config := build.DefaultConfig("juleson", "./cmd/juleson")
-		config.Version = input.Version
-		config.GOOS = input.GOOS
-		config.GOARCH = input.GOARCH
-		config.Race = input.Race
-
-		if input.Version != "dev" {
-			config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", input.Version))
-		}
-
-		builder := build.NewBuilder(config)
-		result := builder.BuildWithResult(ctx)
-
+	summary, err := devToolOrchestrator().BuildWithResults(ctx, orchestrator.BuildOptions{
+		Target:  input.Target,
+		Version: input.Version,
+		Race:    input.Race,
+		GOOS:    input.GOOS,
+		GOARCH:  input.GOARCH,
+	})
+	results := make([]string, 0, len(summary.Results))
+	for _, result := range summary.Results {
+		label := result.Name
 		if result.Success {
-			results = append(results, fmt.Sprintf("✅ CLI: %s", result.String()))
-			successCount++
+			results = append(results, fmt.Sprintf("✅ %s: %s", label, result.String()))
 		} else {
-			results = append(results, fmt.Sprintf("❌ CLI: %s", result.String()))
-		}
-	}
-
-	// Build MCP
-	if buildMCP {
-		totalCount++
-		config := build.DefaultConfig("jules-mcp", "./cmd/jules-mcp")
-		config.Version = input.Version
-		config.GOOS = input.GOOS
-		config.GOARCH = input.GOARCH
-		config.Race = input.Race
-
-		if input.Version != "dev" {
-			config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", input.Version))
-		}
-
-		builder := build.NewBuilder(config)
-		result := builder.BuildWithResult(ctx)
-
-		if result.Success {
-			results = append(results, fmt.Sprintf("✅ MCP: %s", result.String()))
-			successCount++
-		} else {
-			results = append(results, fmt.Sprintf("❌ MCP: %s", result.String()))
+			results = append(results, fmt.Sprintf("❌ %s: %s", label, result.String()))
 		}
 	}
 
 	output := BuildProjectOutput{
 		Target:  input.Target,
 		Results: results,
-		Summary: fmt.Sprintf("Build Summary: %d/%d successful", successCount, totalCount),
+		Summary: fmt.Sprintf("Build Summary: %d/%d successful", summary.SuccessCount, len(summary.Results)),
 	}
 
-	if successCount < totalCount {
+	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
@@ -257,7 +223,7 @@ func runTestsHandler(ctx context.Context, req *mcp.CallToolRequest, input RunTes
 	RunTestsOutput,
 	error,
 ) {
-	config := build.DefaultTestConfig()
+	config := orchestrator.DefaultTestConfig()
 	config.Verbose = input.Verbose
 	config.Race = input.Race
 	config.Cover = input.Cover
@@ -271,8 +237,7 @@ func runTestsHandler(ctx context.Context, req *mcp.CallToolRequest, input RunTes
 		config.CoverProfile = "coverage.out"
 	}
 
-	tester := build.NewTester(config)
-	result := tester.TestWithResult(ctx)
+	result := devToolOrchestrator().RunTestsWithResult(ctx, config)
 
 	output := RunTestsOutput{
 		Success:  result.Success,
@@ -297,12 +262,11 @@ func lintCodeHandler(ctx context.Context, req *mcp.CallToolRequest, input LintCo
 	LintCodeOutput,
 	error,
 ) {
-	config := build.DefaultLintConfig()
+	config := orchestrator.DefaultLintConfig()
 	config.FixMode = input.Fix
 	config.Verbose = input.Verbose
 
-	linter := build.NewLinter(config)
-	result := linter.LintWithResult(ctx)
+	result := devToolOrchestrator().LintWithResult(ctx, config)
 
 	output := LintCodeOutput{
 		Success: result.Success,
@@ -326,16 +290,7 @@ func formatCodeHandler(ctx context.Context, req *mcp.CallToolRequest, input Form
 	FormatCodeOutput,
 	error,
 ) {
-	formatter := build.NewFormatter()
-
-	var err error
-	if input.UseGofumpt {
-		err = formatter.FormatWithGofumpt(ctx)
-	} else {
-		err = formatter.Format(ctx)
-	}
-
-	if err != nil {
+	if err := devToolOrchestrator().FormatCode(ctx, input.UseGofumpt); err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
@@ -352,41 +307,18 @@ func cleanArtifactsHandler(ctx context.Context, req *mcp.CallToolRequest, input 
 	CleanArtifactsOutput,
 	error,
 ) {
-	cleaner := build.NewCleaner("bin", []string{"coverage.out", "coverage.html"})
-	var cleaned []string
-
-	if input.All {
-		if err := cleaner.CleanAll(ctx); err != nil {
-			return &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: fmt.Sprintf("Clean failed: %v", err)},
-				},
-			}, CleanArtifactsOutput{Success: false}, nil
-		}
-		cleaned = []string{"artifacts", "build cache", "module cache"}
-	} else {
-		if err := cleaner.Clean(ctx); err != nil {
-			return &mcp.CallToolResult{
-				IsError: true,
-				Content: []mcp.Content{
-					&mcp.TextContent{Text: fmt.Sprintf("Clean failed: %v", err)},
-				},
-			}, CleanArtifactsOutput{Success: false}, nil
-		}
-		cleaned = append(cleaned, "artifacts")
-
-		if input.Cache {
-			if err := cleaner.CleanCache(ctx); err == nil {
-				cleaned = append(cleaned, "build cache")
-			}
-		}
-
-		if input.ModCache {
-			if err := cleaner.CleanModCache(ctx); err == nil {
-				cleaned = append(cleaned, "module cache")
-			}
-		}
+	cleaned, err := devToolOrchestrator().CleanArtifacts(ctx, orchestrator.CleanOptions{
+		All:      input.All,
+		Cache:    input.Cache,
+		ModCache: input.ModCache,
+	})
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Clean failed: %v", err)},
+			},
+		}, CleanArtifactsOutput{Success: false}, nil
 	}
 
 	return nil, CleanArtifactsOutput{
@@ -404,8 +336,8 @@ func qualityCheckHandler(ctx context.Context, req *mcp.CallToolRequest, input Qu
 	var checks []string
 
 	// Format
-	formatter := build.NewFormatter()
-	if err := formatter.Format(ctx); err != nil {
+	service := devToolOrchestrator()
+	if err := service.FormatCode(ctx, false); err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
@@ -416,24 +348,23 @@ func qualityCheckHandler(ctx context.Context, req *mcp.CallToolRequest, input Qu
 	checks = append(checks, "✅ Format")
 
 	// Lint
-	linter := build.NewLinter(build.DefaultLintConfig())
-	if err := linter.Lint(ctx); err != nil {
+	lintResult := service.LintWithResult(ctx, orchestrator.DefaultLintConfig())
+	if !lintResult.Success {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Lint failed: %v", err)},
+				&mcp.TextContent{Text: fmt.Sprintf("Lint failed: %v", lintResult.Error)},
 			},
 		}, QualityCheckOutput{Success: false, Checks: checks}, nil
 	}
 	checks = append(checks, "✅ Lint")
 
 	// Test
-	config := build.DefaultTestConfig()
+	config := orchestrator.DefaultTestConfig()
 	config.Cover = true
 	config.CoverProfile = "coverage.out"
 
-	tester := build.NewTester(config)
-	result := tester.TestWithResult(ctx)
+	result := service.RunTestsWithResult(ctx, config)
 
 	if !result.Success {
 		return &mcp.CallToolResult{
@@ -457,23 +388,8 @@ func moduleMaintenanceHandler(ctx context.Context, req *mcp.CallToolRequest, inp
 	ModuleMaintenanceOutput,
 	error,
 ) {
-	manager := build.NewModuleManager()
-
-	var err error
-	switch input.Operation {
-	case "tidy":
-		err = manager.Tidy(ctx)
-	case "download":
-		err = manager.Download(ctx)
-	case "verify":
-		err = manager.Verify(ctx)
-	case "vendor":
-		err = manager.Vendor(ctx)
-	case "graph":
-		err = manager.Graph(ctx)
-	case "why":
-		err = manager.Why(ctx, input.Packages...)
-	default:
+	if input.Operation != "tidy" && input.Operation != "download" && input.Operation != "verify" &&
+		input.Operation != "vendor" && input.Operation != "graph" && input.Operation != "why" {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
@@ -482,6 +398,7 @@ func moduleMaintenanceHandler(ctx context.Context, req *mcp.CallToolRequest, inp
 		}, ModuleMaintenanceOutput{Success: false, Operation: input.Operation}, nil
 	}
 
+	err := devToolOrchestrator().RunModuleMaintenance(ctx, input.Operation, input.Packages...)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -512,58 +429,24 @@ func buildReleaseHandler(ctx context.Context, req *mcp.CallToolRequest, input Bu
 		}, BuildReleaseOutput{}, nil
 	}
 
-	platforms := []struct {
-		goos   string
-		goarch string
-	}{
-		{"linux", "amd64"},
-		{"linux", "arm64"},
-		{"darwin", "amd64"},
-		{"darwin", "arm64"},
-		{"windows", "amd64"},
-	}
-
+	summary, err := devToolOrchestrator().ReleaseWithResults(ctx, input.Version)
 	var builtPlatforms []string
-	successCount := 0
-	totalCount := 0
-
-	for _, platform := range platforms {
-		for _, binary := range []struct {
-			name string
-			path string
-		}{
-			{"juleson", "./cmd/juleson"},
-			{"jules-mcp", "./cmd/jules-mcp"},
-		} {
-			totalCount++
-
-			config := build.DefaultConfig(binary.name, binary.path)
-			config.Version = input.Version
-			config.GOOS = platform.goos
-			config.GOARCH = platform.goarch
-			config.OutputDir = fmt.Sprintf("dist/%s-%s-%s", binary.name, platform.goos, platform.goarch)
-			config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", input.Version))
-
-			builder := build.NewBuilder(config)
-			result := builder.BuildWithResult(ctx)
-
-			if result.Success {
-				builtPlatforms = append(builtPlatforms, fmt.Sprintf("%s-%s/%s", platform.goos, platform.goarch, binary.name))
-				successCount++
-			}
+	for _, result := range summary.Results {
+		if result.Success {
+			builtPlatforms = append(builtPlatforms, result.OutputPath)
 		}
 	}
 
 	output := BuildReleaseOutput{
-		Success:          successCount == totalCount,
+		Success:          summary.SuccessCount == len(summary.Results),
 		Version:          input.Version,
-		TotalBuilds:      totalCount,
-		SuccessfulBuilds: successCount,
+		TotalBuilds:      len(summary.Results),
+		SuccessfulBuilds: summary.SuccessCount,
 		Platforms:        builtPlatforms,
-		Summary:          fmt.Sprintf("Release %s: %d/%d builds successful", input.Version, successCount, totalCount),
+		Summary:          fmt.Sprintf("Release %s: %d/%d builds successful", input.Version, summary.SuccessCount, len(summary.Results)),
 	}
 
-	if successCount < totalCount {
+	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{

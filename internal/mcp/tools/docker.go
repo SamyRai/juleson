@@ -3,9 +3,8 @@ package tools
 import (
 	"context"
 	"fmt"
-	"os/exec"
-	"strings"
 
+	"github.com/SamyRai/juleson/internal/orchestrator"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -190,72 +189,36 @@ type DockerExecOutput struct {
 
 // Handler functions
 
+func dockerOps() *orchestrator.DockerOperations {
+	return orchestrator.NewDockerOperations()
+}
+
 func dockerBuildHandler(ctx context.Context, req *mcp.CallToolRequest, input DockerBuildInput) (
 	*mcp.CallToolResult,
 	DockerBuildOutput,
 	error,
 ) {
-	// Set defaults
-	if input.Path == "" {
-		input.Path = "."
-	}
-	if input.Tag == "" {
-		input.Tag = "latest"
-	}
-	if input.Dockerfile == "" {
-		input.Dockerfile = "Dockerfile"
-	}
-
-	// Build docker build command
-	args := []string{"build", "-t", input.Tag}
-
-	if input.Dockerfile != "Dockerfile" {
-		args = append(args, "-f", input.Dockerfile)
-	}
-
-	if input.NoCache {
-		args = append(args, "--no-cache")
-	}
-
-	// Add build args
-	for key, value := range input.BuildArgs {
-		args = append(args, "--build-arg", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	args = append(args, input.Path)
-
-	// Execute command
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	result, err := dockerOps().Build(ctx, orchestrator.DockerBuildOptions{
+		Path:       input.Path,
+		Tag:        input.Tag,
+		Dockerfile: input.Dockerfile,
+		BuildArgs:  input.BuildArgs,
+		NoCache:    input.NoCache,
+	})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker build failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: fmt.Sprintf("Docker build failed: %v\nOutput: %s", err, result.Output)},
 			},
-		}, DockerBuildOutput{Success: false, Tag: input.Tag, Output: outputStr}, nil
-	}
-
-	// Extract image ID from output (usually the last line)
-	lines := strings.Split(strings.TrimSpace(outputStr), "\n")
-	imageID := ""
-	if len(lines) > 0 {
-		lastLine := lines[len(lines)-1]
-		if strings.HasPrefix(lastLine, "Successfully built ") {
-			parts := strings.Fields(lastLine)
-			if len(parts) >= 3 {
-				imageID = parts[2]
-			}
-		}
+		}, DockerBuildOutput{Success: false, Tag: result.Tag, Output: result.Output}, nil
 	}
 
 	return nil, DockerBuildOutput{
 		Success: true,
-		ImageID: imageID,
-		Tag:     input.Tag,
-		Output:  outputStr,
+		ImageID: result.ImageID,
+		Tag:     result.Tag,
+		Output:  result.Output,
 	}, nil
 }
 
@@ -264,83 +227,36 @@ func dockerRunHandler(ctx context.Context, req *mcp.CallToolRequest, input Docke
 	DockerRunOutput,
 	error,
 ) {
-	if input.Image == "" {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Image is required"},
-			},
-		}, DockerRunOutput{}, nil
-	}
-
-	args := []string{"run"}
-
-	if input.Detach {
-		args = append(args, "-d")
-	}
-	if input.Remove {
-		args = append(args, "--rm")
-	}
-	if input.Interactive {
-		args = append(args, "-i")
-	}
-	if input.TTY {
-		args = append(args, "-t")
-	}
-
-	// Add environment variables
-	for key, value := range input.Environment {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	// Add port mappings
-	for host, container := range input.Ports {
-		args = append(args, "-p", fmt.Sprintf("%s:%s", host, container))
-	}
-
-	// Add volume mappings
-	for host, container := range input.Volumes {
-		args = append(args, "-v", fmt.Sprintf("%s:%s", host, container))
-	}
-
-	// Add container name
-	if input.Name != "" {
-		args = append(args, "--name", input.Name)
-	}
-
-	// Add image
-	args = append(args, input.Image)
-
-	// Add command
-	if len(input.Command) > 0 {
-		args = append(args, input.Command...)
-	}
-
-	// Execute command
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	result, err := dockerOps().RunContainer(ctx, orchestrator.DockerRunOptions{
+		Image:       input.Image,
+		Name:        input.Name,
+		Command:     input.Command,
+		Environment: input.Environment,
+		Ports:       input.Ports,
+		Volumes:     input.Volumes,
+		Detach:      input.Detach,
+		Remove:      input.Remove,
+		Interactive: input.Interactive,
+		TTY:         input.TTY,
+	})
 	if err != nil {
+		message := fmt.Sprintf("Docker run failed: %v\nOutput: %s", err, result.Output)
+		if input.Image == "" {
+			message = "Image is required"
+		}
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker run failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: message},
 			},
-		}, DockerRunOutput{Success: false, Output: outputStr}, nil
-	}
-
-	// Extract container ID (first 12 characters of the output)
-	containerID := strings.TrimSpace(outputStr)
-	if len(containerID) > 12 {
-		containerID = containerID[:12]
+		}, DockerRunOutput{Success: false, Output: result.Output}, nil
 	}
 
 	return nil, DockerRunOutput{
 		Success:       true,
-		ContainerID:   containerID,
+		ContainerID:   result.ContainerID,
 		ContainerName: input.Name,
-		Output:        outputStr,
+		Output:        result.Output,
 	}, nil
 }
 
@@ -349,51 +265,26 @@ func dockerImagesHandler(ctx context.Context, req *mcp.CallToolRequest, input Do
 	DockerImagesOutput,
 	error,
 ) {
-	args := []string{"images"}
-
-	if input.All {
-		args = append(args, "-a")
-	}
-	if input.Filter != "" {
-		args = append(args, "--filter", input.Filter)
-	}
-	if input.Format != "" {
-		args = append(args, "--format", input.Format)
-	}
-	if input.Quiet {
-		args = append(args, "-q")
-	}
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	result, err := dockerOps().Images(ctx, orchestrator.DockerListOptions{
+		All:    input.All,
+		Filter: input.Filter,
+		Format: input.Format,
+		Quiet:  input.Quiet,
+	})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker images failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: fmt.Sprintf("Docker images failed: %v\nOutput: %s", err, result.Output)},
 			},
-		}, DockerImagesOutput{Success: false, Output: outputStr}, nil
-	}
-
-	// Parse images from output
-	var images []string
-	if !input.Quiet && outputStr != "" {
-		lines := strings.Split(strings.TrimSpace(outputStr), "\n")
-		// Skip header line
-		if len(lines) > 1 {
-			images = lines[1:]
-		}
-	} else if input.Quiet && outputStr != "" {
-		images = strings.Split(strings.TrimSpace(outputStr), "\n")
+		}, DockerImagesOutput{Success: false, Output: result.Output}, nil
 	}
 
 	return nil, DockerImagesOutput{
 		Success: true,
-		Images:  images,
-		Count:   len(images),
-		Output:  outputStr,
+		Images:  result.Items,
+		Count:   len(result.Items),
+		Output:  result.Output,
 	}, nil
 }
 
@@ -402,54 +293,27 @@ func dockerContainersHandler(ctx context.Context, req *mcp.CallToolRequest, inpu
 	DockerContainersOutput,
 	error,
 ) {
-	args := []string{"ps"}
-
-	if input.All {
-		args = append(args, "-a")
-	}
-	if input.Filter != "" {
-		args = append(args, "--filter", input.Filter)
-	}
-	if input.Format != "" {
-		args = append(args, "--format", input.Format)
-	}
-	if input.Quiet {
-		args = append(args, "-q")
-	}
-	if input.Latest {
-		args = append(args, "-l")
-	}
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	result, err := dockerOps().Containers(ctx, orchestrator.DockerListOptions{
+		All:    input.All,
+		Filter: input.Filter,
+		Format: input.Format,
+		Quiet:  input.Quiet,
+		Latest: input.Latest,
+	})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker ps failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: fmt.Sprintf("Docker ps failed: %v\nOutput: %s", err, result.Output)},
 			},
-		}, DockerContainersOutput{Success: false, Output: outputStr}, nil
-	}
-
-	// Parse containers from output
-	var containers []string
-	if !input.Quiet && outputStr != "" {
-		lines := strings.Split(strings.TrimSpace(outputStr), "\n")
-		// Skip header line
-		if len(lines) > 1 {
-			containers = lines[1:]
-		}
-	} else if input.Quiet && outputStr != "" {
-		containers = strings.Split(strings.TrimSpace(outputStr), "\n")
+		}, DockerContainersOutput{Success: false, Output: result.Output}, nil
 	}
 
 	return nil, DockerContainersOutput{
 		Success:    true,
-		Containers: containers,
-		Count:      len(containers),
-		Output:     outputStr,
+		Containers: result.Items,
+		Count:      len(result.Items),
+		Output:     result.Output,
 	}, nil
 }
 
@@ -458,39 +322,23 @@ func dockerStopHandler(ctx context.Context, req *mcp.CallToolRequest, input Dock
 	DockerStopOutput,
 	error,
 ) {
-	if input.Container == "" {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Container ID or name is required"},
-			},
-		}, DockerStopOutput{}, nil
-	}
-
-	args := []string{"stop"}
-
-	if input.Time > 0 {
-		args = append(args, "-t", fmt.Sprintf("%d", input.Time))
-	}
-
-	args = append(args, input.Container)
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	output, err := dockerOps().Stop(ctx, input.Container, input.Time)
 	if err != nil {
+		message := fmt.Sprintf("Docker stop failed: %v\nOutput: %s", err, output)
+		if input.Container == "" {
+			message = "Container ID or name is required"
+		}
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker stop failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: message},
 			},
-		}, DockerStopOutput{Success: false, Output: outputStr}, nil
+		}, DockerStopOutput{Success: false, Output: output}, nil
 	}
 
 	return nil, DockerStopOutput{
 		Success: true,
-		Output:  outputStr,
+		Output:  output,
 	}, nil
 }
 
@@ -499,42 +347,23 @@ func dockerRemoveHandler(ctx context.Context, req *mcp.CallToolRequest, input Do
 	DockerRemoveOutput,
 	error,
 ) {
-	if input.Container == "" {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Container ID or name is required"},
-			},
-		}, DockerRemoveOutput{}, nil
-	}
-
-	args := []string{"rm"}
-
-	if input.Force {
-		args = append(args, "-f")
-	}
-	if input.Volumes {
-		args = append(args, "-v")
-	}
-
-	args = append(args, input.Container)
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	output, err := dockerOps().RemoveContainer(ctx, input.Container, input.Force, input.Volumes)
 	if err != nil {
+		message := fmt.Sprintf("Docker rm failed: %v\nOutput: %s", err, output)
+		if input.Container == "" {
+			message = "Container ID or name is required"
+		}
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker rm failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: message},
 			},
-		}, DockerRemoveOutput{Success: false, Output: outputStr}, nil
+		}, DockerRemoveOutput{Success: false, Output: output}, nil
 	}
 
 	return nil, DockerRemoveOutput{
 		Success: true,
-		Output:  outputStr,
+		Output:  output,
 	}, nil
 }
 
@@ -543,39 +372,23 @@ func dockerRmiHandler(ctx context.Context, req *mcp.CallToolRequest, input Docke
 	DockerRmiOutput,
 	error,
 ) {
-	if input.Image == "" {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Image ID or name is required"},
-			},
-		}, DockerRmiOutput{}, nil
-	}
-
-	args := []string{"rmi"}
-
-	if input.Force {
-		args = append(args, "-f")
-	}
-
-	args = append(args, input.Image)
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	output, err := dockerOps().RemoveImage(ctx, input.Image, input.Force)
 	if err != nil {
+		message := fmt.Sprintf("Docker rmi failed: %v\nOutput: %s", err, output)
+		if input.Image == "" {
+			message = "Image ID or name is required"
+		}
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker rmi failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: message},
 			},
-		}, DockerRmiOutput{Success: false, Output: outputStr}, nil
+		}, DockerRmiOutput{Success: false, Output: output}, nil
 	}
 
 	return nil, DockerRmiOutput{
 		Success: true,
-		Output:  outputStr,
+		Output:  output,
 	}, nil
 }
 
@@ -584,31 +397,19 @@ func dockerPruneHandler(ctx context.Context, req *mcp.CallToolRequest, input Doc
 	DockerPruneOutput,
 	error,
 ) {
-	args := []string{"system", "prune", "-f"}
-
-	if input.All {
-		args = append(args, "-a")
-	}
-	if input.Volumes {
-		args = append(args, "--volumes")
-	}
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	output, err := dockerOps().Prune(ctx, input.All, input.Volumes)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker prune failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: fmt.Sprintf("Docker prune failed: %v\nOutput: %s", err, output)},
 			},
-		}, DockerPruneOutput{Success: false, Output: outputStr}, nil
+		}, DockerPruneOutput{Success: false, Output: output}, nil
 	}
 
 	return nil, DockerPruneOutput{
 		Success: true,
-		Output:  outputStr,
+		Output:  output,
 	}, nil
 }
 
@@ -617,60 +418,32 @@ func dockerExecHandler(ctx context.Context, req *mcp.CallToolRequest, input Dock
 	DockerExecOutput,
 	error,
 ) {
-	if input.Container == "" {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Container ID or name is required"},
-			},
-		}, DockerExecOutput{}, nil
-	}
-
-	if len(input.Command) == 0 {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Command is required"},
-			},
-		}, DockerExecOutput{}, nil
-	}
-
-	args := []string{"exec"}
-
-	if input.User != "" {
-		args = append(args, "-u", input.User)
-	}
-	if input.WorkDir != "" {
-		args = append(args, "-w", input.WorkDir)
-	}
-	if input.Detach {
-		args = append(args, "-d")
-	}
-	if input.TTY {
-		args = append(args, "-t")
-	}
-	if input.Interactive {
-		args = append(args, "-i")
-	}
-
-	args = append(args, input.Container)
-	args = append(args, input.Command...)
-
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	outputStr := string(output)
-
+	output, err := dockerOps().Exec(ctx, orchestrator.DockerExecOptions{
+		Container:   input.Container,
+		Command:     input.Command,
+		User:        input.User,
+		WorkDir:     input.WorkDir,
+		Detach:      input.Detach,
+		TTY:         input.TTY,
+		Interactive: input.Interactive,
+	})
 	if err != nil {
+		message := fmt.Sprintf("Docker exec failed: %v\nOutput: %s", err, output)
+		if input.Container == "" {
+			message = "Container ID or name is required"
+		} else if len(input.Command) == 0 {
+			message = "Command is required"
+		}
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Docker exec failed: %v\nOutput: %s", err, outputStr)},
+				&mcp.TextContent{Text: message},
 			},
-		}, DockerExecOutput{Success: false, Output: outputStr}, nil
+		}, DockerExecOutput{Success: false, Output: output}, nil
 	}
 
 	return nil, DockerExecOutput{
 		Success: true,
-		Output:  outputStr,
+		Output:  output,
 	}, nil
 }

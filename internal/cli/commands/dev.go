@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/build"
+	"github.com/SamyRai/juleson/internal/orchestrator"
 	"github.com/spf13/cobra"
 )
 
@@ -31,41 +31,27 @@ func NewDevCommand() *cobra.Command {
 	return devCmd
 }
 
-func buildBinaries(ctx context.Context, version, goos, goarch string, race bool) ([]*build.BuildResult, error) {
-	var results []*build.BuildResult
+func devOrchestrator() *orchestrator.Service {
+	return orchestrator.NewService(orchestrator.DefaultConfig("dev", "", ""))
+}
 
-	binaries := []struct {
-		name string
-		path string
-	}{
-		{"juleson", "./cmd/juleson"},
-		{"jules-mcp", "./cmd/jules-mcp"},
-	}
-
-	for _, binary := range binaries {
-		fmt.Printf("🔨 Building %s...\n", binary.name)
-		config := build.DefaultConfig(binary.name, binary.path)
-		config.Version = version
-		config.GOOS = goos
-		config.GOARCH = goarch
-		config.Race = race
-
-		if version != "" && version != "dev" {
-			config.LDFlags = append(config.LDFlags, fmt.Sprintf("-X main.version=%s", version))
-		}
-
-		builder := build.NewBuilder(config)
-		result := builder.BuildWithResult(ctx)
-		results = append(results, result)
-
+func buildBinaries(ctx context.Context, version, goos, goarch string, race bool) (*orchestrator.BuildSummary, error) {
+	summary, err := devOrchestrator().BuildWithResults(ctx, orchestrator.BuildOptions{
+		Target:  "all",
+		Version: version,
+		GOOS:    goos,
+		GOARCH:  goarch,
+		Race:    race,
+	})
+	for _, result := range summary.Results {
+		fmt.Printf("🔨 Building %s...\n", result.Name)
 		if result.Success {
 			fmt.Printf("✅ %s\n", result.String())
 		} else {
 			fmt.Printf("❌ %s\n", result.String())
 		}
 	}
-
-	return results, nil
+	return summary, err
 }
 
 // newBuildCommand creates the build command
@@ -87,32 +73,16 @@ func newBuildCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			results, err := buildBinaries(ctx, version, goos, goarch, race)
+			summary, err := buildBinaries(ctx, version, goos, goarch, race)
 			if err != nil {
 				return err
 			}
 
 			// Print summary
 			fmt.Println("\n📊 Build Summary:")
-			successCount := 0
-			totalDuration := time.Duration(0)
-			totalSize := int64(0)
-
-			for _, result := range results {
-				if result.Success {
-					successCount++
-					totalDuration += result.Duration
-					totalSize += result.OutputSize
-				}
-			}
-
-			fmt.Printf("  Successful: %d/%d\n", successCount, len(results))
-			fmt.Printf("  Total Time: %v\n", totalDuration)
-			fmt.Printf("  Total Size: %.2f MB\n", float64(totalSize)/(1024*1024))
-
-			if successCount < len(results) {
-				return fmt.Errorf("some builds failed")
-			}
+			fmt.Printf("  Successful: %d/%d\n", summary.SuccessCount, len(summary.Results))
+			fmt.Printf("  Total Time: %v\n", summary.TotalDuration)
+			fmt.Printf("  Total Size: %.2f MB\n", float64(summary.TotalSize)/(1024*1024))
 
 			return nil
 		},
@@ -154,7 +124,7 @@ func newTestCommand() *cobra.Command {
 
 			fmt.Println("🧪 Running tests...")
 
-			config := build.DefaultTestConfig()
+			config := orchestrator.DefaultTestConfig()
 			config.Verbose = verbose
 			config.Race = race
 			config.Cover = cover
@@ -181,8 +151,8 @@ func newTestCommand() *cobra.Command {
 				config.Packages = args
 			}
 
-			tester := build.NewTester(config)
-			result := tester.TestWithResult(ctx)
+			service := devOrchestrator()
+			result := service.RunTestsWithResult(ctx, config)
 
 			if result.Success {
 				fmt.Printf("\n✅ %s\n", result.String())
@@ -195,7 +165,7 @@ func newTestCommand() *cobra.Command {
 			if cover && coverProfile != "" {
 				htmlPath := "coverage.html"
 				fmt.Printf("\n📊 Generating HTML coverage report...\n")
-				if err := tester.GenerateCoverageHTML(ctx, htmlPath); err != nil {
+				if err := service.GenerateCoverageHTML(ctx, config, htmlPath); err != nil {
 					fmt.Printf("⚠️  Failed to generate HTML report: %v\n", err)
 				} else {
 					fmt.Printf("✅ Coverage report: %s\n", htmlPath)
@@ -239,7 +209,7 @@ func newLintCommand() *cobra.Command {
 
 			fmt.Println("🔍 Running linters...")
 
-			config := build.DefaultLintConfig()
+			config := orchestrator.DefaultLintConfig()
 			config.FixMode = fix
 			config.Verbose = verbose
 			config.Fast = fast
@@ -249,8 +219,7 @@ func newLintCommand() *cobra.Command {
 				config.Packages = args
 			}
 
-			linter := build.NewLinter(config)
-			result := linter.LintWithResult(ctx)
+			result := devOrchestrator().LintWithResult(ctx, config)
 
 			if result.Success {
 				fmt.Printf("\n✅ %s\n", result.String())
@@ -284,16 +253,7 @@ func newFormatCommand() *cobra.Command {
 
 			fmt.Println("✨ Formatting code...")
 
-			formatter := build.NewFormatter()
-
-			var err error
-			if useGofumpt {
-				err = formatter.FormatWithGofumpt(ctx, args...)
-			} else {
-				err = formatter.Format(ctx, args...)
-			}
-
-			if err != nil {
+			if err := devOrchestrator().FormatCode(ctx, useGofumpt, args...); err != nil {
 				fmt.Printf("❌ Format failed: %v\n", err)
 				return err
 			}
@@ -326,36 +286,15 @@ func newCleanCommand() *cobra.Command {
 
 			fmt.Println("🧹 Cleaning...")
 
-			cleaner := build.NewCleaner("bin", []string{"coverage.out", "coverage.html"})
-
-			if all {
-				if err := cleaner.CleanAll(ctx); err != nil {
-					fmt.Printf("❌ Clean failed: %v\n", err)
-					return err
-				}
-			} else {
-				if err := cleaner.Clean(ctx); err != nil {
-					fmt.Printf("❌ Clean failed: %v\n", err)
-					return err
-				}
-
-				if cache {
-					if err := cleaner.CleanCache(ctx); err != nil {
-						fmt.Printf("⚠️  Cache clean failed: %v\n", err)
-					}
-				}
-
-				if modCache {
-					if err := cleaner.CleanModCache(ctx); err != nil {
-						fmt.Printf("⚠️  Module cache clean failed: %v\n", err)
-					}
-				}
-
-				if testCache {
-					if err := cleaner.CleanTestCache(ctx); err != nil {
-						fmt.Printf("⚠️  Test cache clean failed: %v\n", err)
-					}
-				}
+			_, err := devOrchestrator().CleanArtifacts(ctx, orchestrator.CleanOptions{
+				All:       all,
+				Cache:     cache,
+				ModCache:  modCache,
+				TestCache: testCache,
+			})
+			if err != nil {
+				fmt.Printf("❌ Clean failed: %v\n", err)
+				return err
 			}
 
 			fmt.Println("✅ Cleaned successfully")
@@ -384,8 +323,7 @@ func newModCommand() *cobra.Command {
 		Short: "Tidy dependencies",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("📦 Tidying dependencies...")
-			manager := build.NewModuleManager()
-			if err := manager.Tidy(context.Background()); err != nil {
+			if err := devOrchestrator().RunModuleMaintenance(context.Background(), "tidy"); err != nil {
 				return err
 			}
 			fmt.Println("✅ Dependencies tidied")
@@ -398,8 +336,7 @@ func newModCommand() *cobra.Command {
 		Short: "Download dependencies",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("📥 Downloading dependencies...")
-			manager := build.NewModuleManager()
-			if err := manager.Download(context.Background()); err != nil {
+			if err := devOrchestrator().RunModuleMaintenance(context.Background(), "download"); err != nil {
 				return err
 			}
 			fmt.Println("✅ Dependencies downloaded")
@@ -412,8 +349,7 @@ func newModCommand() *cobra.Command {
 		Short: "Verify dependencies",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("🔍 Verifying dependencies...")
-			manager := build.NewModuleManager()
-			if err := manager.Verify(context.Background()); err != nil {
+			if err := devOrchestrator().RunModuleMaintenance(context.Background(), "verify"); err != nil {
 				return err
 			}
 			fmt.Println("✅ Dependencies verified")
@@ -426,8 +362,7 @@ func newModCommand() *cobra.Command {
 		Short: "Vendor dependencies",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Println("📦 Vendoring dependencies...")
-			manager := build.NewModuleManager()
-			if err := manager.Vendor(context.Background()); err != nil {
+			if err := devOrchestrator().RunModuleMaintenance(context.Background(), "vendor"); err != nil {
 				return err
 			}
 			fmt.Println("✅ Dependencies vendored")
@@ -439,8 +374,7 @@ func newModCommand() *cobra.Command {
 		Use:   "graph",
 		Short: "Print dependency graph",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			manager := build.NewModuleManager()
-			return manager.Graph(context.Background())
+			return devOrchestrator().RunModuleMaintenance(context.Background(), "graph")
 		},
 	})
 
@@ -449,8 +383,7 @@ func newModCommand() *cobra.Command {
 		Short: "Explain why packages are needed",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			manager := build.NewModuleManager()
-			return manager.Why(context.Background(), args...)
+			return devOrchestrator().RunModuleMaintenance(context.Background(), "why", args...)
 		},
 	})
 
@@ -468,28 +401,27 @@ func newCheckCommand() *cobra.Command {
 
 			// Format
 			fmt.Println("✨ Formatting code...")
-			formatter := build.NewFormatter()
-			if err := formatter.Format(ctx); err != nil {
+			service := devOrchestrator()
+			if err := service.FormatCode(ctx, false); err != nil {
 				return fmt.Errorf("format failed: %w", err)
 			}
 			fmt.Println("✅ Code formatted")
 
 			// Lint
 			fmt.Println("\n🔍 Running linters...")
-			linter := build.NewLinter(build.DefaultLintConfig())
-			if err := linter.Lint(ctx); err != nil {
-				return fmt.Errorf("lint failed: %w", err)
+			lintResult := service.LintWithResult(ctx, orchestrator.DefaultLintConfig())
+			if !lintResult.Success {
+				return fmt.Errorf("lint failed: %w", lintResult.Error)
 			}
 			fmt.Println("✅ Linting passed")
 
 			// Test
 			fmt.Println("\n🧪 Running tests...")
-			config := build.DefaultTestConfig()
+			config := orchestrator.DefaultTestConfig()
 			config.Cover = true
 			config.CoverProfile = "coverage.out"
 
-			tester := build.NewTester(config)
-			result := tester.TestWithResult(ctx)
+			result := service.RunTestsWithResult(ctx, config)
 
 			if !result.Success {
 				return fmt.Errorf("tests failed: %w", result.Error)
@@ -524,8 +456,8 @@ func newInstallCommand() *cobra.Command {
 
 				// Format
 				fmt.Println("  ✨ Formatting code...")
-				formatter := build.NewFormatter()
-				if err := formatter.Format(ctx); err != nil {
+				service := devOrchestrator()
+				if err := service.FormatCode(ctx, false); err != nil {
 					return fmt.Errorf("format failed: %w", err)
 				}
 				fmt.Println("  ✅ Code formatted")
@@ -533,9 +465,9 @@ func newInstallCommand() *cobra.Command {
 				// Lint (unless skipped)
 				if !skipLint {
 					fmt.Println("  🔍 Running linters...")
-					linter := build.NewLinter(build.DefaultLintConfig())
-					if err := linter.Lint(ctx); err != nil {
-						return fmt.Errorf("lint failed: %w", err)
+					lintResult := service.LintWithResult(ctx, orchestrator.DefaultLintConfig())
+					if !lintResult.Success {
+						return fmt.Errorf("lint failed: %w", lintResult.Error)
 					}
 					fmt.Println("  ✅ Linting passed")
 				} else {
@@ -545,12 +477,11 @@ func newInstallCommand() *cobra.Command {
 				// Test (unless skipped)
 				if !skipTests {
 					fmt.Println("  🧪 Running tests...")
-					config := build.DefaultTestConfig()
+					config := orchestrator.DefaultTestConfig()
 					config.Cover = true
 					config.CoverProfile = "coverage.out"
 
-					tester := build.NewTester(config)
-					result := tester.TestWithResult(ctx)
+					result := service.RunTestsWithResult(ctx, config)
 
 					if !result.Success {
 						return fmt.Errorf("tests failed: %w", result.Error)
@@ -573,21 +504,14 @@ func newInstallCommand() *cobra.Command {
 				return err
 			}
 
-			// Install binaries
-			installer := build.NewInstaller("bin", []string{"juleson", "jules-mcp"})
-
-			var result *build.InstallResult
-
+			service := devOrchestrator()
+			var result *orchestrator.InstallResult
 			if installPath != "" {
 				fmt.Printf("📦 Installing to %s...", installPath)
-				result, err = installer.InstallTo(ctx, installPath)
+				result, err = service.InstallWithResult(ctx, orchestrator.InstallOptions{Path: installPath, SkipBuild: true})
 			} else {
-				defaultPath, pathErr := installer.GetInstallPath()
-				if pathErr != nil {
-					return fmt.Errorf("failed to determine install path: %w", pathErr)
-				}
-				fmt.Printf("📦 Installing to %s...", defaultPath)
-				result, err = installer.Install(ctx)
+				fmt.Printf("📦 Installing...")
+				result, err = service.InstallWithResult(ctx, orchestrator.InstallOptions{SkipBuild: true})
 			}
 
 			if err != nil {
@@ -646,13 +570,13 @@ func newReleaseCommand() *cobra.Command {
 			failCount := 0
 
 			for _, platform := range platforms {
-				results, err := buildBinaries(ctx, version, platform.goos, platform.goarch, false)
+				summary, err := buildBinaries(ctx, version, platform.goos, platform.goarch, false)
 				if err != nil {
-					failCount += len(results)
+					failCount += len(summary.Results)
 					continue
 				}
 
-				for _, result := range results {
+				for _, result := range summary.Results {
 					if result.Success {
 						successCount++
 					} else {
