@@ -112,7 +112,7 @@ func TestReleaseWorkflowPublishesInstallAssets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	text := string(workflow)
+	text := strings.ReplaceAll(string(workflow), "\r\n", "\n")
 
 	for _, want := range []string{
 		"cp scripts/install.sh dist/install.sh",
