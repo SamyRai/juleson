@@ -49,6 +49,7 @@ type AIOrchestrator struct {
 	maxIterations int
 	checkInterval time.Duration
 	allowedTools  []string
+	taskExecutor  *aiTaskExecutor
 }
 
 // AIState represents the current state of AI orchestration
@@ -164,7 +165,7 @@ func NewAIOrchestrator(
 		config = DefaultAIOrchestrationConfig()
 	}
 
-	return &AIOrchestrator{
+	orchestrator := &AIOrchestrator{
 		julesClient:     julesClient,
 		geminiClient:    geminiClient,
 		state:           AIStateAnalyzing,
@@ -178,6 +179,8 @@ func NewAIOrchestrator(
 		pendingTasks:    make([]PendingTask, 0),
 		decisionHistory: make([]AIDecision, 0),
 	}
+	orchestrator.taskExecutor = newAITaskExecutor(julesClient, orchestrator.GetSessionID)
+	return orchestrator
 }
 
 // Execute runs the AI orchestration for the given goal
@@ -457,42 +460,9 @@ func (ao *AIOrchestrator) executeNextTask(ctx context.Context, decision *AIDecis
 		[]string{task.Description},
 	)
 
-	// Send message to Jules session to execute this task
-	err := ao.julesClient.SendMessage(ctx, ao.sessionID, &jules.SendMessageRequest{
-		Prompt: task.Prompt,
-	})
+	completed, err := ao.taskExecutor.execute(ctx, task)
 	if err != nil {
-		return fmt.Errorf("failed to send task to session: %w", err)
-	}
-
-	// Wait for task completion and gather results
-	time.Sleep(5 * time.Second) // Allow time for execution
-
-	// Get activities to see results
-	activities, err := ao.julesClient.ListActivities(ctx, ao.sessionID, 5)
-	if err != nil {
-		return fmt.Errorf("failed to list activities: %w", err)
-	}
-
-	result := AITaskResult{
-		Success: true,
-	}
-
-	if len(activities) > 0 {
-		result.ActivityID = activities[0].ID
-		result.FilesChanged = extractFilesChanged(activities[0])
-	}
-
-	// Record completed task
-	completed := CompletedTask{
-		Name:        task.Name,
-		Description: task.Description,
-		Result:      result,
-		Timestamp:   time.Now(),
-	}
-
-	if len(activities) > 0 {
-		completed.Artifacts = activities[0].Artifacts
+		return err
 	}
 
 	ao.mu.Lock()
