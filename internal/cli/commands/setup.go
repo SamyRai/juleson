@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/orchestrator"
 	"github.com/spf13/cobra"
 )
 
@@ -378,7 +378,7 @@ func installZshCompletion(cmd *cobra.Command) error {
 
 func installBashCompletion(cmd *cobra.Command) error {
 	// Check if bash-completion is installed
-	if _, err := exec.LookPath("bash-completion"); err != nil {
+	if !orchestrator.CommandAvailable("bash-completion") {
 		fmt.Println("⚠️  bash-completion is not installed")
 		fmt.Println("Install it with your package manager, then run:")
 		fmt.Println("  juleson completion bash > /etc/bash_completion.d/juleson")

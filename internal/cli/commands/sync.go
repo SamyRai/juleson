@@ -1,11 +1,11 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 
+	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/spf13/cobra"
 )
 
@@ -26,64 +26,33 @@ func NewSyncCommand() *cobra.Command {
 			projectPath := args[0]
 			remote := args[1]
 
-			// Validate project path exists
-			absPath, err := filepath.Abs(projectPath)
-			if err != nil {
-				return fmt.Errorf("invalid project path: %w", err)
-			}
-
-			if _, err := os.Stat(absPath); os.IsNotExist(err) {
-				return fmt.Errorf("project path does not exist: %s", absPath)
-			}
-
-			// Check if it's a git repository
-			gitDir := filepath.Join(absPath, ".git")
-			if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-				return fmt.Errorf("not a git repository: %s", absPath)
-			}
-
 			fmt.Printf("🔄 Syncing project with remote '%s'...\n", remote)
 
 			// Pull changes if requested
 			if pull {
 				fmt.Printf("📥 Pulling changes from %s/%s...\n", remote, branch)
-				pullCmd := exec.Command("git", "pull", remote, branch)
-				pullCmd.Dir = absPath
-				pullCmd.Stdout = os.Stdout
-				pullCmd.Stderr = os.Stderr
-
-				if err := pullCmd.Run(); err != nil {
-					return fmt.Errorf("failed to pull changes: %w", err)
-				}
-				fmt.Println("✅ Pull completed successfully")
 			}
 
 			// Push changes if requested
 			if push {
 				fmt.Printf("📤 Pushing changes to %s/%s...\n", remote, branch)
-				pushCmd := exec.Command("git", "push", remote, branch)
-				pushCmd.Dir = absPath
-				pushCmd.Stdout = os.Stdout
-				pushCmd.Stderr = os.Stderr
-
-				if err := pushCmd.Run(); err != nil {
-					return fmt.Errorf("failed to push changes: %w", err)
-				}
-				fmt.Println("✅ Push completed successfully")
 			}
 
 			// Fetch remote changes if neither pull nor push
 			if !pull && !push {
 				fmt.Printf("📡 Fetching changes from %s...\n", remote)
-				fetchCmd := exec.Command("git", "fetch", remote)
-				fetchCmd.Dir = absPath
-				fetchCmd.Stdout = os.Stdout
-				fetchCmd.Stderr = os.Stderr
+			}
 
-				if err := fetchCmd.Run(); err != nil {
-					return fmt.Errorf("failed to fetch changes: %w", err)
-				}
-				fmt.Println("✅ Fetch completed successfully")
+			if err := julesops.SyncGitRepository(context.Background(), julesops.GitSyncOptions{
+				ProjectPath: projectPath,
+				Remote:      remote,
+				Branch:      branch,
+				Pull:        pull,
+				Push:        push,
+				Stdout:      os.Stdout,
+				Stderr:      os.Stderr,
+			}); err != nil {
+				return err
 			}
 
 			fmt.Println("✅ Sync completed successfully")

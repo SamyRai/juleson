@@ -40,6 +40,37 @@ func TestDevAndDockerAdaptersDoNotOwnCommandExecution(t *testing.T) {
 	}
 }
 
+func TestCLIMCPAdaptersDoNotImportExec(t *testing.T) {
+	root := repoRoot(t)
+	adapterDirs := []string{
+		"internal/cli/commands",
+		"internal/mcp/tools",
+	}
+
+	for _, adapterDir := range adapterDirs {
+		t.Run(adapterDir, func(t *testing.T) {
+			entries, err := os.ReadDir(filepath.Join(root, adapterDir))
+			if err != nil {
+				t.Fatalf("read adapter dir: %v", err)
+			}
+			for _, entry := range entries {
+				if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+					continue
+				}
+				file := filepath.Join(root, adapterDir, entry.Name())
+				content, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatalf("read file: %v", err)
+				}
+				text := string(content)
+				if strings.Contains(text, "\"os/exec\"") || strings.Contains(text, "exec.Command") {
+					t.Fatalf("%s still owns command execution", filepath.Join(adapterDir, entry.Name()))
+				}
+			}
+		})
+	}
+}
+
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()

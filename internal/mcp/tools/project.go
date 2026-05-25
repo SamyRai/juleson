@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"path/filepath"
 
+	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/SamyRai/juleson/internal/services"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -137,25 +136,13 @@ func syncProject(ctx context.Context, req *mcp.CallToolRequest, input SyncProjec
 	SyncProjectOutput,
 	error,
 ) {
-	// Validate project path exists
-	if _, err := os.Stat(input.ProjectPath); os.IsNotExist(err) {
-		return nil, SyncProjectOutput{}, fmt.Errorf("project path does not exist: %s", input.ProjectPath)
-	}
-
-	// Check if it's a git repository
-	gitDir := filepath.Join(input.ProjectPath, ".git")
-	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-		return nil, SyncProjectOutput{}, fmt.Errorf("not a git repository: %s", input.ProjectPath)
-	}
-
-	// Fetch from remote
-	fetchCmd := exec.Command("git", "fetch", input.Remote)
-	fetchCmd.Dir = input.ProjectPath
-	fetchCmd.Stdout = os.Stdout
-	fetchCmd.Stderr = os.Stderr
-
-	if err := fetchCmd.Run(); err != nil {
-		return nil, SyncProjectOutput{}, fmt.Errorf("failed to fetch from remote: %w", err)
+	if err := julesops.SyncGitRepository(ctx, julesops.GitSyncOptions{
+		ProjectPath: input.ProjectPath,
+		Remote:      input.Remote,
+		Stdout:      os.Stdout,
+		Stderr:      os.Stderr,
+	}); err != nil {
+		return nil, SyncProjectOutput{}, err
 	}
 
 	output := SyncProjectOutput{
