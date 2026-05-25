@@ -60,6 +60,20 @@ func (c *Client) GetSession(ctx context.Context, sessionID string) (*Session, er
 	return &session, nil
 }
 
+// DeleteSession deletes a session by ID.
+func (c *Client) DeleteSession(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		return fmt.Errorf("session ID is required")
+	}
+
+	url := fmt.Sprintf("%s/sessions/%s", c.BaseURL, sessionID)
+	if err := c.doRequestWithJSON(ctx, "DELETE", url, nil, nil); err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+
+	return nil
+}
+
 // ListSessions lists all sessions with pagination support
 // Deprecated: Use ListSessionsWithPagination for full pagination support
 func (c *Client) ListSessions(ctx context.Context, pageSize int) ([]Session, error) {
@@ -180,12 +194,3 @@ func (c *Client) ApprovePlan(ctx context.Context, sessionID string) error {
 
 	return nil
 }
-
-// NOTE: The Jules API v1alpha does NOT support cancel or delete operations.
-// These operations are only available through the Jules web UI.
-// See: https://developers.google.com/jules/api/reference/rest/v1alpha/sessions
-//
-// To manage sessions:
-// - Cancel: Use the web UI at the URL returned in session.URL
-// - Delete: Use the web UI
-// - Monitor state: Use GetSession to check if state is FAILED, COMPLETED, or PAUSED

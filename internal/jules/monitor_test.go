@@ -22,7 +22,7 @@ type MonitorTestSuite struct {
 // SetupTest is called before each test
 func (suite *MonitorTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://api.jules.ai", 30*time.Second, 3)
+	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
 	suite.monitor = NewSessionMonitor(suite.client, "test-session-1")
 }
 
@@ -104,7 +104,7 @@ func (suite *MonitorTestSuite) TestGetSessionStatus() {
 		State: "COMPLETED",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockSession)
 			return resp, nil
@@ -121,7 +121,7 @@ func (suite *MonitorTestSuite) TestGetSessionStatus() {
 
 // TestGetSessionStatusNotFound tests handling of not found sessions
 func (suite *MonitorTestSuite) TestGetSessionStatusNotFound() {
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(404, `{"error": "Session not found"}`), nil
 		})
@@ -138,7 +138,7 @@ func (suite *MonitorTestSuite) TestGetSessionStatusNotFound() {
 // TestWaitForCompletion tests waiting for session completion
 func (suite *MonitorTestSuite) TestWaitForCompletion() {
 	callCount := 0
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			callCount++
 			var state string
@@ -171,7 +171,7 @@ func (suite *MonitorTestSuite) TestWaitForCompletion() {
 // TestWaitForPlan tests waiting for plan generation
 func (suite *MonitorTestSuite) TestWaitForPlan() {
 	callCount := 0
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			callCount++
 			mockSession := Session{
@@ -183,7 +183,7 @@ func (suite *MonitorTestSuite) TestWaitForPlan() {
 		})
 
 	// Mock activities endpoint to return activities with plan
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1/activities?pageSize=10",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1/activities?pageSize=10",
 		func(req *http.Request) (*http.Response, error) {
 			var activities []Activity
 			if callCount >= 2 {
@@ -213,7 +213,7 @@ func (suite *MonitorTestSuite) TestWaitForPlan() {
 
 // TestPollUntilCompleteTimeout tests timeout behavior
 func (suite *MonitorTestSuite) TestPollUntilCompleteTimeout() {
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			mockSession := Session{
 				ID:    "test-session-1",
@@ -234,7 +234,7 @@ func (suite *MonitorTestSuite) TestPollUntilCompleteTimeout() {
 
 // TestContextCancellation tests context cancellation during polling
 func (suite *MonitorTestSuite) TestContextCancellation() {
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/test-session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
 		func(req *http.Request) (*http.Response, error) {
 			time.Sleep(100 * time.Millisecond) // Slow response
 			mockSession := Session{

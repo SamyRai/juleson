@@ -92,13 +92,18 @@ Registered when the Jules client is available:
 - `send_session_message`
 - `create_session`
 - `get_session`
+- `delete_session`
 - `list_session_activities`
 - `get_session_activity`
 - `search_session_activities`
 - `get_session_plans`
 
-The server does not expose cancel/delete session tools because those operations
-are not available through the Jules API used by this project.
+`create_session.source` is optional. Omit it for a repoless session, or pass a
+source such as `sources/github/owner/repo` for a source-backed session.
+
+`delete_session` requires `confirm=true` and calls the documented Jules API
+delete endpoint. Session cancel is not exposed by the Jules API v1alpha
+reference used by this project.
 
 ## GitHub Tools
 

@@ -44,8 +44,8 @@ Available capabilities:
 - Session Management: Monitor and control Jules automation sessions
 - GitHub Integration: Create sessions from GitHub repos, merge PRs, and manage repositories
 
-Note: Session cancel and delete operations are not available via Jules API v1alpha.
-These operations must be performed through the Jules web UI.
+Note: Session delete is available through the guarded delete_session tool. Session
+cancel is not available through the Jules API v1alpha.
 
 Use the available tools to help users with their automation needs. Always provide clear, actionable results.`,
 	}
@@ -218,6 +218,7 @@ Tools Available:
 - list_sessions: List all Jules sessions
 - get_session_status: Get detailed session status summary
 - approve_session_plan: Approve session plans for execution
+- delete_session: Delete a session after explicit confirmation
 - github_create_session_from_repo: Create Jules session from GitHub repository
 - github_merge_session_pr: Merge PR created by Jules session
 - github_list_repos: List accessible GitHub repositories
@@ -242,7 +243,7 @@ Tools Available:
 - module_maintenance: Go module operations
 - build_release: Build release binaries for all platforms
 
-Note: cancel_session and delete_session are NOT available - Jules API v1alpha does not support these operations.
+Note: cancel_session is not available because Jules API v1alpha does not expose a cancel endpoint.
 
 For more information, use the available tools or check the Jules documentation.`
 
@@ -341,7 +342,7 @@ func (s *Server) handleConfigTemplateResource(ctx context.Context, req *mcp.Read
 	template := `{
   "jules": {
     "api_key": "your-api-key-here",
-    "base_url": "https://api.jules.ai",
+    "base_url": "https://jules.googleapis.com/v1alpha",
     "timeout": 30,
     "retry_attempts": 3
   },
@@ -401,8 +402,9 @@ Available actions:
 - list: Get all current sessions
 - status: Get detailed status summary
 - approve: Approve a session plan for execution
+- delete: Delete a session after explicit confirmation
 
-Note: Cancel and delete operations are NOT supported by Jules API v1alpha. Use the Jules web UI for these actions.
+Note: Cancel is not supported by Jules API v1alpha. Use the Jules web UI to cancel sessions.
 
 Start by listing sessions to see what's available, then use status for detailed information.`
 	} else {
@@ -413,10 +415,12 @@ Start by listing sessions to see what's available, then use status for detailed 
 			content = "Use the get_session_status tool to get a comprehensive overview of all sessions, including counts by state and recent activity."
 		case "approve":
 			content = "Use the approve_session_plan tool with a session_id to approve a planned session for execution."
-		case "cancel", "delete":
-			content = "Session cancel and delete are NOT available via API. These operations must be performed through the Jules web UI. Each session response includes a 'url' field that opens the session in the web interface."
+		case "delete":
+			content = "Use the delete_session tool with session_id and confirm=true to delete a session."
+		case "cancel":
+			content = "Session cancel is not available via API. Use the Jules web UI for cancellation. Each session response includes a 'url' field that opens the session in the web interface."
 		default:
-			content = fmt.Sprintf("Unknown action: %s. Valid actions are: list, status, approve.", action)
+			content = fmt.Sprintf("Unknown action: %s. Valid actions are: list, status, approve, delete.", action)
 		}
 	}
 

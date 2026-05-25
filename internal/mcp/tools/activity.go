@@ -52,6 +52,7 @@ type ListActivitiesInput struct {
 	SessionID    string `json:"session_id" jsonschema:"ID of the session to list activities from"`
 	PageSize     int    `json:"page_size,omitempty" jsonschema:"Number of activities per page (default: 50, max: 100)"`
 	PageToken    string `json:"page_token,omitempty" jsonschema:"Token for pagination"`
+	CreateTime   string `json:"create_time,omitempty" jsonschema:"Official createTime filter for activity creation time"`
 	Type         string `json:"type,omitempty" jsonschema:"Filter by activity type (e.g., 'message', 'plan', 'execution')"`
 	HasPlan      *bool  `json:"has_plan,omitempty" jsonschema:"Filter activities that have/don't have plans"`
 	HasArtifacts *bool  `json:"has_artifacts,omitempty" jsonschema:"Filter activities that have/don't have artifacts"`
@@ -80,15 +81,19 @@ func listActivities(ctx context.Context, req *mcp.CallToolRequest, input ListAct
 	var nextToken string
 
 	// Use filtered list if filters are provided
-	if input.Type != "" || input.HasPlan != nil || input.HasArtifacts != nil {
+	if input.Type != "" || input.CreateTime != "" || input.HasPlan != nil || input.HasArtifacts != nil {
 		filter := &jules.ActivityFilter{
+			CreateTime:   input.CreateTime,
 			Type:         input.Type,
 			HasPlan:      input.HasPlan,
 			HasArtifacts: input.HasArtifacts,
 		}
 		activities, err = client.ListActivitiesFiltered(ctx, input.SessionID, filter)
 	} else {
-		response, err := client.ListActivitiesWithPagination(ctx, input.SessionID, pageSize, input.PageToken)
+		response, err := client.ListActivitiesWithOptions(ctx, input.SessionID, &jules.ListActivitiesOptions{
+			PageSize:  pageSize,
+			PageToken: input.PageToken,
+		})
 		if err != nil {
 			return &mcp.CallToolResult{
 				IsError: true,

@@ -80,6 +80,7 @@ juleson --help
 juleson sources list
 juleson sessions list
 juleson sessions create sources/github/owner/repo "Fix failing tests"
+juleson sessions create --no-source "Draft a migration plan"
 juleson sessions approve SESSION_ID
 juleson sessions preview SESSION_ID
 

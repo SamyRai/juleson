@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/SamyRai/juleson/internal/jules"
 
@@ -38,6 +39,14 @@ func RegisterSessionTools(server *mcp.Server, julesClient *jules.Client) {
 		Description: "Approve a session plan for execution",
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ApproveSessionPlanInput) (*mcp.CallToolResult, ApproveSessionPlanOutput, error) {
 		return approveSessionPlan(ctx, req, input, julesClient)
+	})
+
+	// Delete Session Tool
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_session",
+		Description: "Delete a Jules session after explicit confirmation",
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input DeleteSessionInput) (*mcp.CallToolResult, DeleteSessionOutput, error) {
+		return deleteSession(ctx, req, input, julesClient)
 	})
 
 	// Apply Session Patches Tool
@@ -79,10 +88,6 @@ func RegisterSessionTools(server *mcp.Server, julesClient *jules.Client) {
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetSessionInput) (*mcp.CallToolResult, GetSessionOutput, error) {
 		return getSession(ctx, req, input, julesClient)
 	})
-
-	// NOTE: cancel_session and delete_session tools are NOT available
-	// The Jules API v1alpha does not support these operations.
-	// Users must use the Jules web UI to cancel or delete sessions.
 }
 
 // ListSessionsInput represents input for list_sessions tool
@@ -241,9 +246,51 @@ func approveSessionPlan(ctx context.Context, req *mcp.CallToolRequest, input App
 	return nil, output, nil
 }
 
-// NOTE: CancelSession and DeleteSession functionality removed
-// The Jules API v1alpha does not provide these endpoints.
-// Cancel/Delete operations are only available via the Jules web UI.
+// DeleteSessionInput represents input for delete_session tool
+type DeleteSessionInput struct {
+	SessionID string `json:"session_id" jsonschema:"ID of the session to delete"`
+	Confirm   bool   `json:"confirm" jsonschema:"Must be true to confirm destructive deletion"`
+}
+
+// DeleteSessionOutput represents output for delete_session tool
+type DeleteSessionOutput struct {
+	SessionID string `json:"session_id"`
+	Status    string `json:"status"`
+	Message   string `json:"message"`
+}
+
+func deleteSession(ctx context.Context, req *mcp.CallToolRequest, input DeleteSessionInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	DeleteSessionOutput,
+	error,
+) {
+	if !input.Confirm {
+		err := fmt.Errorf("delete_session requires confirm=true")
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: err.Error()},
+			},
+		}, DeleteSessionOutput{}, err
+	}
+
+	if err := client.DeleteSession(ctx, input.SessionID); err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to delete session: %v", err)},
+			},
+		}, DeleteSessionOutput{}, err
+	}
+
+	output := DeleteSessionOutput{
+		SessionID: input.SessionID,
+		Status:    "deleted",
+		Message:   fmt.Sprintf("Session deleted successfully: %s", input.SessionID),
+	}
+
+	return nil, output, nil
+}
 
 // ApplySessionPatchesInput represents input for apply_session_patches tool
 type ApplySessionPatchesInput struct {
@@ -419,7 +466,7 @@ func sendSessionMessage(ctx context.Context, req *mcp.CallToolRequest, input Sen
 
 // CreateSessionInput represents input for create_session tool
 type CreateSessionInput struct {
-	Source              string `json:"source" jsonschema:"Source ID or path (e.g., 'sources/github/owner/repo')"`
+	Source              string `json:"source,omitempty" jsonschema:"Optional source ID or path (e.g., 'sources/github/owner/repo'); omit for a repoless session"`
 	Prompt              string `json:"prompt" jsonschema:"Prompt describing the task for Jules to work on"`
 	Title               string `json:"title,omitempty" jsonschema:"Optional title for the session"`
 	RequirePlanApproval bool   `json:"require_plan_approval,omitempty" jsonschema:"Whether to require manual approval of plans (default: false)"`
@@ -441,14 +488,24 @@ func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSe
 	CreateSessionOutput,
 	error,
 ) {
-	sourceContext := &jules.SourceContext{
-		Source: input.Source,
-	}
-
-	if input.StartingBranch != "" {
-		sourceContext.GithubRepoContext = &jules.GithubRepoContext{
-			StartingBranch: input.StartingBranch,
+	var sourceContext *jules.SourceContext
+	if strings.TrimSpace(input.Source) != "" {
+		sourceContext = &jules.SourceContext{
+			Source: normalizeMCPSourceID(input.Source),
 		}
+		if input.StartingBranch != "" {
+			sourceContext.GithubRepoContext = &jules.GithubRepoContext{
+				StartingBranch: input.StartingBranch,
+			}
+		}
+	} else if input.StartingBranch != "" {
+		err := fmt.Errorf("starting_branch requires source")
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: err.Error()},
+			},
+		}, CreateSessionOutput{}, err
 	}
 
 	createReq := &jules.CreateSessionRequest{
@@ -477,6 +534,14 @@ func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSe
 	}
 
 	return nil, output, nil
+}
+
+func normalizeMCPSourceID(sourceID string) string {
+	sourceID = strings.TrimSpace(sourceID)
+	if strings.HasPrefix(sourceID, "sources/") {
+		return sourceID
+	}
+	return fmt.Sprintf("sources/%s", sourceID)
 }
 
 // GetSessionInput represents input for get_session tool

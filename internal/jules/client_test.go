@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ type ClientTestSuite struct {
 // SetupTest is called before each test
 func (suite *ClientTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://api.jules.ai", 30*time.Second, 3)
+	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
 }
 
 // TearDownTest is called after each test
@@ -54,7 +55,7 @@ func (suite *ClientTestSuite) TestListSessions() {
 		NextPageToken: "",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions?pageSize=10",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions?pageSize=10",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockResponse)
 			return resp, nil
@@ -81,7 +82,7 @@ func (suite *ClientTestSuite) TestListSessionsWithPagination() {
 		NextPageToken: "next-token",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions?pageSize=5&pageToken=test-token",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions?pageSize=5&pageToken=test-token",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockResponse)
 			return resp, nil
@@ -106,7 +107,7 @@ func (suite *ClientTestSuite) TestGetSession() {
 		URL:        "https://app.jules.ai/sessions/session-1",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockSession)
 			return resp, nil
@@ -134,7 +135,7 @@ func (suite *ClientTestSuite) TestCreateSession() {
 		State: "PLANNING",
 	}
 
-	httpmock.RegisterResponder("POST", "https://api.jules.ai/sessions",
+	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
 		func(req *http.Request) (*http.Response, error) {
 			// Verify request body
 			var receivedRequest CreateSessionRequest
@@ -144,6 +145,7 @@ func (suite *ClientTestSuite) TestCreateSession() {
 			assert.Equal(suite.T(), request.Prompt, receivedRequest.Prompt)
 			assert.Equal(suite.T(), request.RequirePlanApproval, receivedRequest.RequirePlanApproval)
 			assert.Equal(suite.T(), request.AutomationMode, receivedRequest.AutomationMode)
+			assert.False(suite.T(), strings.Contains(string(body), "sourceContext"))
 
 			resp, _ := httpmock.NewJsonResponse(201, expectedResponse)
 			return resp, nil
@@ -156,13 +158,47 @@ func (suite *ClientTestSuite) TestCreateSession() {
 	assert.Equal(suite.T(), "New Session", session.Title)
 }
 
+// TestCreateSessionWithSource tests creating a source-backed session.
+func (suite *ClientTestSuite) TestCreateSessionWithSource() {
+	request := CreateSessionRequest{
+		Prompt: "Create a new feature",
+		SourceContext: &SourceContext{
+			Source: "sources/github/owner/repo",
+		},
+	}
+
+	expectedResponse := Session{
+		ID:    "new-session-1",
+		Title: "New Session",
+		State: "PLANNING",
+	}
+
+	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
+		func(req *http.Request) (*http.Response, error) {
+			var receivedRequest CreateSessionRequest
+			body, _ := io.ReadAll(req.Body)
+			json.Unmarshal(body, &receivedRequest)
+
+			require.NotNil(suite.T(), receivedRequest.SourceContext)
+			assert.Equal(suite.T(), "sources/github/owner/repo", receivedRequest.SourceContext.Source)
+
+			resp, _ := httpmock.NewJsonResponse(201, expectedResponse)
+			return resp, nil
+		})
+
+	session, err := suite.client.CreateSession(context.Background(), &request)
+
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "new-session-1", session.ID)
+}
+
 // TestSendMessage tests sending a message to a session
 func (suite *ClientTestSuite) TestSendMessage() {
 	request := SendMessageRequest{
 		Prompt: "Please implement this feature",
 	}
 
-	httpmock.RegisterResponder("POST", "https://api.jules.ai/sessions/session-1:sendMessage",
+	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions/session-1:sendMessage",
 		func(req *http.Request) (*http.Response, error) {
 			var receivedRequest SendMessageRequest
 			body, _ := io.ReadAll(req.Body)
@@ -180,7 +216,7 @@ func (suite *ClientTestSuite) TestSendMessage() {
 
 // TestApprovePlan tests approving a plan
 func (suite *ClientTestSuite) TestApprovePlan() {
-	httpmock.RegisterResponder("POST", "https://api.jules.ai/sessions/session-1:approvePlan",
+	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions/session-1:approvePlan",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(200, ""), nil
 		})
@@ -190,9 +226,17 @@ func (suite *ClientTestSuite) TestApprovePlan() {
 	require.NoError(suite.T(), err)
 }
 
-// NOTE: TestCancelSession and TestDeleteSession removed
-// The Jules API v1alpha does not provide cancel or delete endpoints.
-// These operations are only available through the Jules web UI.
+// TestDeleteSession tests deleting a session.
+func (suite *ClientTestSuite) TestDeleteSession() {
+	httpmock.RegisterResponder("DELETE", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewStringResponse(200, ""), nil
+		})
+
+	err := suite.client.DeleteSession(context.Background(), "session-1")
+
+	require.NoError(suite.T(), err)
+}
 
 // TestListActivities tests listing activities
 func (suite *ClientTestSuite) TestListActivities() {
@@ -216,7 +260,7 @@ func (suite *ClientTestSuite) TestListActivities() {
 		NextPageToken: "",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities?pageSize=10",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=10",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockResponse)
 			return resp, nil
@@ -239,7 +283,7 @@ func (suite *ClientTestSuite) TestGetActivity() {
 		CreateTime: "2024-01-01T00:00:00Z",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockActivity)
 			return resp, nil
@@ -268,7 +312,7 @@ func (suite *ClientTestSuite) TestListSources() {
 		NextPageToken: "",
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sources?pageSize=10",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources?pageSize=10",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockResponse)
 			return resp, nil
@@ -293,7 +337,7 @@ func (suite *ClientTestSuite) TestGetSource() {
 		},
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sources/source-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/source-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockSource)
 			return resp, nil
@@ -308,7 +352,7 @@ func (suite *ClientTestSuite) TestGetSource() {
 
 // TestErrorHandling tests error handling for API errors
 func (suite *ClientTestSuite) TestErrorHandling() {
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(404, `{"error": "Session not found"}`), nil
 		})
@@ -324,7 +368,7 @@ func (suite *ClientTestSuite) TestErrorHandling() {
 // TestRetryLogic tests retry logic for failed requests
 func (suite *ClientTestSuite) TestRetryLogic() {
 	callCount := 0
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
 		func(req *http.Request) (*http.Response, error) {
 			callCount++
 			if callCount < 3 {
@@ -344,7 +388,7 @@ func (suite *ClientTestSuite) TestRetryLogic() {
 
 // TestContextCancellation tests context cancellation
 func (suite *ClientTestSuite) TestContextCancellation() {
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
 		func(req *http.Request) (*http.Response, error) {
 			// Simulate slow response
 			time.Sleep(100 * time.Millisecond)

@@ -55,9 +55,11 @@ juleson sources get SOURCE_ID
 juleson sessions list
 juleson sessions status
 juleson sessions create SOURCE_ID "Prompt text"
+juleson sessions create --no-source "Prompt text"
 juleson sessions get SESSION_ID
 juleson sessions approve SESSION_ID
 juleson sessions message SESSION_ID "Follow-up text"
+juleson sessions delete SESSION_ID --force
 juleson sessions preview SESSION_ID
 juleson sessions preview-activity SESSION_ID ACTIVITY_ID
 juleson sessions download SESSION_ID OUTPUT_DIR
@@ -67,7 +69,13 @@ juleson activities list SESSION_ID
 juleson activities get SESSION_ID ACTIVITY_ID
 ```
 
-Session cancel/delete commands are not present in the current CLI.
+`sessions create` accepts either `github/owner/repo` or
+`sources/github/owner/repo`. `--no-source` creates a repoless Jules session by
+omitting `sourceContext`.
+
+`sessions delete` calls the Jules API delete endpoint. Without `--force`, it
+asks for the exact session ID before deleting. Session cancel is not exposed by
+the Jules API v1alpha reference used by this project.
 
 ## Templates
 

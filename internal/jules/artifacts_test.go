@@ -23,7 +23,7 @@ type ArtifactsTestSuite struct {
 // SetupTest is called before each test
 func (suite *ArtifactsTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://api.jules.ai", 30*time.Second, 3)
+	suite.client = NewClient("test-api-key", "https://jules.googleapis.com/v1alpha", 30*time.Second, 3)
 }
 
 // TearDownTest is called after each test
@@ -45,14 +45,14 @@ func (suite *ArtifactsTestSuite) TestDownloadArtifactFromActivity() {
 			{BashOutput: &BashOutput{Command: "echo hello", Output: "hello"}},
 		},
 	}
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockActivity)
 			return resp, nil
 		})
 
 	// Mock download endpoint
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1/artifacts/0/download",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/download",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(200, "artifact content"), nil
 		})
@@ -89,21 +89,21 @@ func (suite *ArtifactsTestSuite) TestDownloadAllSessionArtifacts() {
 			},
 		},
 	}
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities?pageSize=100",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, ActivitiesResponse{Activities: mockActivities})
 			return resp, nil
 		})
 
 	// Mock activity details
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockActivities[0])
 			return resp, nil
 		})
 
 	// Mock download endpoint
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1/artifacts/0/download",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/download",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(200, "artifact content"), nil
 		})
@@ -132,7 +132,7 @@ func (suite *ArtifactsTestSuite) TestGetArtifactsFromActivity() {
 			{ChangeSet: &ChangeSet{GitPatch: &GitPatch{UnidiffPatch: "diff content"}}},
 		},
 	}
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockActivity)
 			return resp, nil
@@ -162,7 +162,7 @@ func (suite *ArtifactsTestSuite) TestGetAllSessionArtifacts() {
 			},
 		},
 	}
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities?pageSize=100",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, ActivitiesResponse{Activities: mockActivities})
 			return resp, nil
@@ -191,7 +191,7 @@ func (suite *ArtifactsTestSuite) TestAnalyzeArtifact() {
 		Issues:        []ArtifactIssue{},
 	}
 
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1/artifacts/0/analyze",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/analyze",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockAnalysis)
 			return resp, nil
@@ -209,7 +209,7 @@ func (suite *ArtifactsTestSuite) TestAnalyzeArtifact() {
 // TestGetArtifactContent tests getting raw artifact content
 func (suite *ArtifactsTestSuite) TestGetArtifactContent() {
 	content := "This is the artifact content"
-	httpmock.RegisterResponder("GET", "https://api.jules.ai/sessions/session-1/activities/activity-1/artifacts/0/content",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/activity-1/artifacts/0/content",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(200, content), nil
 		})

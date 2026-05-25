@@ -76,8 +76,12 @@ type Activity struct {
 	Name             string            `json:"name"`
 	CreateTime       string            `json:"createTime"`
 	Originator       string            `json:"originator"` // "agent" or "user"
+	Description      string            `json:"description,omitempty"`
+	Status           string            `json:"status,omitempty"`
 	PlanGenerated    *PlanGenerated    `json:"planGenerated,omitempty"`
 	PlanApproved     *PlanApproved     `json:"planApproved,omitempty"`
+	UserMessaged     *UserMessaged     `json:"userMessaged,omitempty"`
+	AgentMessaged    *AgentMessaged    `json:"agentMessaged,omitempty"`
 	ProgressUpdated  *ProgressUpdated  `json:"progressUpdated,omitempty"`
 	SessionCompleted *SessionCompleted `json:"sessionCompleted,omitempty"`
 	SessionFailed    *SessionFailed    `json:"sessionFailed,omitempty"`
@@ -92,8 +96,9 @@ type PlanGenerated struct {
 
 // Plan represents a coding plan
 type Plan struct {
-	ID    string `json:"id"`
-	Steps []Step `json:"steps"`
+	ID         string `json:"id"`
+	Steps      []Step `json:"steps"`
+	CreateTime string `json:"createTime,omitempty"`
 }
 
 // Step represents a step in the plan
@@ -107,6 +112,16 @@ type Step struct {
 // PlanApproved represents a plan approval activity
 type PlanApproved struct {
 	PlanID string `json:"planId"`
+}
+
+// UserMessaged represents a message sent by the user.
+type UserMessaged struct {
+	UserMessage string `json:"userMessage"`
+}
+
+// AgentMessaged represents a message sent by Jules.
+type AgentMessaged struct {
+	AgentMessage string `json:"agentMessage"`
 }
 
 // ProgressUpdated represents a progress update activity
@@ -167,7 +182,7 @@ type Media struct {
 // CreateSessionRequest represents a request to create a session
 type CreateSessionRequest struct {
 	Prompt              string         `json:"prompt"`
-	SourceContext       *SourceContext `json:"sourceContext"`
+	SourceContext       *SourceContext `json:"sourceContext,omitempty"`
 	Title               string         `json:"title,omitempty"`
 	AutomationMode      string         `json:"automationMode,omitempty"`
 	RequirePlanApproval bool           `json:"requirePlanApproval,omitempty"`

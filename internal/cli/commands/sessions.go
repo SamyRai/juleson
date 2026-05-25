@@ -1,8 +1,10 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/SamyRai/juleson/internal/config"
@@ -58,15 +60,27 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 	})
 
 	// Create session
-	sessionsCmd.AddCommand(&cobra.Command{
+	var createNoSource bool
+	createCmd := &cobra.Command{
 		Use:   "create [source-id] [prompt]",
 		Short: "Create a new session",
-		Long:  "Create a new Jules session with the specified source and prompt",
-		Args:  cobra.ExactArgs(2),
+		Long:  "Create a new Jules session with a repository source, or pass --no-source for a repoless session",
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return createSession(cfg, args[0], args[1])
+			if createNoSource {
+				if len(args) != 1 {
+					return fmt.Errorf("--no-source accepts exactly one prompt argument")
+				}
+				return createSession(cfg, "", args[0], true)
+			}
+			if len(args) != 2 {
+				return fmt.Errorf("provide source ID and prompt, or pass --no-source with a prompt")
+			}
+			return createSession(cfg, args[0], args[1], false)
 		},
-	})
+	}
+	createCmd.Flags().BoolVar(&createNoSource, "no-source", false, "Create a repoless session without sourceContext")
+	sessionsCmd.AddCommand(createCmd)
 
 	// Approve plan
 	sessionsCmd.AddCommand(&cobra.Command{
@@ -110,6 +124,19 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 			return sendSessionMessage(cfg, args[0], args[1])
 		},
 	})
+
+	var deleteForce bool
+	deleteCmd := &cobra.Command{
+		Use:   "delete [session-id]",
+		Short: "Delete a session",
+		Long:  "Delete a Jules session. Without --force, type the session ID to confirm.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return deleteSession(cfg, args[0], deleteForce)
+		},
+	}
+	deleteCmd.Flags().BoolVar(&deleteForce, "force", false, "Delete without interactive confirmation")
+	sessionsCmd.AddCommand(deleteCmd)
 
 	// Download all session artifacts
 	sessionsCmd.AddCommand(&cobra.Command{
@@ -190,7 +217,7 @@ func approveSessionPlan(cfg *config.Config, sessionID string) error {
 
 	return nil
 }
-func createSession(cfg *config.Config, sourceID string, prompt string) error {
+func createSession(cfg *config.Config, sourceID string, prompt string, noSource bool) error {
 	// Initialize Jules client
 	julesClient := jules.NewClient(
 		cfg.Jules.APIKey,
@@ -202,15 +229,21 @@ func createSession(cfg *config.Config, sourceID string, prompt string) error {
 	ctx := context.Background()
 
 	fmt.Printf("🚀 Creating new Jules session...\n")
-	fmt.Printf("Source: %s\n", sourceID)
+	if noSource {
+		fmt.Printf("Source: repoless\n")
+	} else {
+		fmt.Printf("Source: %s\n", normalizeSourceID(sourceID))
+	}
 	fmt.Printf("Prompt: %s\n\n", prompt)
 
 	req := &jules.CreateSessionRequest{
-		Prompt: prompt,
-		SourceContext: &jules.SourceContext{
-			Source: fmt.Sprintf("sources/%s", sourceID),
-		},
+		Prompt:              prompt,
 		RequirePlanApproval: false, // Default to auto-approval for CLI
+	}
+	if !noSource {
+		req.SourceContext = &jules.SourceContext{
+			Source: normalizeSourceID(sourceID),
+		}
 	}
 
 	session, err := julesClient.CreateSession(ctx, req)
@@ -233,6 +266,45 @@ func createSession(cfg *config.Config, sourceID string, prompt string) error {
 
 	return nil
 }
+
+func deleteSession(cfg *config.Config, sessionID string, force bool) error {
+	julesClient := jules.NewClient(
+		cfg.Jules.APIKey,
+		cfg.Jules.BaseURL,
+		cfg.Jules.Timeout,
+		cfg.Jules.RetryAttempts,
+	)
+
+	if !force {
+		fmt.Printf("Type the session ID to confirm deletion (%s): ", sessionID)
+		scanner := bufio.NewScanner(os.Stdin)
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				return fmt.Errorf("failed to read confirmation: %w", err)
+			}
+			return fmt.Errorf("session deletion cancelled")
+		}
+		if strings.TrimSpace(scanner.Text()) != sessionID {
+			return fmt.Errorf("session deletion cancelled")
+		}
+	}
+
+	if err := julesClient.DeleteSession(context.Background(), sessionID); err != nil {
+		return fmt.Errorf("failed to delete session: %w", err)
+	}
+
+	fmt.Printf("✅ Deleted session: %s\n", sessionID)
+	return nil
+}
+
+func normalizeSourceID(sourceID string) string {
+	sourceID = strings.TrimSpace(sourceID)
+	if strings.HasPrefix(sourceID, "sources/") {
+		return sourceID
+	}
+	return fmt.Sprintf("sources/%s", sourceID)
+}
+
 func listSessions(cfg *config.Config) error {
 	// Initialize Jules client
 	julesClient := jules.NewClient(
