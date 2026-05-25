@@ -294,7 +294,7 @@ jobs:
           output-file: ./sbom.json
 
       - name: Download linux amd64 artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: binaries-linux-amd64
           path: dist/
