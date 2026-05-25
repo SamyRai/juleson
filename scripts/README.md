@@ -2,29 +2,27 @@
 
 This directory contains utility and automation scripts.
 
-## Planned Scripts
+## Installer Scripts
 
-- `build.sh` - Build script for all binaries
-- `test.sh` - Run all tests
-- `install.sh` - Installation script
-- `deploy.sh` - Deployment automation
-- `release.sh` - Release preparation
+- `install.sh` - Linux/macOS release installer for `juleson` and `jules-mcp`
+- `install.ps1` - Windows release installer for `juleson` and `jules-mcp`
 
 ## Usage
 
-Scripts should be executable and documented with comments explaining their purpose and usage.
-
-### Example: build.sh
+### Linux/macOS
 
 ```bash
-#!/bin/bash
-# Build all binaries
+curl -L https://github.com/SamyRai/juleson/releases/latest/download/install.sh | bash
+```
 
-echo "Building juleson..."
-go build -o bin/juleson ./cmd/juleson
+Use `INSTALL_DIR` to install somewhere other than `/usr/local/bin`:
 
-echo "Building jules-mcp..."
-go build -o bin/jules-mcp ./cmd/jules-mcp
+```bash
+INSTALL_DIR="$HOME/.local/bin" bash install.sh
+```
 
-echo "Build complete!"
+### Windows
+
+```powershell
+irm https://github.com/SamyRai/juleson/releases/latest/download/install.ps1 | iex
 ```

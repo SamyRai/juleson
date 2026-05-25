@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -13,31 +15,25 @@ import (
 )
 
 func TestServerE2EWithCommandTransport(t *testing.T) {
-	// Use the binary from go/bin or current directory
-	binaryPath := os.Getenv("JULESON_MCP_BINARY")
-	if binaryPath == "" {
-		// Try common locations
-		for _, path := range []string{
-			"../bin/juleson-mcp",
-			"./bin/juleson-mcp",
-			"juleson-mcp",
-		} {
-			if _, err := os.Stat(path); err == nil {
-				binaryPath = path
-				break
-			}
-		}
+	if testing.Short() {
+		t.Skip("skipping command-transport E2E test in short mode")
 	}
-	if binaryPath == "" || os.Getenv("SKIP_E2E") != "" {
-		t.Skip("juleson-mcp binary not found or E2E tests disabled, run 'make build-mcp' first")
+	if os.Getenv("SKIP_E2E") != "" {
+		t.Skip("E2E tests disabled by SKIP_E2E")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	binaryPath := resolveMCPBinary(t, ctx)
 
 	// Create a command transport like VSCode would
 	cmd := exec.Command(binaryPath)
-	// Don't change directory - run from current directory
+	cmd.Dir = repoRoot(t)
+	cmd.Env = append(os.Environ(),
+		"HOME="+t.TempDir(),
+		"JULES_API_KEY=",
+	)
 	transport := &mcp.CommandTransport{Command: cmd}
 
 	// Create client
@@ -88,4 +84,57 @@ func TestServerE2EWithCommandTransport(t *testing.T) {
 			t.Logf("Found resource: %s - %s", resource.Name, resource.Description)
 		}
 	})
+}
+
+func resolveMCPBinary(t *testing.T, ctx context.Context) string {
+	t.Helper()
+
+	if binaryPath := os.Getenv("JULESON_MCP_BINARY"); binaryPath != "" {
+		// #nosec G304,G703 -- tests intentionally accept an explicit local binary path.
+		if _, err := os.Stat(binaryPath); err != nil {
+			t.Fatalf("JULESON_MCP_BINARY %q is not usable: %v", binaryPath, err)
+		}
+		return binaryPath
+	}
+
+	root := repoRoot(t)
+	for _, path := range []string{
+		filepath.Join(root, "bin", "jules-mcp"),
+		filepath.Join(root, "jules-mcp"),
+	} {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	binaryPath := filepath.Join(t.TempDir(), "jules-mcp")
+	if runtime.GOOS == "windows" {
+		binaryPath += ".exe"
+	}
+
+	buildCmd := exec.CommandContext(ctx, "go", "build", "-o", binaryPath, "./cmd/jules-mcp")
+	buildCmd.Dir = root
+	if output, err := buildCmd.CombinedOutput(); err != nil {
+		t.Fatalf("build jules-mcp E2E binary: %v\n%s", err, output)
+	}
+	return binaryPath
+}
+
+func repoRoot(t *testing.T) string {
+	t.Helper()
+
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			t.Fatal("could not find repository root")
+		}
+		dir = parent
+	}
 }

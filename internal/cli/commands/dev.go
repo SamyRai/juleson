@@ -39,7 +39,7 @@ func buildBinaries(ctx context.Context, version, goos, goarch string, race bool)
 		path string
 	}{
 		{"juleson", "./cmd/juleson"},
-		{"juleson-mcp", "./cmd/jules-mcp"},
+		{"jules-mcp", "./cmd/jules-mcp"},
 	}
 
 	for _, binary := range binaries {
@@ -574,7 +574,7 @@ func newInstallCommand() *cobra.Command {
 			}
 
 			// Install binaries
-			installer := build.NewInstaller("bin", []string{"juleson", "juleson-mcp"})
+			installer := build.NewInstaller("bin", []string{"juleson", "jules-mcp"})
 
 			var result *build.InstallResult
 

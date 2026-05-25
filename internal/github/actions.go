@@ -101,8 +101,9 @@ func (s *ActionsService) ListWorkflowRuns(ctx context.Context, owner, repo strin
 		runs, _, err = s.client.Client.Actions.ListRepositoryWorkflowRuns(ctx, owner, repo, opts)
 	} else {
 		// Try as filename first
-		runs, _, err = s.client.Client.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowIDOrFile, opts)
-		if err != nil {
+		if runsByFile, _, fileErr := s.client.Client.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowIDOrFile, opts); fileErr == nil {
+			runs = runsByFile
+		} else {
 			// Try as ID
 			workflowID := int64(parseInt(workflowIDOrFile))
 			runs, _, err = s.client.Client.Actions.ListWorkflowRunsByID(ctx, owner, repo, workflowID, opts)
@@ -110,6 +111,9 @@ func (s *ActionsService) ListWorkflowRuns(ctx context.Context, owner, repo strin
 				return nil, fmt.Errorf("failed to list workflow runs: %w", err)
 			}
 		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workflow runs: %w", err)
 	}
 
 	var result []*WorkflowRun

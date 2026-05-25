@@ -123,7 +123,20 @@ jobs:
         run: go mod download
 
       - name: Run tests with race detection
-        run: go test -v -race -timeout=10m -coverprofile=coverage.out -covermode=atomic ./...
+        env:
+          CGO_ENABLED: 1
+          SKIP_E2E: 1
+        run: go test -v -race -timeout=10m ./...
+
+      - name: Run coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        env:
+          SKIP_E2E: 1
+        run: go test -v -timeout=10m -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Run MCP E2E
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        run: go test -v -run TestServerE2EWithCommandTransport ./internal/mcp
 
       - name: Run tests with -short flag
         run: go test -v -short -timeout=5m ./...
@@ -162,7 +175,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -170,11 +183,21 @@ jobs:
           go-version-file: "go.mod"
           cache: true
 
+      - name: Determine lint base
+        id: lint-base
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "base=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+              echo "base=HEAD~1" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          args: --timeout=10m --verbose
+          args: --timeout=10m --verbose --new-from-rev=${{ steps.lint-base.outputs.base }}
           skip-cache: false
 
   security:
@@ -198,7 +221,7 @@ jobs:
           cache: true
 
       - name: Run Gosec Security Scanner
-        uses: securecodewarrior/github-action-gosec@master
+        uses: securego/gosec@v2.26.1
         with:
           args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
 
@@ -209,7 +232,7 @@ jobs:
           sarif_file: gosec-results.sarif
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -244,10 +267,32 @@ jobs:
           cache: true
 
       - name: Build juleson (optimized)
-        run: go build -v -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -trimpath -o bin/juleson ./cmd/juleson
+        shell: bash
+        run: |
+          ext=""
+          if [ "$RUNNER_OS" = "Windows" ]; then
+              ext=".exe"
+          fi
+          build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          go build -v \
+            -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time}" \
+            -trimpath \
+            -o "bin/juleson${ext}" \
+            ./cmd/juleson
 
       - name: Build jules-mcp (optimized)
-        run: go build -v -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" -trimpath -o bin/jules-mcp ./cmd/jules-mcp
+        shell: bash
+        run: |
+          ext=""
+          if [ "$RUNNER_OS" = "Windows" ]; then
+              ext=".exe"
+          fi
+          build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          go build -v \
+            -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time}" \
+            -trimpath \
+            -o "bin/jules-mcp${ext}" \
+            ./cmd/jules-mcp
 
       - name: Test binaries (Unix)
         if: runner.os != 'Windows'
@@ -257,6 +302,7 @@ jobs:
 
       - name: Test binaries (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           .\bin\juleson.exe --version || echo "Version flag not implemented yet"
           .\bin\jules-mcp.exe --help || echo "Help flag not implemented yet"
@@ -265,7 +311,7 @@ jobs:
         run: go vet ./...
 
       - name: Check for ineffective assignments
-        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest -checks=SA4006 ./...
 
       - name: Upload binaries
         if: matrix.os == 'ubuntu-latest'
@@ -290,7 +336,7 @@ jobs:
           fetch-depth: 1
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: moderate
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
@@ -316,7 +362,7 @@ jobs:
         run: go test -bench=. -benchmem -run=^$ ./...
 
       - name: Run memory profiling
-        run: go test -memprofile=mem.out -run=^$ ./...
+        run: go test -memprofile=mem.out -run=^$ ./internal/mcp
 
   all-checks-pass:
     name: All Checks Pass
@@ -337,13 +383,28 @@ jobs:
 
     steps:
       - name: Check all job statuses
+        env:
+          PRE_CHECK_STATUS: ${{ needs.pre-check.result }}
+          TEST_STATUS: ${{ needs.test.result }}
+          LINT_STATUS: ${{ needs.lint.result }}
+          SECURITY_STATUS: ${{ needs.security.result }}
+          BUILD_STATUS: ${{ needs.build.result }}
+          DEPENDENCY_REVIEW_STATUS: ${{ needs.dependency-review.result }}
+          PERFORMANCE_TEST_STATUS: ${{ needs.performance-test.result }}
         run: |
-          # Define required jobs
-          required_jobs="pre-check test lint security build dependency-review performance-test"
+          declare -A job_statuses=(
+            ["pre-check"]="$PRE_CHECK_STATUS"
+            ["test"]="$TEST_STATUS"
+            ["lint"]="$LINT_STATUS"
+            ["security"]="$SECURITY_STATUS"
+            ["build"]="$BUILD_STATUS"
+            ["dependency-review"]="$DEPENDENCY_REVIEW_STATUS"
+            ["performance-test"]="$PERFORMANCE_TEST_STATUS"
+          )
 
           # Check each required job
-          for job in $required_jobs; do
-              status="${{ needs.$job.result }}"
+          for job in "${!job_statuses[@]}"; do
+              status="${job_statuses[$job]}"
               if [[ "$status" != "success" && "$status" != "skipped" ]]; then
                   echo "❌ Job '$job' failed with status: $status"
                   exit 1

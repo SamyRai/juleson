@@ -32,7 +32,7 @@ Juleson bridges your development workflow with Google's Jules AI agent, providin
 Juleson/
 ├── cmd/                          # Application entry points
 │   ├── juleson/                 # CLI tool for direct usage
-│   ├── juleson-mcp/             # MCP server for AI assistants
+│   ├── jules-mcp/               # MCP server for AI assistants
 │   └── orchestrator/            # Build orchestrator
 ├── internal/
 │   ├── agent/                   # 🤖 Intelligent AI Agent System
@@ -259,7 +259,7 @@ Juleson/
 
 ### **Prerequisites**
 
-- Go 1.24 or higher
+- Go 1.25 or higher
 - Jules API key ([Get one from Google](https://jules.googleapis.com))
 - Git (for project analysis features)
 - Optional: Gemini API key (for AI orchestration features)
@@ -274,17 +274,23 @@ Juleson/
 **Linux/macOS:**
 
 ```bash
-# Using Go (requires Go 1.24+)
+# Using pre-built binaries
+curl -L https://github.com/SamyRai/juleson/releases/latest/download/install.sh | bash
+
+# Or using Go (requires Go 1.25+)
 go install github.com/SamyRai/juleson/cmd/juleson@latest
-go install github.com/SamyRai/juleson/cmd/juleson-mcp@latest
+go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
 
 **Windows:**
 
 ```powershell
-# Using Go (requires Go 1.24+)
+# Using pre-built binaries
+irm https://github.com/SamyRai/juleson/releases/latest/download/install.ps1 | iex
+
+# Or using Go (requires Go 1.25+)
 go install github.com/SamyRai/juleson/cmd/juleson@latest
-go install github.com/SamyRai/juleson/cmd/juleson-mcp@latest
+go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
 
 #### Build from Source
@@ -315,7 +321,7 @@ go build -o bin/orchestrator ./cmd/orchestrator
 
 # Verify installation
 juleson --version
-juleson-mcp --version
+jules-mcp --version
 ```
 
 ## 📖 **Usage**
@@ -390,7 +396,7 @@ juleson template create my-template refactoring "Description" # Create custom te
 Start the MCP server for integration with AI assistants:
 
 ```bash
-./bin/juleson-mcp
+./bin/jules-mcp
 ```
 
 #### **Configure with Claude Desktop**
@@ -401,7 +407,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "Juleson": {
-      "command": "/absolute/path/to/Juleson/bin/juleson-mcp",
+      "command": "/absolute/path/to/Juleson/bin/jules-mcp",
       "env": {
         "JULES_API_KEY": "your-api-key"
       }
@@ -418,7 +424,7 @@ Add to Cursor settings JSON:
 {
   "mcp.servers": {
     "Juleson": {
-      "command": "/absolute/path/to/Juleson/bin/juleson-mcp",
+      "command": "/absolute/path/to/Juleson/bin/jules-mcp",
       "env": {
         "JULES_API_KEY": "your-api-key"
       }

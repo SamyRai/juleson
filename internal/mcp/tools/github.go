@@ -140,22 +140,30 @@ func createSessionFromRepo(ctx context.Context, req *mcp.CallToolRequest, input 
 
 		// Create session with explicit repo
 		session, err = ghClient.Sessions.CreateSessionFromRepo(ctx, input.Prompt, owner, name, input.Branch)
+		if err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Failed to create session: %v", err)},
+				},
+			}, GitHubCreateSessionOutput{}, err
+		}
 	} else {
 		// Auto-detect from current directory
 		session, err = ghClient.Sessions.CreateSessionFromCurrentRepo(ctx, input.Prompt, input.Branch)
-		if err == nil {
-			// Get repo info for output
-			repo, _ = ghClient.Repositories.DiscoverCurrentRepo(ctx)
+		if err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Failed to create session: %v", err)},
+				},
+			}, GitHubCreateSessionOutput{}, err
 		}
-	}
-
-	if err != nil {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Failed to create session: %v", err)},
-			},
-		}, GitHubCreateSessionOutput{}, err
+		// Get repo info for output when discovery succeeds.
+		discoveredRepo, discoverErr := ghClient.Repositories.DiscoverCurrentRepo(ctx)
+		if discoverErr == nil {
+			repo = discoveredRepo
+		}
 	}
 
 	branch := input.Branch

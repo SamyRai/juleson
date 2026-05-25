@@ -79,8 +79,10 @@ jobs:
 
       - name: Check if tag exists
         id: tag_check
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          if git show-ref --tags | grep -q "refs/tags/${{ github.event.inputs.version || github.ref_name }}"; then
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          if git show-ref --tags | grep -q "refs/tags/${VERSION}"; then
               echo "Tag already exists"
               exit 1
           fi
@@ -89,11 +91,11 @@ jobs:
         id: version
         run: |
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [[ $VERSION == *"beta"* || $VERSION == *"alpha"* || $VERSION == *"rc"* ]]; then
-              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+              echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
           else
-              echo "is_prerelease=false" >> $GITHUB_OUTPUT
+              echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
   # Build release artifacts
@@ -114,6 +116,8 @@ jobs:
             goarch: arm64
           - goos: windows
             goarch: amd64
+          - goos: windows
+            goarch: arm64
 
     steps:
       - name: Checkout code
@@ -149,6 +153,23 @@ jobs:
             -o dist/jules-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
             ./cmd/jules-mcp
 
+      - name: Package release assets
+        run: |
+          set -euo pipefail
+          OS="${{ matrix.goos }}"
+          ARCH="${{ matrix.goarch }}"
+
+          if [ "$OS" = "windows" ]; then
+              (cd dist && zip -q "juleson-${OS}-${ARCH}.zip" "juleson-${OS}-${ARCH}.exe")
+              (cd dist && zip -q "jules-mcp-${OS}-${ARCH}.zip" "jules-mcp-${OS}-${ARCH}.exe")
+          else
+              mkdir -p package/juleson package/jules-mcp
+              cp "dist/juleson-${OS}-${ARCH}" package/juleson/juleson
+              cp "dist/jules-mcp-${OS}-${ARCH}" package/jules-mcp/jules-mcp
+              tar -C package/juleson -czf "dist/juleson-${OS}-${ARCH}.tar.gz" juleson
+              tar -C package/jules-mcp -czf "dist/jules-mcp-${OS}-${ARCH}.tar.gz" jules-mcp
+          fi
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -178,20 +199,21 @@ jobs:
       - name: Publish to Go Module Proxy
         run: |
           # Set GOPROXY to ensure we publish to the official proxy
-          GOPROXY=proxy.golang.org go list -m juleson@${{ needs.validate.outputs.version }}
+          GOPROXY=proxy.golang.org go list -m github.com/SamyRai/juleson@${{ needs.validate.outputs.version }}
 
       - name: Verify module is published
         run: |
           # Wait a moment for indexing
           sleep 30
           # Verify the module is available
-          go list -m -versions juleson | grep "${{ needs.validate.outputs.version }}"
+          go list -m -versions github.com/SamyRai/juleson | grep "${{ needs.validate.outputs.version }}"
 
   # Create GitHub release
   release:
     name: Create GitHub Release
     needs: [validate, build, publish-module]
     runs-on: ubuntu-latest
+    if: always() && needs.validate.result == 'success' && needs.build.result == 'success' && (needs.publish-module.result == 'success' || needs.publish-module.result == 'skipped')
 
     steps:
       - name: Checkout code
@@ -203,6 +225,11 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: dist/
+
+      - name: Add installer scripts
+        run: |
+          cp scripts/install.sh dist/install.sh
+          cp scripts/install.ps1 dist/install.ps1
 
       - name: Generate checksums
         run: |
@@ -221,12 +248,12 @@ jobs:
 
           # Generate changelog
           if command -v git-cliff &> /dev/null; then
-              git-cliff $PREVIOUS_TAG..HEAD --latest --strip header > changelog.md
+              git-cliff "$PREVIOUS_TAG..HEAD" --latest --strip header > changelog.md
           else
               # Fallback to git log
               echo "## Changes" > changelog.md
               echo "" >> changelog.md
-              git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> changelog.md
+              git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..HEAD" >> changelog.md
           fi
 
       - name: Create Release

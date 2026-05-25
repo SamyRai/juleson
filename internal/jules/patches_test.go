@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,7 +20,7 @@ type PatchesTestSuite struct {
 
 func (suite *PatchesTestSuite) SetupTest() {
 	httpmock.Activate()
-	suite.client = NewClient("test-api-key", "https://jules.googleapis.com", 30, 3)
+	suite.client = NewClient("test-api-key", "https://jules.googleapis.com", 30*time.Second, 3)
 }
 
 func (suite *PatchesTestSuite) TearDownTest() {
@@ -67,8 +69,8 @@ index 1234567..abcdefg 100644
 
 	changes, err := suite.client.GetSessionChanges(context.Background(), sessionID)
 
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), changes)
+	require.NoError(suite.T(), err)
+	require.NotNil(suite.T(), changes)
 	assert.Equal(suite.T(), sessionID, changes.SessionID)
 	assert.Equal(suite.T(), 1, changes.TotalPatches)
 	assert.Len(suite.T(), changes.Files, 1)
