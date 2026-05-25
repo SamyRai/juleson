@@ -2,6 +2,7 @@ param(
     [string]$Version = "latest",
     [string]$InstallDir = "$env:USERPROFILE\.juleson\bin",
     [string]$Repo = "SamyRai/juleson",
+    [string]$BaseUrl = $env:JULESON_INSTALL_BASE_URL,
     [switch]$NoPathUpdate,
     [switch]$Help
 )
@@ -14,7 +15,7 @@ function Show-Usage {
 Install the latest Juleson release binaries.
 
 Usage:
-  .\install.ps1 [-Version <tag|latest>] [-InstallDir <path>] [-Repo <owner/repo>] [-NoPathUpdate]
+  .\install.ps1 [-Version <tag|latest>] [-InstallDir <path>] [-Repo <owner/repo>] [-BaseUrl <url>] [-NoPathUpdate]
 
 Examples:
   irm https://github.com/SamyRai/juleson/releases/latest/download/install.ps1 | iex
@@ -37,7 +38,9 @@ $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "Unsupported Windows architecture: $env:PROCESSOR_ARCHITECTURE" }
 }
 
-if ($Version -eq "latest") {
+if (-not [string]::IsNullOrWhiteSpace($BaseUrl)) {
+    $baseUrl = $BaseUrl.TrimEnd("/")
+} elseif ($Version -eq "latest") {
     $baseUrl = "https://github.com/$Repo/releases/latest/download"
 } else {
     $baseUrl = "https://github.com/$Repo/releases/download/$Version"

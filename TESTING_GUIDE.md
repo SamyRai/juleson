@@ -115,7 +115,19 @@ func TestClient_SessionWorkflow(t *testing.T) {
 
 **Purpose**: Test complete user workflows
 
-**Location**: `e2e/` directory or `*_e2e_test.go`
+**Location**: `*_e2e_test.go` files or package-level tests that execute the real
+binary/script boundary
+
+Current E2E coverage includes:
+
+- `internal/mcp/server_e2e_test.go`, which builds a temporary `juleson-mcp`
+  binary when `JULESON_MCP_BINARY` is not set, connects through MCP command
+  transport, and verifies tools, prompts, and resources.
+- `scripts/install_test.go`, which serves local fake release archives and runs
+  the real `scripts/install.sh` installer against a temporary install directory.
+
+E2E tests are skipped by `go test -short ./...`. Set `SKIP_E2E=1` to skip MCP
+E2E in regular test runs when debugging locally.
 
 **Example**:
 
@@ -263,6 +275,22 @@ go test -tags=integration ./...
 
 # Run with real API (requires API key)
 JULES_API_KEY=your-key go test -tags=integration ./internal/jules/
+```
+
+### End-to-End Tests
+
+```bash
+# Run the full unit, integration-style, and E2E suite
+go test ./...
+
+# Run only MCP command-transport E2E
+go test -run TestServerE2EWithCommandTransport ./internal/mcp
+
+# Run installer unit and E2E checks
+go test ./scripts
+
+# Skip E2E during a short pass
+go test -short ./...
 ```
 
 ## Writing Tests

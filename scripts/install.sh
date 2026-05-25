@@ -91,7 +91,9 @@ case "$(uname -m)" in
 		;;
 esac
 
-if [ "$version" = "latest" ]; then
+if [ -n "${JULESON_INSTALL_BASE_URL:-}" ]; then
+	base_url="${JULESON_INSTALL_BASE_URL%/}"
+elif [ "$version" = "latest" ]; then
 	base_url="https://github.com/${repo}/releases/latest/download"
 else
 	base_url="https://github.com/${repo}/releases/download/${version}"
