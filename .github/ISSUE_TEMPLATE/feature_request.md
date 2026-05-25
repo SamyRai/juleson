@@ -1,20 +1,27 @@
 ---
 name: Feature Request
-about: Suggest an idea for this project
+about: Propose a change or capability
 title: "[FEAT] "
 labels: ["enhancement", "needs-triage"]
-assignees: ''
-
+assignees: ""
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+## Problem
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+What user or maintainer problem should this solve?
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## Proposed Change
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+Describe the requested behavior.
+
+## Alternatives
+
+List any alternatives considered.
+
+## Acceptance Criteria
+
+- [ ]
+
+## Additional Context
+
+Add examples, links, or constraints.

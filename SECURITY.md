@@ -2,132 +2,52 @@
 
 ## Supported Versions
 
-We release patches for security vulnerabilities for the following versions:
+Juleson is pre-1.0. Security fixes are handled on `main` unless a maintained release branch exists.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+## Report A Vulnerability
 
-## Reporting a Vulnerability
+Do not open a public issue for vulnerabilities.
 
-We take security seriously. If you discover a security vulnerability, please follow these steps:
+Email: <security@glpx.pro>
 
-### 1. **Do Not** Open a Public Issue
+Include:
 
-Please do not create a public GitHub issue for security vulnerabilities.
+- affected version or commit
+- description and impact
+- reproduction steps
+- relevant logs or proof of concept
+- suggested fix, if available
 
-### 2. Report Privately
+Expected response:
 
-Send an email to: **<security@glpx.pro>**
+- initial response within 48 hours
+- status update within 7 days
+- fix timeline based on severity and scope
 
-Include the following information:
+## Secrets
 
-- Description of the vulnerability
-- Steps to reproduce the issue
-- Potential impact
-- Suggested fix (if any)
-- Your contact information
+- Do not commit API keys, tokens, passwords, private keys, or local config containing credentials.
+- Prefer environment variables such as `JULES_API_KEY`, `GITHUB_TOKEN`, and `GEMINI_API_KEY`.
+- Keep local config files untracked.
+- Redact credentials in logs, issue reports, and screenshots.
 
-### 3. Response Timeline
-
-- **Initial Response**: Within 48 hours
-- **Status Update**: Within 7 days
-- **Fix Timeline**: Varies based on severity
-  - Critical: 1-3 days
-  - High: 1-2 weeks
-  - Medium: 2-4 weeks
-  - Low: Best effort
-
-### 4. Disclosure Policy
-
-- We will acknowledge receipt of your vulnerability report
-- We will investigate and validate the issue
-- We will develop a fix and coordinate disclosure
-- We will credit you for the discovery (unless you prefer to remain anonymous)
-
-## Security Best Practices
-
-### API Keys and Secrets
-
-- **Never** commit API keys, passwords, or secrets to the repository
-- Use environment variables for sensitive configuration
-- Use `configs/Juleson.example.yaml` as a template
-- Keep `configs/Juleson.yaml` in `.gitignore`
-
-### Configuration
+## Local Configuration
 
 ```bash
-# Set environment variables
-export JULES_API_KEY="your-api-key"
-
-# Or use configuration file
-cp configs/Juleson.example.yaml configs/Juleson.yaml
-# Edit configs/Juleson.yaml and add your API key
+export JULES_API_KEY="..."
+export GITHUB_TOKEN="..."
 ```
 
-### Running Securely
-
-- Keep dependencies up to date: `go get -u ./...`
-- Review code before executing templates
-- Use least privilege for file system operations
-- Validate input from external sources
-
-## Known Security Considerations
-
-### 1. Template Execution
-
-Templates execute operations on your file system. Review templates before executing:
+Optional config:
 
 ```bash
-# Review template before execution
-./bin/juleson template view modular-restructure
-
-# Execute with dry-run first
-./bin/juleson execute --template modular-restructure --project ./test --dry-run
+cp configs/juleson.example.yaml configs/juleson.yaml
 ```
 
-### 2. API Communications
+## Runtime Considerations
 
-All communications with Jules API use HTTPS. Ensure your system's CA certificates are up to date.
-
-### 3. File System Access
-
-The tool requires read/write access to your project directories. Be cautious
-when running on sensitive codebases.
-
-## Security Updates
-
-Security updates will be released as patch versions and announced via:
-
-- GitHub Security Advisories
-- Release notes
-- Email notifications (for reported vulnerabilities)
-
-## Scope
-
-This security policy applies to:
-
-- All code in the `Juleson` repository
-- Official binary releases
-- Docker images (if applicable)
-
-Out of scope:
-
-- Third-party integrations
-- User-created custom templates
-- Forked repositories
-
-## Bug Bounty
-
-We currently do not offer a bug bounty program, but we greatly appreciate responsible disclosure.
-
-## Recognition
-
-We maintain a [SECURITY_CONTRIBUTORS.md](SECURITY_CONTRIBUTORS.md) file to
-acknowledge security researchers who have helped improve the project's
-security.
-
----
-
-Thank you for helping keep Juleson and our users safe!
+- Review templates before executing them against a working tree.
+- Use least-privilege GitHub tokens.
+- Avoid `--auto-approve` unless unattended execution is acceptable.
+- Inspect patches before applying session changes.
+- Keep dependencies current and review security scan output in CI.
