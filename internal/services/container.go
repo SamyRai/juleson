@@ -8,6 +8,8 @@ import (
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/gemini"
+	"github.com/SamyRai/juleson/internal/orchestration"
+	"github.com/SamyRai/juleson/internal/orchestration/adapters"
 	"github.com/SamyRai/juleson/internal/templates"
 	"github.com/SamyRai/juleson/pkg/jules"
 )
@@ -15,13 +17,14 @@ import (
 // Container manages application dependencies and services
 // It follows the Dependency Injection pattern for lazy initialization
 type Container struct {
-	config           *config.Config
-	julesClient      *jules.Client
-	geminiClient     *gemini.Client
-	templateManager  *templates.Manager
-	automationEngine *automation.Engine
-	logger           *slog.Logger
-	mu               sync.RWMutex
+	config               *config.Config
+	julesClient          *jules.Client
+	geminiClient         *gemini.Client
+	templateManager      *templates.Manager
+	automationEngine     *automation.Engine
+	orchestrationRuntime *orchestration.Runtime
+	logger               *slog.Logger
+	mu                   sync.RWMutex
 }
 
 // NewContainer creates a new service container
@@ -139,6 +142,36 @@ func (c *Container) AutomationEngine() (*automation.Engine, error) {
 	}
 
 	return c.automationEngine, nil
+}
+
+// OrchestrationRuntime returns the extraction-ready orchestration runtime.
+func (c *Container) OrchestrationRuntime() (*orchestration.Runtime, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.orchestrationRuntime == nil {
+		templateManager, err := c.templateManagerLocked()
+		if err != nil {
+			return nil, err
+		}
+
+		sessionGateway := adapters.NewJulesSessionGateway(c.julesClientLocked())
+		sourceMatcher := adapters.NewSourceMatcherAdapter()
+		c.orchestrationRuntime = orchestration.NewRuntime(orchestration.RuntimeDeps{
+			ProjectAnalyzer: adapters.NewAnalyzerAdapter(nil),
+			Planner:         adapters.NewGeminiPlanner(c.geminiClientLocked()),
+			DecisionMaker:   adapters.NewGeminiDecisionMaker(c.geminiClientLocked()),
+			TaskExecutor:    adapters.NewJulesTaskExecutor(sessionGateway, sourceMatcher),
+			SessionGateway:  sessionGateway,
+			TemplateStore:   adapters.NewTemplateStoreAdapter(templateManager),
+			PromptRenderer:  adapters.NewPromptRendererAdapter(),
+			SourceMatcher:   sourceMatcher,
+			ProgressSink:    adapters.NoopProgressSink{},
+			Clock:           adapters.SystemClock{},
+		})
+	}
+
+	return c.orchestrationRuntime, nil
 }
 
 // Config returns the application configuration

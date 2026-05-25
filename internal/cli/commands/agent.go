@@ -3,17 +3,12 @@ package commands
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/agent"
-	"github.com/SamyRai/juleson/internal/agent/core"
-	"github.com/SamyRai/juleson/internal/agent/review"
-	"github.com/SamyRai/juleson/internal/agent/tools"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/juleson/internal/orchestration/domain"
+	"github.com/SamyRai/juleson/internal/services"
 	"github.com/spf13/cobra"
 )
 
@@ -76,90 +71,33 @@ Examples:
 			goalDescription := args[0]
 
 			// Validate priority
-			var goalPriority agent.Priority
+			var goalPriority domain.Priority
 			switch priority {
 			case "CRITICAL", "critical":
-				goalPriority = agent.PriorityCritical
+				goalPriority = domain.PriorityCritical
 			case "HIGH", "high":
-				goalPriority = agent.PriorityHigh
+				goalPriority = domain.PriorityHigh
 			case "MEDIUM", "medium":
-				goalPriority = agent.PriorityMedium
+				goalPriority = domain.PriorityMedium
 			case "LOW", "low":
-				goalPriority = agent.PriorityLow
+				goalPriority = domain.PriorityLow
 			default:
-				goalPriority = agent.PriorityMedium
+				goalPriority = domain.PriorityMedium
 			}
 
-			// Validate strictness
-			var reviewStrictness review.Strictness
-			switch strictness {
-			case "high":
-				reviewStrictness = review.StrictnessHigh
-			case "medium":
-				reviewStrictness = review.StrictnessMedium
-			case "low":
-				reviewStrictness = review.StrictnessLow
-			default:
-				reviewStrictness = review.StrictnessMedium
+			container := services.NewContainer(cfg)
+			runtime, err := container.OrchestrationRuntime()
+			if err != nil {
+				return fmt.Errorf("failed to create orchestration runtime: %w", err)
 			}
-
-			// Create logger
-			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-				Level: slog.LevelInfo,
-			}))
-
-			// Create tool registry
-			registry := tools.NewToolRegistry()
-
-			// Register Jules tool
-			julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
-
-			julesTool := tools.NewJulesTool(julesClient, &tools.JulesToolConfig{
-				RequireApproval: !dryRun,
-				AutoApprove:     false,
-				MaxRetries:      3,
-				Timeout:         10 * time.Minute,
-			})
-
-			if err := registry.Register(julesTool); err != nil {
-				return fmt.Errorf("failed to register Jules tool: %w", err)
-			}
-
-			// Register analyzer tool
-			analyzerTool := tools.NewAnalyzerTool()
-			if err := registry.Register(analyzerTool); err != nil {
-				return fmt.Errorf("failed to register analyzer tool: %w", err)
-			}
-
-			// Register Docker tool
-			dockerTool := tools.NewDockerTool()
-			if err := registry.Register(dockerTool); err != nil {
-				return fmt.Errorf("failed to register Docker tool: %w", err)
-			}
-
-			// Create agent
-			agentConfig := &core.Config{
-				MaxIterations: maxIters,
-				DryRun:        dryRun,
-				ReviewConfig: &review.Config{
-					Strictness:       reviewStrictness,
-					MinTestCoverage:  0.8,
-					SecurityScan:     true,
-					PerformanceCheck: true,
-					StyleCheck:       true,
-				},
-				Logger: logger,
-			}
-
-			agentInstance := core.NewAgent(registry, agentConfig)
 
 			// Create goal
-			goal := agent.Goal{
+			goal := domain.Goal{
 				ID:          fmt.Sprintf("goal-%d", time.Now().Unix()),
 				Description: goalDescription,
 				Constraints: constraints,
 				Priority:    goalPriority,
-				Context: agent.GoalContext{
+				Context: domain.GoalContext{
 					SourceID: sourceID,
 				},
 			}
@@ -170,11 +108,13 @@ Examples:
 			fmt.Printf("Priority: %s\n", priority)
 			if dryRun {
 				fmt.Printf("Mode: DRY RUN (no changes will be applied)\n")
+				fmt.Printf("\nDry run stops before orchestration side effects.\n\n")
+				return nil
 			}
 			fmt.Printf("\n")
 
 			ctx := context.Background()
-			result, err := agentInstance.Execute(ctx, goal)
+			result, err := runtime.AgentRunner().Run(ctx, goal)
 
 			// Display results
 			separator := strings.Repeat("=", 60)
@@ -205,12 +145,11 @@ Examples:
 					if !task.Success {
 						status = "❌"
 					}
-					fmt.Printf("  %s %d. %s (%s)\n", status, i+1, task.Name, task.Tool)
-					if task.ReviewResult != nil {
-						fmt.Printf("     Review: %s (Score: %.1f/100)\n",
-							task.ReviewResult.Decision, task.ReviewResult.Score)
-						if len(task.ReviewResult.Comments) > 0 {
-							fmt.Printf("     Comments: %d\n", len(task.ReviewResult.Comments))
+					fmt.Printf("  %s %d. %s (%s)\n", status, i+1, task.TaskName, task.Tool)
+					if task.Review != nil {
+						fmt.Printf("     Review: %.1f/100\n", task.Review.Score)
+						if len(task.Review.Diagnostics) > 0 {
+							fmt.Printf("     Comments: %d\n", len(task.Review.Diagnostics))
 						}
 					}
 				}
@@ -219,7 +158,7 @@ Examples:
 			if len(result.Learnings) > 0 {
 				fmt.Printf("\n📚 Learnings:\n")
 				for _, learning := range result.Learnings {
-					fmt.Printf("  • %s (confidence: %.1f)\n", learning.Lesson, learning.Confidence)
+					fmt.Printf("  • %s\n", learning)
 				}
 			}
 

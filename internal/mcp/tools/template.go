@@ -69,17 +69,17 @@ func executeTemplate(ctx context.Context, req *mcp.CallToolRequest, input Execut
 	ExecuteTemplateOutput,
 	error,
 ) {
-	engine, err := container.AutomationEngine()
+	runtime, err := container.OrchestrationRuntime()
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize automation engine: %v", err)},
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize orchestration runtime: %v", err)},
 			},
 		}, ExecuteTemplateOutput{}, err
 	}
 
-	result, err := engine.ExecuteTemplate(ctx, input.TemplateName, input.CustomParams)
+	result, outputFiles, err := runtime.TemplateRunner().Run(ctx, input.TemplateName, input.ProjectPath, input.CustomParams)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
@@ -90,13 +90,13 @@ func executeTemplate(ctx context.Context, req *mcp.CallToolRequest, input Execut
 	}
 
 	output := ExecuteTemplateOutput{
-		TemplateName:    result.TemplateName,
-		ProjectPath:     result.ProjectPath,
+		TemplateName:    input.TemplateName,
+		ProjectPath:     input.ProjectPath,
 		Duration:        result.Duration.String(),
 		Success:         result.Success,
-		TasksExecuted:   len(result.TasksExecuted),
-		OutputFiles:     result.OutputFiles,
-		Recommendations: result.Recommendations,
+		TasksExecuted:   len(result.Tasks),
+		OutputFiles:     outputFiles,
+		Recommendations: result.Learnings,
 	}
 
 	return nil, output, nil

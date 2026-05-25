@@ -8,10 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/gemini"
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/juleson/internal/orchestration/domain"
+	"github.com/SamyRai/juleson/internal/services"
 	"github.com/spf13/cobra"
 )
 
@@ -67,48 +66,24 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			goal := args[0]
 
-			// Setup Jules client
-			julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(3))
-
-			// Setup Gemini client
-			geminiConfig := &gemini.Config{
-				APIKey:  geminiKey,
-				Backend: "gemini-api",
-				Model:   geminiModel,
-				Timeout: 30 * time.Second,
+			if geminiKey == "" {
+				geminiKey = os.Getenv("GEMINI_API_KEY")
 			}
 			if geminiKey == "" {
-				geminiConfig.APIKey = os.Getenv("GEMINI_API_KEY")
-			}
-			if geminiConfig.APIKey == "" {
 				return fmt.Errorf("Gemini API key required. Set --gemini-key or GEMINI_API_KEY environment variable")
 			}
+			cfg.Gemini.APIKey = geminiKey
+			cfg.Gemini.Backend = "gemini-api"
+			cfg.Gemini.Model = geminiModel
+			cfg.Gemini.Timeout = 30 * time.Second
+			cfg.Jules.Timeout = 30 * time.Second
+			cfg.Jules.RetryAttempts = 3
 
-			geminiClient, err := gemini.NewClient(geminiConfig)
+			container := services.NewContainer(cfg)
+			runtime, err := container.OrchestrationRuntime()
 			if err != nil {
-				return fmt.Errorf("failed to create Gemini client: %w", err)
+				return fmt.Errorf("failed to create orchestration runtime: %w", err)
 			}
-			defer geminiClient.Close()
-
-			// Create AI orchestrator
-			orchestratorConfig := &automation.AIOrchestrationConfig{
-				MaxIterations: maxIters,
-				CheckInterval: 15 * time.Second,
-				AllowedTools: []string{
-					"execute_template",
-					"run_tests",
-					"apply_patches",
-					"create_issue",
-				},
-				AutoApprove:    autoApprove,
-				MaxSessionTime: 4 * time.Hour,
-			}
-
-			orchestrator := automation.NewAIOrchestrator(
-				julesClient,
-				geminiClient,
-				orchestratorConfig,
-			)
 
 			// Setup context with cancellation
 			ctx, cancel := context.WithCancel(context.Background())
@@ -120,34 +95,7 @@ Examples:
 			go func() {
 				<-sigChan
 				fmt.Println("\n\n⚠️  Stopping AI orchestration...")
-				orchestrator.Stop()
 				cancel()
-			}()
-
-			// Monitor progress in a goroutine
-			go func() {
-				for progress := range orchestrator.ProgressChannel() {
-					fmt.Printf("\n🤖 AI: %s\n", progress.Message)
-					if len(progress.NextSteps) > 0 {
-						fmt.Println("   Next steps:")
-						for _, step := range progress.NextSteps {
-							fmt.Printf("   - %s\n", step)
-						}
-					}
-					fmt.Printf("   Progress: %.0f%% | Phase: %s\n", progress.Progress, progress.Phase)
-				}
-			}()
-
-			// Monitor AI decisions
-			go func() {
-				for decision := range orchestrator.DecisionChannel() {
-					fmt.Printf("\n🧠 AI Decision: %s\n", decision.DecisionType)
-					fmt.Printf("   Reasoning: %s\n", decision.Reasoning)
-					fmt.Printf("   Confidence: %.0f%%\n", decision.Confidence*100)
-					if decision.Action != "" {
-						fmt.Printf("   Action: %s\n", decision.Action)
-					}
-				}
 			}()
 
 			// Print header
@@ -164,8 +112,18 @@ Examples:
 			}
 			fmt.Println("\n🤖 AI is analyzing your project and creating a plan...")
 			fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-			fmt.Println() // Execute AI orchestration
-			err = orchestrator.Execute(ctx, sourceID, goal, projectPath, constraints)
+			fmt.Println()
+
+			result, err := runtime.AIWorkflowRunner().Run(ctx, domain.Goal{
+				ID:          fmt.Sprintf("ai-goal-%d", time.Now().Unix()),
+				Description: goal,
+				Constraints: constraints,
+				Context: domain.GoalContext{
+					SourceID:    sourceID,
+					ProjectPath: projectPath,
+				},
+				Priority: domain.PriorityMedium,
+			})
 			if err != nil {
 				fmt.Printf("\n❌ AI orchestration failed: %v\n", err)
 				return err
@@ -174,10 +132,12 @@ Examples:
 			// Print summary
 			fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 			fmt.Println("✅ AI Orchestration Complete!")
-			fmt.Printf("📊 Session ID: %s\n", orchestrator.GetSessionID())
-			fmt.Printf("📝 AI made %d decisions during execution\n", len(orchestrator.GetDecisionHistory()))
-			fmt.Println("\nTo view full details:")
-			fmt.Printf("  juleson sessions show %s\n", orchestrator.GetSessionID())
+			fmt.Printf("📝 Tasks completed: %d\n", len(result.Tasks))
+			for _, task := range result.Tasks {
+				if task.SessionID != "" {
+					fmt.Printf("📊 Session ID: %s\n", task.SessionID)
+				}
+			}
 
 			return nil
 		},

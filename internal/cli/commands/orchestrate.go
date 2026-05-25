@@ -7,7 +7,8 @@ import (
 
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/pkg/jules"
+	"github.com/SamyRai/juleson/internal/orchestration/domain"
+	"github.com/SamyRai/juleson/internal/services"
 
 	"github.com/spf13/cobra"
 )
@@ -146,9 +147,6 @@ The workflow file should define phases and tasks:
 
 func runAPIModernizationWorkflow(cfg *config.Config, sourceID string, autoApprove bool) error {
 	ctx := context.Background()
-
-	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	// Define API Modernization workflow
 	workflow := &automation.WorkflowDefinition{
@@ -307,43 +305,17 @@ Make the system observable and debuggable.`,
 		},
 	}
 
-	// Create orchestrator
-	orchestratorConfig := &automation.OrchestratorConfig{
-		AutoApprove:     autoApprove,
-		CheckInterval:   10 * time.Second,
-		MaxSessionAge:   4 * time.Hour,
-		RetryAttempts:   3,
-		ContinueOnError: false,
-		SaveState:       true,
-	}
-
-	orchestrator := automation.NewSessionOrchestrator(julesClient, workflow, orchestratorConfig)
-
-	// Start monitoring progress in a goroutine
-	go monitorProgress(orchestrator)
-
 	// Start workflow
 	fmt.Println("🚀 Starting API Modernization Workflow")
 	fmt.Println("======================================")
 	fmt.Printf("Source: %s\n", sourceID)
 	fmt.Printf("Auto-approve: %v\n\n", autoApprove)
 
-	err := orchestrator.Start(ctx, sourceID)
-	if err != nil {
-		return fmt.Errorf("workflow failed: %w", err)
-	}
-
-	// Display execution summary
-	displayExecutionSummary(orchestrator)
-
-	return nil
+	return runDomainWorkflow(ctx, cfg, sourceID, autoApprove, workflow)
 }
 
 func runMicroservicesMigrationWorkflow(cfg *config.Config, sourceID string, autoApprove bool) error {
 	ctx := context.Background()
-
-	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	// Define Microservices Migration workflow
 	workflow := &automation.WorkflowDefinition{
@@ -454,25 +426,82 @@ Ensure data integrity throughout the migration.`,
 		},
 	}
 
-	// Create and run orchestrator
-	orchestratorConfig := automation.DefaultOrchestratorConfig()
-	orchestratorConfig.AutoApprove = autoApprove
-
-	orchestrator := automation.NewSessionOrchestrator(julesClient, workflow, orchestratorConfig)
-
-	go monitorProgress(orchestrator)
-
 	fmt.Println("🚀 Starting Microservices Migration Workflow")
 	fmt.Println("============================================")
 	fmt.Printf("Source: %s\n\n", sourceID)
 
-	err := orchestrator.Start(ctx, sourceID)
+	return runDomainWorkflow(ctx, cfg, sourceID, autoApprove, workflow)
+}
+
+func runDomainWorkflow(ctx context.Context, cfg *config.Config, sourceID string, autoApprove bool, workflow *automation.WorkflowDefinition) error {
+	container := services.NewContainer(cfg)
+	runtime, err := container.OrchestrationRuntime()
+	if err != nil {
+		return err
+	}
+	domainWorkflow := workflowToDomain(workflow)
+	execution := domain.ExecutionContext{
+		Goal: domain.Goal{
+			ID:          workflow.Name,
+			Description: workflow.Description,
+			Context: domain.GoalContext{
+				SourceID: sourceID,
+			},
+		},
+		ApprovalPolicy: domain.ApprovalPolicy{AutoApprove: autoApprove},
+	}
+	result, err := runtime.SessionWorkflowRunner().Run(ctx, domainWorkflow, execution)
 	if err != nil {
 		return fmt.Errorf("workflow failed: %w", err)
 	}
 
-	displayExecutionSummary(orchestrator)
+	fmt.Println("\n📋 Execution Summary")
+	fmt.Println("===================")
+	fmt.Printf("Session ID: %s\n", result.SessionID)
+	fmt.Printf("Phases: %d\n", result.TotalPhases)
+	fmt.Printf("Total duration: %v\n", result.TotalDuration)
+	for i, phase := range result.PhaseResults {
+		status := "✅"
+		if !phase.Success {
+			status = "❌"
+		}
+		fmt.Printf("  %d. %s %s (%v)\n", i+1, status, phase.PhaseName, phase.Duration)
+	}
 	return nil
+}
+
+func workflowToDomain(workflow *automation.WorkflowDefinition) domain.Workflow {
+	phases := make([]domain.Phase, 0, len(workflow.Phases))
+	for _, phase := range workflow.Phases {
+		tasks := make([]domain.Task, 0, len(phase.Tasks))
+		for _, task := range phase.Tasks {
+			tasks = append(tasks, domain.Task{
+				ID:               task.Name,
+				Name:             task.Name,
+				Description:      task.Description,
+				Prompt:           task.Prompt,
+				RequiresApproval: task.WaitForPlan,
+				Retry:            task.Retry,
+				Timeout:          task.Timeout,
+			})
+		}
+		phases = append(phases, domain.Phase{
+			ID:              phase.Name,
+			Name:            phase.Name,
+			Description:     phase.Description,
+			Tasks:           tasks,
+			Parallel:        phase.Parallel,
+			ContinueOnError: phase.ContinueOnError,
+			Timeout:         phase.Timeout,
+			Prerequisites:   phase.Prerequisites,
+		})
+	}
+	return domain.Workflow{
+		Name:        workflow.Name,
+		Description: workflow.Description,
+		Phases:      phases,
+		MaxDuration: workflow.MaxDuration,
+	}
 }
 
 func monitorProgress(orchestrator *automation.SessionOrchestrator) {

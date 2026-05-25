@@ -57,3 +57,17 @@ juleson dev release
 - Do not add `os/exec`, `exec.Command*`, or `internal/build` imports to dev/build/Docker adapters.
 - Return errors with enough command context for callers to display useful messages.
 - Avoid adding one-off shell command paths outside the orchestrator for existing responsibilities.
+
+## Agent Orchestration Boundary
+
+Agent and automation workflows are separate from build/dev/Docker orchestration.
+Their extraction unit is `internal/orchestration`:
+
+- `domain` owns pure orchestration concepts.
+- `ports` owns interfaces consumed by orchestration.
+- `app` owns state machines, scheduling, progress, and decision routing.
+- `adapters` owns Jules, Gemini, analyzer, template, tool, checkpoint, memory, and other concrete systems.
+
+`internal/services.Container` builds the runtime through
+`orchestration.NewRuntime`. New CLI and MCP orchestration paths should use that
+runtime rather than directly constructing legacy agent or automation internals.
