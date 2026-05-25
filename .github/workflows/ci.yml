@@ -123,6 +123,8 @@ jobs:
         run: go mod download
 
       - name: Run tests with race detection
+        env:
+          CGO_ENABLED: 1
         run: go test -v -race -timeout=10m -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Run tests with -short flag
