@@ -1,0 +1,23 @@
+glob_matcher: doublestar
+
+pre-commit:
+  parallel: true
+  commands:
+    gofmt:
+      glob: "**/*.go"
+      run: test -z "$(gofmt -s -l {staged_files})"
+    go-mod-tidy:
+      glob:
+        - "**/*.go"
+        - "go.mod"
+        - "go.sum"
+      run: go mod tidy && git diff --exit-code go.mod go.sum
+    go-vet:
+      glob: "**/*.go"
+      run: go vet ./...
+
+pre-push:
+  commands:
+    test:
+      files: git ls-files
+      run: go test ./...

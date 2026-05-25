@@ -100,6 +100,16 @@ type TemplatesConfig struct {
 
 // Load loads configuration from file and environment variables
 func Load() (*Config, error) {
+	return load(true)
+}
+
+// LoadOptional loads configuration without requiring a Jules API key.
+// Commands that need Jules API access should still validate credentials before use.
+func LoadOptional() (*Config, error) {
+	return load(false)
+}
+
+func load(requireJulesAPIKey bool) (*Config, error) {
 	// Load .env file from multiple possible locations
 	loadEnvFiles()
 
@@ -134,7 +144,7 @@ func Load() (*Config, error) {
 	config.Templates.BuiltinPath = os.ExpandEnv(config.Templates.BuiltinPath)
 
 	// Validate configuration
-	if err := validate(&config); err != nil {
+	if err := validate(&config, requireJulesAPIKey); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
@@ -200,12 +210,12 @@ func setDefaults() {
 }
 
 // validate validates the configuration
-func validate(config *Config) error {
+func validate(config *Config, requireJulesAPIKey bool) error {
 	if config.Jules.APIKey == "" {
 		// Try to get from environment variable as fallback
 		if apiKey := os.Getenv("JULES_API_KEY"); apiKey != "" {
 			config.Jules.APIKey = apiKey
-		} else {
+		} else if requireJulesAPIKey {
 			return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
 		}
 	}

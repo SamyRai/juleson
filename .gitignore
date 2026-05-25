@@ -73,7 +73,7 @@ logs/
 
 # Build artifacts
 dist/
-build/
+/build/
 
 # Coverage reports
 coverage.txt
@@ -104,6 +104,7 @@ tmp/
 # Fortran module files
 *.mod
 *.smod
+!go.mod
 
 # Compiled Static libraries
 *.lai

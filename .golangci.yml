@@ -1,71 +1,56 @@
+version: "2"
 run:
-  timeout: 5m
-  tests: true
   modules-download-mode: readonly
-
+  tests: true
 linters:
   enable:
-    - errcheck # Check for unchecked errors
-    - staticcheck # Advanced Go linter (includes gosimple)
-    - govet # Reports suspicious constructs
-    - ineffassign # Detect ineffectual assignments
-    - unused # Check for unused constants, variables, functions and types
-    - misspell # Finds commonly misspelled English words
-    - gocritic # Highly extensible Go linter
-    - godot # Check if comments end with a period
-    - gocyclo # Compute cyclomatic complexities
-    - dupl # Code clone detection
-    - gosec # Security checker
-    - unconvert # Remove unnecessary type conversions
-
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  govet:
-    enable-all: true
-    disable:
-      - shadow
-  gocyclo:
-    min-complexity: 15
-  dupl:
-    threshold: 100
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-  misspell:
-    locale: US
-  gosec:
-    sarif: true
-
+    - dupl
+    - gocritic
+    - gocyclo
+    - godot
+    - gosec
+    - misspell
+    - unconvert
+  settings:
+    dupl:
+      threshold: 100
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    govet:
+      disable:
+        - shadow
+      enable-all: true
+    misspell:
+      locale: US
   exclusions:
-    rules:
-      # Exclude some linters from running on tests files
-      - path: _test\.go
-        linters:
-          - gocyclo
-          - errcheck
-          - dupl
-          - gosec
-
-      # Exclude TODO/FIXME comments from godot
-      - linters:
-          - godot
-        text: "^\\s*// (TODO|FIXME)"
-
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   new: false
-
-output:
-  formats:
-    - text:
-        path: stdout
-        print-linter-name: true
-        print-issued-lines: true
-        colors: true
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
