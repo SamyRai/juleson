@@ -10,13 +10,31 @@ import (
 	"strings"
 )
 
-// CodeQualityAnalyzer analyzes code quality metrics
-type CodeQualityAnalyzer struct{}
+// CodeQualityAnalyzer orchestrates code quality analysis.
+type CodeQualityAnalyzer struct {
+	coverage   *coverageAnalyzer
+	complexity *complexityAnalyzer
+	security   *securityAnalyzer
+	smells     *smellAnalyzer
+	scorer     *maintainabilityScorer
+}
 
 // NewCodeQualityAnalyzer creates a new code quality analyzer
 func NewCodeQualityAnalyzer() *CodeQualityAnalyzer {
-	return &CodeQualityAnalyzer{}
+	return &CodeQualityAnalyzer{
+		coverage:   &coverageAnalyzer{},
+		complexity: &complexityAnalyzer{},
+		security:   &securityAnalyzer{},
+		smells:     &smellAnalyzer{},
+		scorer:     &maintainabilityScorer{},
+	}
 }
+
+type coverageAnalyzer struct{}
+type complexityAnalyzer struct{}
+type securityAnalyzer struct{}
+type smellAnalyzer struct{}
+type maintainabilityScorer struct{}
 
 // CodeQualityMetrics represents various code quality metrics
 type CodeQualityMetrics struct {
@@ -72,33 +90,33 @@ func (c *CodeQualityAnalyzer) Analyze(projectPath string, languages []string) (*
 	}
 
 	// Analyze test coverage
-	if coverage, err := c.analyzeTestCoverage(projectPath, languages); err == nil {
+	if coverage, err := c.coverage.analyzeTestCoverage(projectPath, languages); err == nil {
 		metrics.TestCoverage = coverage
 	}
 
 	// Analyze code complexity
-	if complexity, err := c.analyzeCodeComplexity(projectPath, languages); err == nil {
+	if complexity, err := c.complexity.analyzeCodeComplexity(projectPath, languages); err == nil {
 		metrics.CodeComplexity = complexity
 	}
 
 	// Analyze security issues
-	if issues, err := c.analyzeSecurityIssues(projectPath, languages); err == nil {
+	if issues, err := c.security.analyzeSecurityIssues(projectPath, languages); err == nil {
 		metrics.SecurityIssues = issues
 	}
 
 	// Analyze code smells
-	if smells, err := c.analyzeCodeSmells(projectPath, languages); err == nil {
+	if smells, err := c.smells.analyzeCodeSmells(projectPath, languages); err == nil {
 		metrics.CodeSmells = smells
 	}
 
 	// Calculate maintainability index
-	metrics.Maintainability = c.calculateMaintainabilityIndex(metrics)
+	metrics.Maintainability = c.scorer.calculateMaintainabilityIndex(metrics)
 
 	return metrics, nil
 }
 
 // analyzeTestCoverage analyzes test coverage for supported languages
-func (c *CodeQualityAnalyzer) analyzeTestCoverage(projectPath string, languages []string) (float64, error) {
+func (c *coverageAnalyzer) analyzeTestCoverage(projectPath string, languages []string) (float64, error) {
 	for _, lang := range languages {
 		switch lang {
 		case "go":
@@ -117,7 +135,7 @@ func (c *CodeQualityAnalyzer) analyzeTestCoverage(projectPath string, languages 
 }
 
 // analyzeGoTestCoverage analyzes Go test coverage
-func (c *CodeQualityAnalyzer) analyzeGoTestCoverage(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) analyzeGoTestCoverage(projectPath string) (float64, error) {
 	// Run go test with coverage
 	cmd := exec.Command("go", "test", "-coverprofile=coverage.out", "./...")
 	cmd.Dir = projectPath
@@ -193,7 +211,7 @@ func (c *CodeQualityAnalyzer) analyzeGoTestCoverage(projectPath string) (float64
 }
 
 // analyzePythonTestCoverage analyzes Python test coverage
-func (c *CodeQualityAnalyzer) analyzePythonTestCoverage(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) analyzePythonTestCoverage(projectPath string) (float64, error) {
 	// Check if coverage is available
 	if _, err := exec.LookPath("coverage"); err != nil {
 		return 0.0, fmt.Errorf("coverage tool not found")
@@ -230,7 +248,7 @@ func (c *CodeQualityAnalyzer) analyzePythonTestCoverage(projectPath string) (flo
 }
 
 // analyzeJavaScriptTestCoverage analyzes JavaScript/TypeScript test coverage
-func (c *CodeQualityAnalyzer) analyzeJavaScriptTestCoverage(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) analyzeJavaScriptTestCoverage(projectPath string) (float64, error) {
 	// Check for various test runners
 	if c.hasPackageScript(projectPath, "test:coverage") {
 		cmd := exec.Command("npm", "run", "test:coverage")
@@ -255,7 +273,7 @@ func (c *CodeQualityAnalyzer) analyzeJavaScriptTestCoverage(projectPath string) 
 }
 
 // analyzeJavaTestCoverage analyzes Java test coverage
-func (c *CodeQualityAnalyzer) analyzeJavaTestCoverage(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) analyzeJavaTestCoverage(projectPath string) (float64, error) {
 	// Check for JaCoCo or similar
 	if _, err := exec.LookPath("mvn"); err == nil {
 		cmd := exec.Command("mvn", "test", "jacoco:report")
@@ -270,7 +288,7 @@ func (c *CodeQualityAnalyzer) analyzeJavaTestCoverage(projectPath string) (float
 }
 
 // analyzeCSharpTestCoverage analyzes C# test coverage
-func (c *CodeQualityAnalyzer) analyzeCSharpTestCoverage(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) analyzeCSharpTestCoverage(projectPath string) (float64, error) {
 	if _, err := exec.LookPath("dotnet"); err == nil {
 		cmd := exec.Command("dotnet", "test", "--collect:\"XPlat Code Coverage\"")
 		cmd.Dir = projectPath
@@ -284,7 +302,7 @@ func (c *CodeQualityAnalyzer) analyzeCSharpTestCoverage(projectPath string) (flo
 }
 
 // analyzeCodeComplexity analyzes code complexity
-func (c *CodeQualityAnalyzer) analyzeCodeComplexity(projectPath string, languages []string) (float64, error) {
+func (c *complexityAnalyzer) analyzeCodeComplexity(projectPath string, languages []string) (float64, error) {
 	totalComplexity := 0.0
 	fileCount := 0
 
@@ -315,7 +333,7 @@ func (c *CodeQualityAnalyzer) analyzeCodeComplexity(projectPath string, language
 }
 
 // analyzeGoComplexity analyzes Go code complexity
-func (c *CodeQualityAnalyzer) analyzeGoComplexity(projectPath string) (float64, int, error) {
+func (c *complexityAnalyzer) analyzeGoComplexity(projectPath string) (float64, int, error) {
 	if _, err := exec.LookPath("gocyclo"); err != nil {
 		return 0.0, 0, fmt.Errorf("gocyclo not found")
 	}
@@ -351,7 +369,7 @@ func (c *CodeQualityAnalyzer) analyzeGoComplexity(projectPath string) (float64, 
 }
 
 // analyzePythonComplexity analyzes Python code complexity
-func (c *CodeQualityAnalyzer) analyzePythonComplexity(projectPath string) (float64, int, error) {
+func (c *complexityAnalyzer) analyzePythonComplexity(projectPath string) (float64, int, error) {
 	// Use radon for complexity analysis
 	if _, err := exec.LookPath("radon"); err != nil {
 		return 0.0, 0, fmt.Errorf("radon not found")
@@ -369,7 +387,7 @@ func (c *CodeQualityAnalyzer) analyzePythonComplexity(projectPath string) (float
 }
 
 // analyzeJavaScriptComplexity analyzes JavaScript/TypeScript complexity
-func (c *CodeQualityAnalyzer) analyzeJavaScriptComplexity(projectPath string) (float64, int, error) {
+func (c *complexityAnalyzer) analyzeJavaScriptComplexity(projectPath string) (float64, int, error) {
 	// Use eslint complexity plugin or similar
 	if _, err := exec.LookPath("npx"); err != nil {
 		return 0.0, 0, fmt.Errorf("npx not found")
@@ -387,7 +405,7 @@ func (c *CodeQualityAnalyzer) analyzeJavaScriptComplexity(projectPath string) (f
 }
 
 // analyzeSecurityIssues analyzes security vulnerabilities
-func (c *CodeQualityAnalyzer) analyzeSecurityIssues(projectPath string, languages []string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) analyzeSecurityIssues(projectPath string, languages []string) ([]SecurityIssue, error) {
 	issues := make([]SecurityIssue, 0)
 
 	for _, lang := range languages {
@@ -411,11 +429,11 @@ func (c *CodeQualityAnalyzer) analyzeSecurityIssues(projectPath string, language
 }
 
 // analyzeJavaScriptSecurity analyzes JavaScript security issues
-func (c *CodeQualityAnalyzer) analyzeJavaScriptSecurity(projectPath string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) analyzeJavaScriptSecurity(projectPath string) ([]SecurityIssue, error) {
 	issues := make([]SecurityIssue, 0)
 
 	// Check for npm audit
-	if c.hasPackageJSON(projectPath) {
+	if hasPackageJSON(projectPath) {
 		cmd := exec.Command("npm", "audit", "--json")
 		cmd.Dir = projectPath
 		output, err := cmd.Output()
@@ -430,7 +448,7 @@ func (c *CodeQualityAnalyzer) analyzeJavaScriptSecurity(projectPath string) ([]S
 }
 
 // analyzePythonSecurity analyzes Python security issues
-func (c *CodeQualityAnalyzer) analyzePythonSecurity(projectPath string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) analyzePythonSecurity(projectPath string) ([]SecurityIssue, error) {
 	issues := make([]SecurityIssue, 0)
 
 	// Check for safety
@@ -449,7 +467,7 @@ func (c *CodeQualityAnalyzer) analyzePythonSecurity(projectPath string) ([]Secur
 }
 
 // analyzeGoSecurity analyzes Go security issues
-func (c *CodeQualityAnalyzer) analyzeGoSecurity(projectPath string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) analyzeGoSecurity(projectPath string) ([]SecurityIssue, error) {
 	issues := make([]SecurityIssue, 0)
 
 	// Use gosec if available
@@ -468,7 +486,7 @@ func (c *CodeQualityAnalyzer) analyzeGoSecurity(projectPath string) ([]SecurityI
 }
 
 // analyzeCodeSmells analyzes code quality issues
-func (c *CodeQualityAnalyzer) analyzeCodeSmells(projectPath string, languages []string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) analyzeCodeSmells(projectPath string, languages []string) ([]CodeSmell, error) {
 	smells := make([]CodeSmell, 0)
 
 	for _, lang := range languages {
@@ -492,7 +510,7 @@ func (c *CodeQualityAnalyzer) analyzeCodeSmells(projectPath string, languages []
 }
 
 // analyzeGoCodeSmells analyzes Go code smells
-func (c *CodeQualityAnalyzer) analyzeGoCodeSmells(projectPath string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) analyzeGoCodeSmells(projectPath string) ([]CodeSmell, error) {
 	smells := make([]CodeSmell, 0)
 
 	// Use golint or revive
@@ -511,7 +529,7 @@ func (c *CodeQualityAnalyzer) analyzeGoCodeSmells(projectPath string) ([]CodeSme
 }
 
 // analyzePythonCodeSmells analyzes Python code smells
-func (c *CodeQualityAnalyzer) analyzePythonCodeSmells(projectPath string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) analyzePythonCodeSmells(projectPath string) ([]CodeSmell, error) {
 	smells := make([]CodeSmell, 0)
 
 	// Use pylint
@@ -530,11 +548,11 @@ func (c *CodeQualityAnalyzer) analyzePythonCodeSmells(projectPath string) ([]Cod
 }
 
 // analyzeJavaScriptCodeSmells analyzes JavaScript code smells
-func (c *CodeQualityAnalyzer) analyzeJavaScriptCodeSmells(projectPath string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) analyzeJavaScriptCodeSmells(projectPath string) ([]CodeSmell, error) {
 	smells := make([]CodeSmell, 0)
 
 	// Use eslint
-	if c.hasPackageJSON(projectPath) {
+	if hasPackageJSON(projectPath) {
 		cmd := exec.Command("npx", "eslint", ".", "--format", "json")
 		cmd.Dir = projectPath
 		output, err := cmd.Output()
@@ -549,7 +567,7 @@ func (c *CodeQualityAnalyzer) analyzeJavaScriptCodeSmells(projectPath string) ([
 }
 
 // calculateMaintainabilityIndex calculates the maintainability index
-func (c *CodeQualityAnalyzer) calculateMaintainabilityIndex(metrics *CodeQualityMetrics) float64 {
+func (c *maintainabilityScorer) calculateMaintainabilityIndex(metrics *CodeQualityMetrics) float64 {
 	// Simplified maintainability index calculation
 	// Higher is better (0-100)
 	baseScore := 100.0
@@ -582,72 +600,72 @@ func (c *CodeQualityAnalyzer) calculateMaintainabilityIndex(metrics *CodeQuality
 }
 
 // Helper methods for parsing outputs
-func (c *CodeQualityAnalyzer) hasPackageJSON(projectPath string) bool {
+func hasPackageJSON(projectPath string) bool {
 	_, err := os.Stat(filepath.Join(projectPath, "package.json"))
 	return err == nil
 }
 
-func (c *CodeQualityAnalyzer) hasPackageScript(projectPath, script string) bool {
+func (c *coverageAnalyzer) hasPackageScript(projectPath, script string) bool {
 	// Simplified check - in production, parse package.json
 	return true // Assume it exists for now
 }
 
-func (c *CodeQualityAnalyzer) parseJestCoverageOutput(output string) (float64, error) {
+func (c *coverageAnalyzer) parseJestCoverageOutput(output string) (float64, error) {
 	// Parse Jest coverage output
 	return 0.0, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseNYCCoverageOutput(output string) (float64, error) {
+func (c *coverageAnalyzer) parseNYCCoverageOutput(output string) (float64, error) {
 	// Parse NYC coverage output
 	return 0.0, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseJaCoCoReport(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) parseJaCoCoReport(projectPath string) (float64, error) {
 	// Parse JaCoCo XML report
 	return 0.0, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseDotNetCoverage(projectPath string) (float64, error) {
+func (c *coverageAnalyzer) parseDotNetCoverage(projectPath string) (float64, error) {
 	// Parse .NET coverage report
 	return 0.0, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseRadonComplexity(output string) (float64, int, error) {
+func (c *complexityAnalyzer) parseRadonComplexity(output string) (float64, int, error) {
 	// Parse radon complexity output
 	return 0.0, 0, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseESLintComplexity(output string) (float64, int, error) {
+func (c *complexityAnalyzer) parseESLintComplexity(output string) (float64, int, error) {
 	// Parse ESLint complexity output
 	return 0.0, 0, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseNPMAudit(output string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) parseNPMAudit(output string) ([]SecurityIssue, error) {
 	// Parse npm audit JSON output
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseSafetyOutput(output string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) parseSafetyOutput(output string) ([]SecurityIssue, error) {
 	// Parse safety JSON output
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseGosecOutput(output string) ([]SecurityIssue, error) {
+func (c *securityAnalyzer) parseGosecOutput(output string) ([]SecurityIssue, error) {
 	// Parse gosec JSON output
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseReviveOutput(output string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) parseReviveOutput(output string) ([]CodeSmell, error) {
 	// Parse revive JSON output
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parsePylintOutput(output string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) parsePylintOutput(output string) ([]CodeSmell, error) {
 	// Parse pylint JSON output
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (c *CodeQualityAnalyzer) parseESLintOutput(output string) ([]CodeSmell, error) {
+func (c *smellAnalyzer) parseESLintOutput(output string) ([]CodeSmell, error) {
 	// Parse ESLint JSON output
 	return nil, fmt.Errorf("not implemented")
 }
