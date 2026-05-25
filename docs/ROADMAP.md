@@ -12,6 +12,29 @@ known gaps without committing to release dates.
 - Expand unit coverage for `internal/github`, `internal/events`, and CLI command behavior.
 - Add a config validation command.
 
+## Next Jules Sprint Objective
+
+Implement `juleson config validate` as a low-risk operator safety command.
+The command should validate the effective Juleson configuration without printing
+secret values, report clear next steps for missing Jules, GitHub, or Gemini
+credentials, and distinguish hard validation failures from optional integration
+warnings.
+
+Acceptance criteria:
+
+- Add the command to the existing Cobra command tree without breaking current
+  `setup`, `sessions`, `sources`, or local `dev` commands.
+- Reuse the existing `internal/config` loading and validation behavior where
+  possible; keep validation ownership in the config package or a directly
+  adjacent CLI handler.
+- Never print API keys, tokens, or config file secret values.
+- Cover success, missing optional credentials, invalid MCP port, and invalid
+  automation concurrency with focused tests.
+- Update `docs/CLI_REFERENCE.md` and `docs/CONFIGURATION.md` with the new
+  command semantics.
+- Verify with `go test ./...`, `go run ./cmd/juleson config validate`, and
+  `go run ./cmd/juleson --help`.
+
 ## Next Sprint Track
 
 - Harden long-running Jules session tracking: status-change wakeups, Jules agent
