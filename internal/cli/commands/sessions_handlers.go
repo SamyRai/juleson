@@ -43,7 +43,7 @@ type ApplySessionOptions struct {
 // approveSessionPlan approves a plan in a session
 func approveSessionPlan(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -61,7 +61,7 @@ func approveSessionPlan(cfg *config.Config, sessionID string) error {
 }
 func createSession(cfg *config.Config, sourceID string, prompt string, options CreateSessionOptions) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 	if options.PromptFile != "" {
@@ -126,7 +126,7 @@ func createSession(cfg *config.Config, sourceID string, prompt string, options C
 	return nil
 }
 func deleteSession(cfg *config.Config, sessionID string, force bool) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	if !force {
 		fmt.Printf("Type the session ID to confirm deletion (%s): ", sessionID)
@@ -154,7 +154,7 @@ func normalizeSourceID(sourceID string) string {
 }
 func listSessions(cfg *config.Config) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	fmt.Println("🔍 Listing Jules sessions...")
 	fmt.Println("============================")
@@ -206,7 +206,7 @@ func listSessions(cfg *config.Config) error {
 // showSessionStatus shows a summary of session statuses
 func showSessionStatus(cfg *config.Config) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	fmt.Println("📊 Jules Session Status")
 	fmt.Println("=======================")
@@ -273,7 +273,7 @@ func showSessionStatus(cfg *config.Config) error {
 // getSessionDetails gets detailed information about a specific session
 func getSessionDetails(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -395,7 +395,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 // sendSessionMessage sends a message to a session
 func sendSessionMessage(cfg *config.Config, sessionID string, message string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -419,7 +419,7 @@ func sendSessionMessage(cfg *config.Config, sessionID string, message string) er
 }
 
 func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue string, followActivities bool, sinceValue, cursorOutput, initialState string, wakeOnStatusChange, wakeOnAgentMessage bool) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	interval, err := time.ParseDuration(intervalValue)
 	if err != nil {
@@ -626,7 +626,7 @@ func describeActivity(activity jules.Activity) string {
 }
 
 func applySessionChanges(cfg *config.Config, sessionID, projectPath string, options ApplySessionOptions) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ctx := context.Background()
 
 	dryRun := !options.Confirm
@@ -698,7 +698,7 @@ func printSessionChangesSummary(changes *julesops.SessionChanges) {
 }
 
 func listSessionArtifacts(cfg *config.Config, sessionID string) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	manifests, err := julesops.ListSessionArtifactManifests(context.Background(), julesClient, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to list session artifacts: %w", err)
@@ -743,7 +743,7 @@ func listSessionArtifacts(cfg *config.Config, sessionID string) error {
 }
 
 func showSessionOutputs(cfg *config.Config, sessionID string) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	session, err := julesClient.GetSession(context.Background(), sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
@@ -783,7 +783,7 @@ func batchCreateSessions(cfg *config.Config, sourceID, taskFileOrPrompt string, 
 		return err
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ctx := context.Background()
 	sourceName := normalizeSourceID(sourceID)
 	if options.BatchID == "" {
@@ -901,7 +901,7 @@ func truncate(value string, limit int) string {
 // downloadSessionArtifacts downloads all artifacts from all activities in a session
 func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -939,7 +939,7 @@ func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir st
 // downloadActivityArtifacts downloads all artifacts from a specific activity
 func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID string, outputDir string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -978,7 +978,7 @@ func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID 
 // previewSessionArtifacts previews all artifacts from all activities in a session
 func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -1021,7 +1021,7 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 // previewActivityArtifacts previews all artifacts from a specific activity
 func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 

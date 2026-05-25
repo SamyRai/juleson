@@ -61,7 +61,7 @@ Examples:
 
 // listSources lists all connected sources
 func listSources(cfg *config.Config, filter string) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -130,7 +130,7 @@ func listSources(cfg *config.Config, filter string) error {
 
 // getSource gets details for a specific source
 func getSource(cfg *config.Config, sourceID string) error {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 

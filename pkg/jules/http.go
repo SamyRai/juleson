@@ -7,10 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
+
+var sensitiveLogValuePattern = regexp.MustCompile(`(?i)((?:api[_-]?key|token|auth|secret|credential)[^=\s]*=)[^&\s"']+`)
 
 // doRequestWithJSON performs an HTTP request with JSON payload and response handling
 func (c *Client) doRequestWithJSON(ctx context.Context, method, url string, body interface{}, result interface{}) error {
@@ -74,7 +80,32 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 			return nil, cloneErr
 		}
 
+		start := time.Now()
 		resp, err = c.HTTPClient.Do(attemptReq)
+		duration := time.Since(start)
+
+		if c.debugLog && c.logger != nil {
+			statusCode := 0
+			if resp != nil {
+				statusCode = resp.StatusCode
+			}
+			redactedURL := redactURL(attemptReq.URL)
+
+			args := []any{
+				slog.String("method", attemptReq.Method),
+				slog.String("url", redactedURL),
+				slog.Duration("duration", duration),
+				slog.Int("attempt", attempt+1),
+			}
+			if resp != nil {
+				args = append(args, slog.Int("status_code", statusCode))
+			}
+			if err != nil {
+				args = append(args, slog.String("error", redactSensitiveLogValue(err.Error())))
+			}
+
+			c.logger.DebugContext(req.Context(), "Jules API request", args...)
+		}
 
 		// Success case (2xx status codes)
 		if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -137,6 +168,35 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func redactURL(u *url.URL) string {
+	if u == nil {
+		return ""
+	}
+
+	clone := *u
+	q := clone.Query()
+	for k := range q {
+		if isSensitiveLogKey(k) {
+			q.Set(k, "REDACTED")
+		}
+	}
+	clone.RawQuery = q.Encode()
+	return clone.String()
+}
+
+func isSensitiveLogKey(key string) bool {
+	lowerKey := strings.ToLower(key)
+	return strings.Contains(lowerKey, "key") ||
+		strings.Contains(lowerKey, "token") ||
+		strings.Contains(lowerKey, "auth") ||
+		strings.Contains(lowerKey, "secret") ||
+		strings.Contains(lowerKey, "credential")
+}
+
+func redactSensitiveLogValue(value string) string {
+	return sensitiveLogValuePattern.ReplaceAllString(value, "${1}REDACTED")
 }
 
 func cloneRequest(req *http.Request) (*http.Request, error) {

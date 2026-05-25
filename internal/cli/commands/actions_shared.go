@@ -13,7 +13,7 @@ import (
 // Helper functions
 
 func getGitHubClientAndRepo(ctx context.Context, cfg *config.Config, args []string, repoFlag string) (*github.Client, string, string, error) {
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	client := github.NewClient(cfg.GitHub.Token, julesClient)
 	if client == nil {

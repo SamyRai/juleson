@@ -40,8 +40,12 @@ client := jules.NewClient(
     jules.WithRetryAttempts(3),
     jules.WithRetryBackoff(time.Second),
     jules.WithUserAgent("my-tool/1.0"),
+    jules.WithLogger(slog.Default()),
+    jules.WithDebugLog(true),
 )
 ```
+
+Debug logging for HTTP requests can be enabled via `jules.WithDebugLog(true)` and requires setting `jules.WithLogger`. When enabled, it logs HTTP method, URL, duration, status code, and errors at the `Debug` level, while redacting any values resembling keys or tokens in query parameters to ensure secrets are not exposed.
 
 The SDK uses typed session states, automation modes, activity originators, and
 `time.Time` values for documented RFC3339 timestamps. Methods accepting resource

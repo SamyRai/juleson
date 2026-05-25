@@ -1,6 +1,7 @@
 package jules
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -21,6 +22,8 @@ type ClientConfig struct {
 	RetryBackoff  time.Duration
 	UserAgent     string
 	Sleep         SleepFunc
+	Logger        *slog.Logger
+	DebugLog      bool
 }
 
 // Client represents a Jules API client
@@ -32,6 +35,8 @@ type Client struct {
 	RetryBackoff  time.Duration
 	UserAgent     string
 	sleep         SleepFunc
+	logger        *slog.Logger
+	debugLog      bool
 }
 
 // ClientOption configures a Jules API client.
@@ -122,6 +127,20 @@ func WithUserAgent(userAgent string) ClientOption {
 	}
 }
 
+// WithLogger sets the logger for the client.
+func WithLogger(logger *slog.Logger) ClientOption {
+	return func(c *Client) {
+		c.logger = logger
+	}
+}
+
+// WithDebugLog enables or disables debug logging.
+func WithDebugLog(debugLog bool) ClientOption {
+	return func(c *Client) {
+		c.debugLog = debugLog
+	}
+}
+
 // WithSleep sets the sleep function used between retries. It is primarily
 // intended for tests.
 func WithSleep(sleep SleepFunc) ClientOption {
@@ -140,5 +159,7 @@ func (c *Client) Config() ClientConfig {
 		RetryBackoff:  c.RetryBackoff,
 		UserAgent:     c.UserAgent,
 		Sleep:         c.sleep,
+		Logger:        c.logger,
+		DebugLog:      c.debugLog,
 	}
 }

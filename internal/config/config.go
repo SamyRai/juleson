@@ -26,6 +26,7 @@ type JulesConfig struct {
 	BaseURL       string        `mapstructure:"base_url"`
 	Timeout       time.Duration `mapstructure:"timeout"`
 	RetryAttempts int           `mapstructure:"retry_attempts"`
+	DebugLog      bool          `mapstructure:"debug_log"`
 }
 
 // GitHubConfig contains GitHub API configuration
@@ -196,6 +197,7 @@ func setDefaults() {
 	viper.SetDefault("jules.base_url", "https://jules.googleapis.com/v1alpha")
 	viper.SetDefault("jules.timeout", "30s")
 	viper.SetDefault("jules.retry_attempts", 3)
+	viper.SetDefault("jules.debug_log", false)
 
 	viper.SetDefault("github.token", "")
 	viper.SetDefault("github.default_org", "")
@@ -254,6 +256,7 @@ func (c *Config) Save() error {
 	viper.Set("jules.base_url", c.Jules.BaseURL)
 	viper.Set("jules.timeout", c.Jules.Timeout.String())
 	viper.Set("jules.retry_attempts", c.Jules.RetryAttempts)
+	viper.Set("jules.debug_log", c.Jules.DebugLog)
 
 	viper.Set("github.token", c.GitHub.Token)
 	viper.Set("github.default_org", c.GitHub.DefaultOrg)

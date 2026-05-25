@@ -64,7 +64,7 @@ func (c *Container) julesClientLocked() *jules.Client {
 		if c.config.Jules.APIKey == "" {
 			return nil // Return nil to indicate client is not available
 		}
-		c.julesClient = jules.NewClient(c.config.Jules.APIKey, jules.WithBaseURL(c.config.Jules.BaseURL), jules.WithTimeout(c.config.Jules.Timeout), jules.WithRetryAttempts(c.config.Jules.RetryAttempts))
+		c.julesClient = jules.NewClient(c.config.Jules.APIKey, jules.WithBaseURL(c.config.Jules.BaseURL), jules.WithTimeout(c.config.Jules.Timeout), jules.WithRetryAttempts(c.config.Jules.RetryAttempts), jules.WithDebugLog(c.config.Jules.DebugLog), jules.WithLogger(getLogger(c.config.Jules.DebugLog)))
 
 	}
 

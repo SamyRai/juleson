@@ -15,6 +15,9 @@ jules:
   # Number of retry attempts for failed requests
   retry_attempts: 3
 
+  # Enable redacted Jules API debug logging
+  debug_log: false
+
 # GitHub Integration Configuration (Optional)
 github:
   # Personal Access Token with repo, workflow, and read:org scopes

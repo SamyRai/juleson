@@ -53,7 +53,7 @@ func NewActivitiesCommand(cfg *config.Config) *cobra.Command {
 // listActivities lists all activities in a session
 func listActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutput string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 
@@ -137,7 +137,7 @@ func listActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutp
 // getActivity gets details for a specific activity
 func getActivity(cfg *config.Config, sessionID string, activityID string) error {
 	// Initialize Jules client
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 
 	ctx := context.Background()
 

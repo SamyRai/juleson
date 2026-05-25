@@ -164,7 +164,7 @@ func runGitHubLogin(cmd *cobra.Command, args []string) error {
 
 	// Test the token
 	fmt.Println("🔍 Testing GitHub authentication...")
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ghClient := ghclient.NewClient(token, julesClient)
 
 	if ghClient == nil {
@@ -219,7 +219,7 @@ func runGitHubStatus(cmd *cobra.Command, args []string) error {
 	fmt.Println("✅ GitHub token configured")
 
 	// Test authentication
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 
 	if ghClient == nil {
@@ -269,7 +269,7 @@ func runGitHubRepos(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("GitHub token not configured. Run 'juleson github login' first")
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 
 	if ghClient == nil {
@@ -331,7 +331,7 @@ func runGitHubCurrent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("GitHub token not configured. Run 'juleson github login' first")
 	}
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 
 	if ghClient == nil {
@@ -388,7 +388,7 @@ func runGitHubSearch(cmd *cobra.Command, args []string) error {
 
 	query := strings.Join(args, " ")
 
-	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(getLogger(cfg.Jules.DebugLog)))
 	ghClient := ghclient.NewClient(cfg.GitHub.Token, julesClient)
 
 	if ghClient == nil {
