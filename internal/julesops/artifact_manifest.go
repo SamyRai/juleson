@@ -2,6 +2,7 @@ package julesops
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/SamyRai/juleson/pkg/jules"
@@ -15,6 +16,7 @@ type ArtifactManifest struct {
 	ActivityCreateTime     time.Time    `json:"activity_create_time,omitempty"`
 	Index                  int          `json:"index"`
 	Type                   string       `json:"type"`
+	Empty                  bool         `json:"empty,omitempty"`
 	FileCount              int          `json:"file_count,omitempty"`
 	Files                  []FileChange `json:"files,omitempty"`
 	BaseCommitID           string       `json:"base_commit_id,omitempty"`
@@ -55,6 +57,7 @@ func BuildArtifactManifest(activity jules.Activity, index int, artifact jules.Ar
 		manifest.Type = "change_set"
 		manifest.BaseCommitID = artifact.ChangeSet.GitPatch.BaseCommitID
 		manifest.SuggestedCommitMessage = artifact.ChangeSet.GitPatch.SuggestedCommitMessage
+		manifest.Empty = strings.TrimSpace(artifact.ChangeSet.GitPatch.UnidiffPatch) == ""
 		manifest.Files = parsePatchFiles(artifact.ChangeSet.GitPatch.UnidiffPatch)
 		manifest.FileCount = len(manifest.Files)
 	case artifact.BashOutput != nil:

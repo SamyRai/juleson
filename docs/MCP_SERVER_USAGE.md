@@ -112,6 +112,8 @@ source such as `sources/github/owner/repo` for a source-backed session.
 `create_session.prompt_file` reads the prompt from a local file and is mutually
 exclusive with `prompt`. `infer_source_for_project` can resolve a local git
 `origin` remote to a connected Jules source before session creation.
+For GitHub-backed sources, `starting_branch` is optional; when omitted, Juleson
+reads source metadata and uses the connected repository's default branch.
 
 `apply_session_patches` dry-runs unless `confirm_apply=true`. Actual apply also
 checks for a clean worktree unless `allow_dirty=true` is passed. Use
@@ -120,9 +122,15 @@ Both preview and apply accept `activity_id` and `artifact_index` to scope a
 single changeset. Patch artifacts with `baseCommitId` warn during dry-run and
 block mutation on mismatch unless `allow_base_mismatch=true`.
 
-`watch_session.since` accepts an RFC3339 activity `createTime` cursor and returns
-`next_activity_cursor` for resumable watches. It returns when a session reaches a
-terminal state, needs user action, times out, or exposes outputs.
+`watch_session.since` accepts an RFC3339 activity `createTime` cursor, filters
+activities client-side, and returns `next_activity_cursor` for resumable watches.
+It returns when a session reaches a terminal state, needs user action, times out,
+or exposes outputs.
+Set `return_on_status_change=true` with optional `initial_state` to return on the
+next session state transition. Set `return_on_jules_agent_message=true` to return
+when Jules posts a new agent message after `since`; without `since`, the first
+poll establishes the activity baseline. Returned watch wakeups include
+`wake_reason`.
 
 `list_session_artifacts` returns an artifact manifest containing activity ID,
 artifact index, type, file count, changed files, base commit, suggested commit

@@ -41,7 +41,7 @@ func TestGetSourceMCP(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/github%2Fowner%2Frepo",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/github/owner/repo",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewJsonResponse(200, jules.Source{
 				Name: "sources/github/owner/repo",

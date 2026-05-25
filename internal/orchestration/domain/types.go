@@ -297,17 +297,19 @@ type PhaseResult struct {
 }
 
 type ExecutionContext struct {
-	Goal           Goal
-	Project        *ProjectContext
-	Plan           *Plan
-	Workflow       *Workflow
-	Completed      []TaskResult
-	Decisions      []Decision
-	SessionID      string
-	Iteration      int
-	StartedAt      time.Time
-	Values         map[string]string
-	ApprovalPolicy ApprovalPolicy
+	Goal             Goal
+	Project          *ProjectContext
+	Plan             *Plan
+	Workflow         *Workflow
+	Completed        []TaskResult
+	Decisions        []Decision
+	SessionID        string
+	Iteration        int
+	StartedAt        time.Time
+	Values           map[string]string
+	ApprovalPolicy   ApprovalPolicy
+	DryRun           bool
+	ReviewStrictness string
 }
 
 type ApprovalPolicy struct {

@@ -478,6 +478,9 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 	watchCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	var cursor time.Time
+	baselineState := jules.SessionState(strings.TrimSpace(input.InitialState))
+	hasStateBaseline := baselineState != ""
+	hasActivityBaseline := false
 	if input.Since != "" {
 		parsed, err := time.Parse(time.RFC3339Nano, input.Since)
 		if err != nil {
@@ -489,6 +492,7 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 			}, WatchSessionOutput{}, err
 		}
 		cursor = parsed
+		hasActivityBaseline = true
 	}
 
 	ticker := time.NewTicker(interval)
@@ -504,7 +508,28 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 				},
 			}, WatchSessionOutput{}, err
 		}
+		currentState := jules.SessionState(output.State)
+		if input.ReturnOnStatusChange {
+			if !hasStateBaseline {
+				baselineState = currentState
+				hasStateBaseline = true
+			} else if currentState != baselineState {
+				output.WakeReason = "status_change"
+				output.NextAction = fmt.Sprintf("session state changed from %s to %s; inspect get_session before taking action", baselineState, currentState)
+				return nil, output, nil
+			}
+		}
+		if input.ReturnOnJulesAgentMessage {
+			if !hasActivityBaseline {
+				hasActivityBaseline = true
+			} else if hasJulesAgentMessageAfter(output.RecentActivities, cursor) {
+				output.WakeReason = "jules_agent_message"
+				output.NextAction = "inspect recent activities and reply with send_session_message if needed"
+				return nil, output, nil
+			}
+		}
 		if output.IsTerminal || output.NeedsUserAction || (output.Session != nil && len(output.Session.Outputs) > 0) {
+			output.WakeReason = defaultWatchWakeReason(output)
 			return nil, output, nil
 		}
 		if output.NextActivityCursor != "" {
@@ -559,6 +584,31 @@ func currentWatchSessionOutput(ctx context.Context, sessionID string, client *ju
 		output.NextAction = "call get_session_outputs to inspect created pull requests or other outputs"
 	}
 	return output, nil
+}
+
+func hasJulesAgentMessageAfter(activities []jules.Activity, cursor time.Time) bool {
+	for _, activity := range activities {
+		if activity.AgentMessaged == nil {
+			continue
+		}
+		if cursor.IsZero() || activity.CreateTime.After(cursor) {
+			return true
+		}
+	}
+	return false
+}
+
+func defaultWatchWakeReason(output WatchSessionOutput) string {
+	switch {
+	case output.NeedsUserAction:
+		return "user_action"
+	case output.IsTerminal:
+		return "terminal_state"
+	case output.Session != nil && len(output.Session.Outputs) > 0:
+		return "session_outputs"
+	default:
+		return ""
+	}
 }
 
 func verifySessionChanges(ctx context.Context, req *mcp.CallToolRequest, input VerifySessionChangesInput) (
@@ -633,12 +683,15 @@ func getSessionOutputs(ctx context.Context, req *mcp.CallToolRequest, input GetS
 		}, GetSessionOutputsOutput{}, err
 	}
 	outputs := session.Outputs
-	if outputs == nil {
-		outputs = []jules.Output{}
+	documentedOutputs := make([]jules.Output, 0, len(outputs))
+	for _, output := range outputs {
+		if output.PullRequest != nil {
+			documentedOutputs = append(documentedOutputs, output)
+		}
 	}
 	return nil, GetSessionOutputsOutput{
 		SessionID:  session.ID,
-		Outputs:    outputs,
-		TotalCount: len(outputs),
+		Outputs:    documentedOutputs,
+		TotalCount: len(documentedOutputs),
 	}, nil
 }

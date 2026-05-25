@@ -75,15 +75,21 @@ Useful flags:
 
 ## Safety Defaults
 
-- Use `--dry-run` to inspect planned behavior.
+- Use `--dry-run` to inspect analyzed and scheduled task plans without creating
+  or reusing Jules sessions.
 - Pass constraints explicitly with `--constraint`.
 - Keep source IDs explicit for session-backed work.
+- Agent-created Jules sessions require plan approval by default.
+- `--strictness` is validated before orchestration starts and is carried through
+  execution context for review adapters.
+- Runner checkpoints are saved through `ports.CheckpointStore` after planning,
+  after each task, and at final success or failure when a store is configured.
 - Prefer small goals that map to one reviewable change.
 
 ## Current Limits
 
 - Some legacy `internal/agent` and `internal/automation` APIs remain for tests
   and older callers.
-- Review, memory, checkpoint, and telemetry adapters need follow-up extraction from legacy packages.
+- Review, memory, persistent checkpoint, and telemetry adapters need follow-up extraction from legacy packages.
 - MCP and CLI adapters should continue moving toward runtime-only construction
   as legacy commands are retired.

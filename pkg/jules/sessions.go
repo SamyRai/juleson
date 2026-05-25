@@ -14,9 +14,16 @@ func (c *Client) CreateSession(ctx context.Context, req *CreateSessionRequest) (
 	if req.Prompt == "" {
 		return nil, fmt.Errorf("prompt is required")
 	}
+	req = cloneCreateSessionRequest(req)
 	if req.SourceContext != nil && req.SourceContext.Source != "" {
-		req = cloneCreateSessionRequest(req)
 		req.SourceContext.Source = NormalizeSourceName(req.SourceContext.Source)
+		if req.SourceContext.GithubRepoContext == nil || req.SourceContext.GithubRepoContext.StartingBranch == "" {
+			branch, err := c.defaultStartingBranch(ctx, req.SourceContext.Source)
+			if err != nil {
+				return nil, err
+			}
+			req.SourceContext.GithubRepoContext = &GithubRepoContext{StartingBranch: branch}
+		}
 	}
 
 	requestURL := fmt.Sprintf("%s/sessions", c.BaseURL)
@@ -24,6 +31,11 @@ func (c *Client) CreateSession(ctx context.Context, req *CreateSessionRequest) (
 	var session Session
 	if err := c.doRequestWithJSON(ctx, "POST", requestURL, req, &session); err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
+	}
+	if session.ID != "" && session.State == "" {
+		if hydrated, err := c.GetSession(ctx, session.ID); err == nil {
+			return hydrated, nil
+		}
 	}
 
 	return &session, nil
@@ -157,6 +169,24 @@ func (c *Client) ApprovePlan(ctx context.Context, sessionID string) error {
 	}
 
 	return nil
+}
+
+func (c *Client) defaultStartingBranch(ctx context.Context, sourceName string) (string, error) {
+	source, err := c.GetSource(ctx, sourceName)
+	if err != nil {
+		return "", fmt.Errorf("failed to infer starting branch for %s: %w", sourceName, err)
+	}
+	if source.GithubRepo != nil {
+		if source.GithubRepo.DefaultBranch != nil && source.GithubRepo.DefaultBranch.DisplayName != "" {
+			return source.GithubRepo.DefaultBranch.DisplayName, nil
+		}
+		for _, branch := range source.GithubRepo.Branches {
+			if branch.DisplayName != "" {
+				return branch.DisplayName, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("starting branch is required for source-backed sessions; pass githubRepoContext.startingBranch")
 }
 
 func cloneCreateSessionRequest(req *CreateSessionRequest) *CreateSessionRequest {

@@ -154,10 +154,13 @@ type GetSessionOutput struct {
 
 // WatchSessionInput represents input for watch_session tool.
 type WatchSessionInput struct {
-	SessionID       string `json:"session_id" jsonschema:"ID of the session to watch"`
-	IntervalSeconds int    `json:"interval_seconds,omitempty" jsonschema:"Polling interval in seconds (default: 30)"`
-	TimeoutSeconds  int    `json:"timeout_seconds,omitempty" jsonschema:"Maximum watch duration in seconds (default: 1800)"`
-	Since           string `json:"since,omitempty" jsonschema:"Optional RFC3339 createTime activity cursor"`
+	SessionID                 string `json:"session_id" jsonschema:"ID of the session to watch"`
+	IntervalSeconds           int    `json:"interval_seconds,omitempty" jsonschema:"Polling interval in seconds (default: 30)"`
+	TimeoutSeconds            int    `json:"timeout_seconds,omitempty" jsonschema:"Maximum watch duration in seconds (default: 1800)"`
+	Since                     string `json:"since,omitempty" jsonschema:"Optional RFC3339 createTime activity cursor"`
+	InitialState              string `json:"initial_state,omitempty" jsonschema:"Known current session state; used with return_on_status_change"`
+	ReturnOnStatusChange      bool   `json:"return_on_status_change,omitempty" jsonschema:"Return when session state changes from initial_state or the first observed state"`
+	ReturnOnJulesAgentMessage bool   `json:"return_on_jules_agent_message,omitempty" jsonschema:"Return when a new Jules-authored message activity appears after since or after the initial poll"`
 }
 
 // WatchSessionOutput represents output for watch_session tool.
@@ -167,6 +170,7 @@ type WatchSessionOutput struct {
 	NeedsUserAction    bool             `json:"needs_user_action"`
 	IsTerminal         bool             `json:"is_terminal"`
 	NextAction         string           `json:"next_action"`
+	WakeReason         string           `json:"wake_reason,omitempty"`
 	NextActivityCursor string           `json:"next_activity_cursor,omitempty"`
 	Session            *jules.Session   `json:"session,omitempty"`
 	RecentActivities   []jules.Activity `json:"recent_activities,omitempty"`

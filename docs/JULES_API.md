@@ -23,8 +23,8 @@ Official references:
 
 - Sources: list and get connected source repositories.
 - Sessions: create, list, get, delete, approve plans, and send messages.
-- Activities: list and get activity details. The list call supports the official
-  `createTime` filter.
+- Activities: list and get activity details. Activity cursor filtering is
+  applied client-side for compatibility with live API behavior.
 - Artifacts: read embedded `changeSet`, `bashOutput`, and base64 `media`
   payloads from activities.
 - Outputs: surface documented session outputs such as pull requests from session
@@ -46,8 +46,8 @@ client := jules.NewClient(
 The SDK uses typed session states, automation modes, activity originators, and
 `time.Time` values for documented RFC3339 timestamps. Methods accepting resource
 names normalize both bare IDs and full names, so `123` and `sessions/123` are
-equivalent for sessions, and slash-containing source names are path-escaped for
-API calls.
+equivalent for sessions. Slash-containing source names such as
+`sources/github/owner/repo` are preserved as path segments for source get calls.
 
 The SDK exposes documented Jules API resources plus pure helpers for embedded
 artifact payloads. It does not call undocumented artifact `/content`,
@@ -81,6 +81,12 @@ juleson sessions create --no-source "Sketch an implementation plan"
 
 Both forms call `POST /sessions`.
 
+For GitHub-backed sources, Juleson includes `githubRepoContext.startingBranch`.
+If a caller provides only the source name, the SDK reads the source metadata and
+uses the connected repository's default branch before creating the session. This
+avoids the Jules API's generic `INVALID_ARGUMENT` response for source-backed
+session creates that omit branch context.
+
 For CLI source inference, `.` is resolved from the local git `origin` remote to a
 connected Jules source. If multiple connected sources match the same
 owner/repository, Juleson fails with the candidates instead of guessing. Batch
@@ -103,10 +109,10 @@ endpoint. Use the Jules web UI to cancel a running session.
 
 ## Activity Filtering
 
-The official activity list endpoint supports pagination and `createTime`.
-Legacy helpers such as type, status, plan, and artifact filters are applied
-client-side after fetching activities; they are not sent as unsupported API
-query parameters.
+The activity list endpoint supports pagination. Although some Jules docs show a
+`createTime` query parameter, live API responses can reject it as an unknown
+field. Juleson therefore performs `createTime`, type, status, plan, and artifact
+filtering client-side after fetching activities.
 
 For immutable activity streams, SDK callers can use `ListActivitiesSince` with a
 stored `createTime` cursor and `ActivityCursor` to compute the next cursor from a

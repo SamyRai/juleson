@@ -64,6 +64,8 @@ juleson sessions create . --prompt-file task.md --title "Fix failing tests"
 juleson sessions create --no-source "Prompt text"
 juleson sessions batch SOURCE_ID task.md --parallel 3 --batch-id batch-20260525 --group-title "Fix CI"
 juleson sessions watch SESSION_ID --follow-activities --since 2026-05-25T10:00:00Z --cursor-output .juleson.cursor
+juleson sessions watch SESSION_ID --wake-on-status-change --initial-state PLANNING
+juleson sessions watch SESSION_ID --wake-on-agent-message --since 2026-05-25T10:00:00Z
 juleson sessions get SESSION_ID
 juleson sessions approve SESSION_ID
 juleson sessions message SESSION_ID "Follow-up text"
@@ -89,9 +91,10 @@ juleson official remote pull SESSION_ID
 `sources/github/owner/repo`. `--no-source` creates a repoless Jules session by
 omitting `sourceContext`. Source-backed sessions also accept `--title`,
 `--starting-branch`, `--require-plan-approval`, `--automation-mode`, and
-`--prompt-file`. Passing `.` as the source asks Juleson to infer the connected
-Jules source from the local git `origin` remote; ambiguous matches fail with the
-candidate source names.
+`--prompt-file`. If `--starting-branch` is omitted for a GitHub source, Juleson
+reads the connected source metadata and uses the default branch. Passing `.` as
+the source asks Juleson to infer the connected Jules source from the local git
+`origin` remote; ambiguous matches fail with the candidate source names.
 
 `sessions batch` creates 1-5 parallel sessions for one source and prompt or task
 file. Batch sessions require plan approval by default and include a `batch_id`,
@@ -100,7 +103,12 @@ documented bulk-create endpoint.
 
 `sessions watch` polls until a session completes, fails, needs user action, or
 surfaces session outputs. With `--follow-activities`, it uses the activity
-`createTime` cursor and prints the next cursor for resumable watches.
+`createTime` cursor for client-side filtering and prints the next cursor for
+resumable watches. Use
+`--wake-on-status-change` to stop on the next state transition from
+`--initial-state` or the first observed state. Use `--wake-on-agent-message` to
+stop when Jules posts a new agent message after `--since`; without `--since`,
+the first poll establishes the activity baseline.
 
 `sessions apply` dry-runs by default. Use `--confirm` to apply patches; dirty
 worktrees are blocked unless `--allow-dirty` is passed. `--activity-id` and
@@ -215,6 +223,13 @@ juleson orchestrate custom workflow.yaml --source SOURCE_ID
 --strictness string
 --max-iterations int
 ```
+
+`--dry-run` analyzes and plans the requested goal, prints the planned tasks, and
+does not create, reuse, or mutate Jules sessions. Real `agent execute` runs
+create Jules sessions with plan approval required by default. `--strictness`
+accepts `low`, `medium`, or `high`; invalid values fail before orchestration
+starts. `agent status` reports configured runtime capabilities, including Jules,
+Gemini, review, memory, checkpointing, and dry-run planning availability.
 
 `ai-orchestrate` flags:
 

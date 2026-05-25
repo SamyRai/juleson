@@ -52,7 +52,9 @@ func (c *Client) ListActivitiesWithPagination(ctx context.Context, sessionID str
 	})
 }
 
-// ListActivitiesWithOptions lists activities with pagination and the official createTime range cursor.
+// ListActivitiesWithOptions lists activities with pagination. When CreateTime
+// is set, activities are filtered client-side because the Jules API currently
+// rejects createTime as a list query parameter.
 func (c *Client) ListActivitiesWithOptions(ctx context.Context, sessionID string, options *ListActivitiesOptions) (*ActivitiesResponse, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("session ID is required")
@@ -82,15 +84,15 @@ func (c *Client) ListActivitiesWithOptions(ctx context.Context, sessionID string
 	if pageToken != "" {
 		query.Set("pageToken", pageToken)
 	}
-	if !createTime.IsZero() {
-		query.Set("createTime", createTime.Format(time.RFC3339Nano))
-	}
 
 	requestURL := fmt.Sprintf("%s/%s/activities?%s", c.BaseURL, resourcePath, query.Encode())
 
 	var response ActivitiesResponse
 	if err := c.doRequestWithJSON(ctx, "GET", requestURL, nil, &response); err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
+	}
+	if !createTime.IsZero() {
+		response.Activities = activitiesAtOrAfter(response.Activities, createTime)
 	}
 
 	return &response, nil
@@ -135,6 +137,22 @@ func (c *Client) ListActivitiesSince(ctx context.Context, sessionID string, curs
 		}
 		pageToken = response.NextPageToken
 	}
+}
+
+func activitiesAtOrAfter(activities []Activity, cursor time.Time) []Activity {
+	if cursor.IsZero() {
+		return activities
+	}
+	filtered := make([]Activity, 0, len(activities))
+	for _, activity := range activities {
+		if activity.CreateTime.IsZero() {
+			continue
+		}
+		if !activity.CreateTime.Before(cursor) {
+			filtered = append(filtered, activity)
+		}
+	}
+	return filtered
 }
 
 // ActivityCursor returns the latest createTime in the provided activities.

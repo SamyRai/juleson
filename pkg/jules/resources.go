@@ -39,7 +39,13 @@ func sourcePath(source string) (string, error) {
 	if !ok || id == "" {
 		return "", fmt.Errorf("invalid source resource name %q", source)
 	}
-	return "sources/" + url.PathEscape(id), nil
+	parts := strings.Split(id, "/")
+	for _, part := range parts {
+		if part == "" {
+			return "", fmt.Errorf("invalid source resource name %q", source)
+		}
+	}
+	return "sources/" + strings.Join(parts, "/"), nil
 }
 
 func activityPath(session, activity string) (string, error) {

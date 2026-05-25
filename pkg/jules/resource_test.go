@@ -21,7 +21,7 @@ func TestResourceNameHandling(t *testing.T) {
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewJsonResponse(http.StatusOK, Session{ID: "123"})
 		})
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/github%2Fowner%2Frepo",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/github/owner/repo",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewJsonResponse(http.StatusOK, Source{ID: "github/owner/repo"})
 		})
@@ -43,6 +43,9 @@ func TestResourceNameHandling(t *testing.T) {
 	assert.Equal(t, "act1", activity.ID)
 
 	_, err = client.GetSession(context.Background(), "sessions/a/b")
+	require.Error(t, err)
+
+	_, err = client.GetSource(context.Background(), "sources/github//repo")
 	require.Error(t, err)
 }
 

@@ -12,6 +12,17 @@ known gaps without committing to release dates.
 - Expand unit coverage for `internal/github`, `internal/events`, and CLI command behavior.
 - Add a config validation command.
 
+## Next Sprint Track
+
+- Harden long-running Jules session tracking: status-change wakeups, Jules agent
+  message wakeups, resumable activity cursors, and clear next-action reasons.
+- Finish agent-loop production readiness: dry-run parity, checkpoint resume
+  behavior, and consistent plan approval gates across CLI, MCP, and orchestration.
+- Reduce operator risk around patch application: cleaner preview summaries,
+  scoped artifact application, and verification guidance before mutation.
+- Keep delivery measurable with focused tests for session watches, activity
+  filtering, agent dry-runs, checkpoint persistence, and dirty-worktree guards.
+
 ## Analysis And Code Intelligence
 
 - Add dependency graph reporting and unused dependency detection for Go projects.
@@ -21,11 +32,12 @@ known gaps without committing to release dates.
 
 ## Agent And Orchestration
 
-- Continue tightening the agent loop around explicit goals, constraints, tool
-  execution, review, and checkpointing.
-- Make dry-run behavior consistent across CLI, MCP, and agent flows.
-- Improve plan approval handling and status reporting for long-running Jules sessions.
-- Add safer defaults for operations that can modify working trees.
+- Continue tightening the agent loop around explicit goals, constraints, review,
+  memory, and persistent checkpoint adapters.
+- Make dry-run behavior consistent across MCP and remaining non-agent flows.
+- Improve status reporting for long-running Jules sessions.
+- Add safer defaults for operations that can modify working trees beyond
+  session-backed agent execution.
 
 ## GitHub Integration
 

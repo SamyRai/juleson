@@ -57,10 +57,16 @@ func (suite *ActivityTestSuite) TestListActivitiesWithPagination() {
 	assert.Equal(suite.T(), "next-token", response.NextPageToken)
 }
 
-// TestListActivitiesWithOptionsCreateTime tests the official createTime filter.
+// TestListActivitiesWithOptionsCreateTime tests client-side createTime filtering.
 func (suite *ActivityTestSuite) TestListActivitiesWithOptionsCreateTime() {
 	mockResponse := ActivitiesResponse{
 		Activities: []Activity{
+			{
+				ID:         "activity-before",
+				Name:       "Earlier Progress",
+				Originator: ActivityOriginatorAgent,
+				CreateTime: testTime("2025-12-31T23:59:00Z"),
+			},
 			{
 				ID:         "activity-1",
 				Name:       "Plan Generated",
@@ -70,7 +76,7 @@ func (suite *ActivityTestSuite) TestListActivitiesWithOptionsCreateTime() {
 		},
 	}
 
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?createTime=2026-01-01T00%3A00%3A00Z&pageSize=25",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=25",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockResponse)
 			return resp, nil
@@ -111,7 +117,7 @@ func (suite *ActivityTestSuite) TestListActivitiesFiltered() {
 		},
 	}
 
-	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?createTime=2024-01-01T00%3A00%3A00Z&pageSize=50",
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=50",
 		func(req *http.Request) (*http.Response, error) {
 			resp, _ := httpmock.NewJsonResponse(200, mockResponse)
 			return resp, nil

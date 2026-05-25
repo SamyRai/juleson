@@ -36,6 +36,14 @@ func TestBuildArtifactManifest(t *testing.T) {
 	assert.Equal(t, "abc123", patchManifest.BaseCommitID)
 	assert.Equal(t, "Update a.txt", patchManifest.SuggestedCommitMessage)
 	assert.Equal(t, created, patchManifest.ActivityCreateTime)
+	assert.False(t, patchManifest.Empty)
+
+	emptyPatchManifest := BuildArtifactManifest(activity, 1, jules.Artifact{
+		ChangeSet: &jules.ChangeSet{GitPatch: &jules.GitPatch{}},
+	})
+	assert.Equal(t, "change_set", emptyPatchManifest.Type)
+	assert.True(t, emptyPatchManifest.Empty)
+	assert.Equal(t, 0, emptyPatchManifest.FileCount)
 
 	bashManifest := BuildArtifactManifest(activity, 1, jules.Artifact{
 		BashOutput: &jules.BashOutput{Command: "go test ./...", ExitCode: exitCode},

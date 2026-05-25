@@ -181,6 +181,16 @@ func (suite *ClientTestSuite) TestCreateSessionWithSource() {
 		State: SessionStatePlanning,
 	}
 
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/github/owner/repo",
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(200, Source{
+				Name: "sources/github/owner/repo",
+				GithubRepo: &GithubRepo{
+					DefaultBranch: &Branch{DisplayName: "main"},
+				},
+			})
+			return resp, nil
+		})
 	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
 		func(req *http.Request) (*http.Response, error) {
 			var receivedRequest CreateSessionRequest
@@ -189,6 +199,8 @@ func (suite *ClientTestSuite) TestCreateSessionWithSource() {
 
 			require.NotNil(suite.T(), receivedRequest.SourceContext)
 			assert.Equal(suite.T(), "sources/github/owner/repo", receivedRequest.SourceContext.Source)
+			require.NotNil(suite.T(), receivedRequest.SourceContext.GithubRepoContext)
+			assert.Equal(suite.T(), "main", receivedRequest.SourceContext.GithubRepoContext.StartingBranch)
 
 			resp, _ := httpmock.NewJsonResponse(201, expectedResponse)
 			return resp, nil
@@ -198,6 +210,52 @@ func (suite *ClientTestSuite) TestCreateSessionWithSource() {
 
 	require.NoError(suite.T(), err)
 	assert.Equal(suite.T(), "new-session-1", session.ID)
+}
+
+func (suite *ClientTestSuite) TestCreateSessionWithSourceRequiresStartingBranchMetadata() {
+	request := CreateSessionRequest{
+		Prompt: "Create a new feature",
+		SourceContext: &SourceContext{
+			Source: "sources/github/owner/repo",
+		},
+	}
+
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sources/github/owner/repo",
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(200, Source{Name: "sources/github/owner/repo", GithubRepo: &GithubRepo{}})
+			return resp, nil
+		})
+
+	_, err := suite.client.CreateSession(context.Background(), &request)
+
+	require.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "starting branch is required")
+}
+
+func (suite *ClientTestSuite) TestCreateSessionHydratesPartialCreateResponse() {
+	request := CreateSessionRequest{
+		Prompt: "Create a new feature",
+	}
+
+	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(201, Session{ID: "new-session-1", Title: "New Session"})
+			return resp, nil
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/new-session-1",
+		func(req *http.Request) (*http.Response, error) {
+			resp, _ := httpmock.NewJsonResponse(200, Session{
+				ID:    "new-session-1",
+				Title: "New Session",
+				State: SessionStateAwaitingPlanApproval,
+			})
+			return resp, nil
+		})
+
+	session, err := suite.client.CreateSession(context.Background(), &request)
+
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), SessionStateAwaitingPlanApproval, session.State)
 }
 
 // TestSendMessage tests sending a message to a session

@@ -57,7 +57,13 @@ func TestMessageQueueMovesFailedMessageToDLQAndTracksMetrics(t *testing.T) {
 	})
 	metrics := queue.GetMetrics()
 	if metrics.MessagesEnqueued != 1 || metrics.MessagesDequeued != 1 || metrics.MessagesFailed != 1 || metrics.DLQSize != 1 {
-		t.Fatalf("unexpected metrics: %#v", metrics)
+		t.Fatalf("unexpected metrics: enqueued=%d dequeued=%d processed=%d failed=%d dlq=%d",
+			metrics.MessagesEnqueued,
+			metrics.MessagesDequeued,
+			metrics.MessagesProcessed,
+			metrics.MessagesFailed,
+			metrics.DLQSize,
+		)
 	}
 
 	if err := queue.Shutdown(context.Background()); err != nil {

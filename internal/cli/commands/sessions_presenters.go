@@ -108,6 +108,8 @@ func previewGitPatch(patch *jules.GitPatch) error {
 			fmt.Printf("    %s\n", line)
 		}
 		fmt.Printf("    ```\n")
+	} else {
+		fmt.Printf("    No diff content.\n")
 	}
 
 	return nil

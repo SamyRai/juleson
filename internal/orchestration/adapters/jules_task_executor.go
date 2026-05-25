@@ -28,19 +28,32 @@ func NewJulesTaskExecutor(gateway ports.SessionGateway, sourceMatcher ports.Sour
 }
 
 func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, execution domain.ExecutionContext) (*domain.TaskResult, error) {
-	if e.gateway == nil {
-		return nil, fmt.Errorf("session gateway is required")
-	}
 	start := time.Now()
 	result := &domain.TaskResult{
 		TaskID:    task.ID,
 		TaskName:  task.Name,
 		TaskType:  task.Type,
 		StartTime: start,
+		Tool:      firstNonEmpty(task.Tool, "jules"),
 		Metrics:   map[string]any{},
 	}
+	result.Metrics["dry_run"] = execution.DryRun
 
 	title := taskTitle(task)
+	if execution.DryRun {
+		result.Output = fmt.Sprintf("Dry run: would create or reuse Jules session %q", title)
+		result.Success = true
+		result.Metrics["session_action"] = "dry_run"
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(start)
+		return result, nil
+	}
+	if e.gateway == nil {
+		err := fmt.Errorf("session gateway is required")
+		result.Metrics["session_action"] = "failed_safety_check"
+		return resultWithError(result, err), err
+	}
+
 	reusable, err := e.gateway.FindReusableSession(ctx, title)
 	if err != nil {
 		return resultWithError(result, err), err
@@ -49,6 +62,7 @@ func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, e
 		result.SessionID = reusable.ID
 		result.Output = fmt.Sprintf("Reused existing session: %s", reusable.URL)
 		result.Success = true
+		result.Metrics["session_action"] = "reused"
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(start)
 		return result, nil
@@ -64,7 +78,7 @@ func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, e
 		Title:               title,
 		Source:              *source,
 		Branch:              branch,
-		RequirePlanApproval: task.RequiresApproval || execution.ApprovalPolicy.RequirePlanApproval,
+		RequirePlanApproval: true,
 		AutomationMode:      defaultAutomationMode,
 	})
 	if err != nil {
@@ -74,6 +88,8 @@ func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, e
 	result.SessionID = session.ID
 	result.Output = fmt.Sprintf("Session created: %s", session.URL)
 	result.Success = true
+	result.Metrics["session_action"] = "created"
+	result.Metrics["require_plan_approval"] = true
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(start)
 	return result, nil

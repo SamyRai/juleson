@@ -418,7 +418,7 @@ func sendSessionMessage(cfg *config.Config, sessionID string, message string) er
 	return nil
 }
 
-func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue string, followActivities bool, sinceValue, cursorOutput string) error {
+func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue string, followActivities bool, sinceValue, cursorOutput, initialState string, wakeOnStatusChange, wakeOnAgentMessage bool) error {
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	interval, err := time.ParseDuration(intervalValue)
@@ -436,12 +436,16 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 		return fmt.Errorf("--timeout must be greater than zero")
 	}
 	var cursor time.Time
+	baselineState := jules.SessionState(strings.TrimSpace(initialState))
+	hasStateBaseline := baselineState != ""
+	hasActivityBaseline := false
 	if sinceValue != "" {
 		parsed, err := time.Parse(time.RFC3339Nano, sinceValue)
 		if err != nil {
 			return fmt.Errorf("invalid --since: %w", err)
 		}
 		cursor = parsed
+		hasActivityBaseline = true
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -456,19 +460,36 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 
 	seenActivities := map[string]bool{}
 	for {
-		stop, nextCursor, err := printSessionWatchUpdate(ctx, julesClient, sessionID, followActivities, seenActivities, cursor)
+		update, err := printSessionWatchUpdate(ctx, julesClient, sessionID, followActivities, wakeOnAgentMessage, seenActivities, cursor)
 		if err != nil {
 			return err
 		}
-		if nextCursor.After(cursor) {
-			cursor = nextCursor
+		if wakeOnStatusChange {
+			if !hasStateBaseline {
+				baselineState = update.State
+				hasStateBaseline = true
+			} else if update.State != baselineState {
+				fmt.Printf("Wake reason: session state changed from %s to %s.\n", baselineState, update.State)
+				return nil
+			}
+		}
+		if wakeOnAgentMessage {
+			if !hasActivityBaseline {
+				hasActivityBaseline = true
+			} else if update.HasJulesAgentMessage {
+				fmt.Printf("Wake reason: Jules sent a new message.\n")
+				return nil
+			}
+		}
+		if update.NextCursor.After(cursor) {
+			cursor = update.NextCursor
 			if cursorOutput != "" {
 				if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0644); err != nil {
 					return fmt.Errorf("failed to write cursor output: %w", err)
 				}
 			}
 		}
-		if stop {
+		if update.Stop {
 			if !cursor.IsZero() {
 				fmt.Printf("Next activity cursor: %s\n", cursor.Format(time.RFC3339Nano))
 			}
@@ -483,10 +504,22 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 	}
 }
 
-func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionID string, followActivities bool, seenActivities map[string]bool, cursor time.Time) (bool, time.Time, error) {
+type sessionWatchUpdate struct {
+	Stop                 bool
+	NextCursor           time.Time
+	State                jules.SessionState
+	HasJulesAgentMessage bool
+}
+
+func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionID string, followActivities bool, detectAgentMessage bool, seenActivities map[string]bool, cursor time.Time) (sessionWatchUpdate, error) {
 	session, err := client.GetSession(ctx, sessionID)
 	if err != nil {
-		return false, cursor, fmt.Errorf("failed to get session: %w", err)
+		return sessionWatchUpdate{}, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	update := sessionWatchUpdate{
+		NextCursor: cursor,
+		State:      session.State,
 	}
 
 	statusIcon := getSessionStatusIcon(session.State)
@@ -497,17 +530,23 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 	}
 	fmt.Println()
 
-	if followActivities {
+	if followActivities || detectAgentMessage {
 		activities, err := client.ListActivitiesSince(ctx, sessionID, cursor, 25)
 		if err != nil {
 			fmt.Printf("⚠️  Could not fetch activities: %v\n", err)
 		} else {
 			nextCursor := jules.ActivityCursor(activities)
 			if nextCursor.After(cursor) {
-				cursor = nextCursor
+				update.NextCursor = nextCursor
 			}
 			for i := len(activities) - 1; i >= 0; i-- {
 				activity := activities[i]
+				if activity.AgentMessaged != nil && (cursor.IsZero() || activity.CreateTime.After(cursor)) {
+					update.HasJulesAgentMessage = true
+				}
+				if !followActivities {
+					continue
+				}
 				key := activityResourceKey(activity)
 				if key == "" || seenActivities[key] {
 					continue
@@ -521,21 +560,25 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 	switch {
 	case session.State.NeedsUserAction():
 		fmt.Printf("Next action: %s. Use 'juleson sessions get %s' to inspect, then approve or send feedback.\n", statusText, sessionID)
-		return true, cursor, nil
+		update.Stop = true
+		return update, nil
 	case session.State == jules.SessionStateFailed:
 		fmt.Printf("Next action: inspect failure details with 'juleson sessions get %s'.\n", sessionID)
-		return true, cursor, nil
+		update.Stop = true
+		return update, nil
 	case session.State == jules.SessionStateCompleted:
 		fmt.Printf("Next action: preview changes with 'juleson sessions apply %s <project-path>'.\n", sessionID)
 		if len(session.Outputs) > 0 {
 			fmt.Printf("Next output action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)
 		}
-		return true, cursor, nil
+		update.Stop = true
+		return update, nil
 	case len(session.Outputs) > 0:
 		fmt.Printf("Next action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)
-		return true, cursor, nil
+		update.Stop = true
+		return update, nil
 	default:
-		return false, cursor, nil
+		return update, nil
 	}
 }
 
@@ -664,6 +707,8 @@ func listSessionArtifacts(cfg *config.Config, sessionID string) error {
 			for _, file := range manifest.Files {
 				fmt.Printf("    %s (+%d -%d)\n", file.Path, file.LinesAdded, file.LinesRemoved)
 			}
+		} else if manifest.Empty {
+			fmt.Printf("  Empty changeset: no diff content\n")
 		}
 		if manifest.BaseCommitID != "" {
 			fmt.Printf("  Base commit: %s\n", manifest.BaseCommitID)
@@ -697,18 +742,21 @@ func showSessionOutputs(cfg *config.Config, sessionID string) error {
 	}
 	fmt.Printf("Outputs for session %s\n", sessionID)
 	fmt.Println(strings.Repeat("=", 60))
-	for i, output := range session.Outputs {
-		fmt.Printf("%d. ", i+1)
+	supported := 0
+	for _, output := range session.Outputs {
 		if output.PullRequest != nil {
+			supported++
+			fmt.Printf("%d. ", supported)
 			fmt.Println("Pull Request")
 			fmt.Printf("   URL: %s\n", output.PullRequest.URL)
 			fmt.Printf("   Title: %s\n", output.PullRequest.Title)
 			if output.PullRequest.Description != "" {
 				fmt.Printf("   Description: %s\n", output.PullRequest.Description)
 			}
-		} else {
-			fmt.Println("Unknown documented output")
 		}
+	}
+	if supported == 0 {
+		fmt.Println("No supported documented output payloads found.")
 	}
 	return nil
 }

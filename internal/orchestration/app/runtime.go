@@ -23,8 +23,30 @@ type Runtime struct {
 	deps RuntimeDeps
 }
 
+type RuntimeCapabilities struct {
+	ProjectAnalysis bool
+	Planning        bool
+	TaskExecution   bool
+	Review          bool
+	Memory          bool
+	Checkpointing   bool
+	DryRunPlanning  bool
+}
+
 func NewRuntime(deps RuntimeDeps) *Runtime {
 	return &Runtime{deps: deps}
+}
+
+func (r *Runtime) Capabilities() RuntimeCapabilities {
+	return RuntimeCapabilities{
+		ProjectAnalysis: r.deps.ProjectAnalyzer != nil,
+		Planning:        r.deps.Planner != nil,
+		TaskExecution:   r.deps.TaskExecutor != nil,
+		Review:          r.deps.Reviewer != nil,
+		Memory:          r.deps.MemoryStore != nil,
+		Checkpointing:   r.deps.CheckpointStore != nil,
+		DryRunPlanning:  r.deps.Planner != nil,
+	}
 }
 
 func (r *Runtime) AgentRunner() *AgentRunner {
