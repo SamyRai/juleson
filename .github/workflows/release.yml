@@ -81,7 +81,8 @@ jobs:
         id: tag_check
         if: github.event_name == 'workflow_dispatch'
         run: |
-          if git show-ref --tags | grep -q "refs/tags/${{ github.event.inputs.version || github.ref_name }}"; then
+          VERSION="${{ github.event.inputs.version || github.ref_name }}"
+          if git show-ref --tags | grep -q "refs/tags/${VERSION}"; then
               echo "Tag already exists"
               exit 1
           fi
@@ -90,11 +91,11 @@ jobs:
         id: version
         run: |
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [[ $VERSION == *"beta"* || $VERSION == *"alpha"* || $VERSION == *"rc"* ]]; then
-              echo "is_prerelease=true" >> $GITHUB_OUTPUT
+              echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
           else
-              echo "is_prerelease=false" >> $GITHUB_OUTPUT
+              echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
   # Build release artifacts
@@ -245,12 +246,12 @@ jobs:
 
           # Generate changelog
           if command -v git-cliff &> /dev/null; then
-              git-cliff $PREVIOUS_TAG..HEAD --latest --strip header > changelog.md
+              git-cliff "$PREVIOUS_TAG..HEAD" --latest --strip header > changelog.md
           else
               # Fallback to git log
               echo "## Changes" > changelog.md
               echo "" >> changelog.md
-              git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> changelog.md
+              git log --pretty=format:"- %s (%h)" "$PREVIOUS_TAG..HEAD" >> changelog.md
           fi
 
       - name: Create Release

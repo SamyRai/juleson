@@ -257,6 +257,7 @@ jobs:
 
       - name: Test binaries (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           .\bin\juleson.exe --version || echo "Version flag not implemented yet"
           .\bin\jules-mcp.exe --help || echo "Help flag not implemented yet"
@@ -337,13 +338,28 @@ jobs:
 
     steps:
       - name: Check all job statuses
+        env:
+          PRE_CHECK_STATUS: ${{ needs.pre-check.result }}
+          TEST_STATUS: ${{ needs.test.result }}
+          LINT_STATUS: ${{ needs.lint.result }}
+          SECURITY_STATUS: ${{ needs.security.result }}
+          BUILD_STATUS: ${{ needs.build.result }}
+          DEPENDENCY_REVIEW_STATUS: ${{ needs.dependency-review.result }}
+          PERFORMANCE_TEST_STATUS: ${{ needs.performance-test.result }}
         run: |
-          # Define required jobs
-          required_jobs="pre-check test lint security build dependency-review performance-test"
+          declare -A job_statuses=(
+            ["pre-check"]="$PRE_CHECK_STATUS"
+            ["test"]="$TEST_STATUS"
+            ["lint"]="$LINT_STATUS"
+            ["security"]="$SECURITY_STATUS"
+            ["build"]="$BUILD_STATUS"
+            ["dependency-review"]="$DEPENDENCY_REVIEW_STATUS"
+            ["performance-test"]="$PERFORMANCE_TEST_STATUS"
+          )
 
           # Check each required job
-          for job in $required_jobs; do
-              status="${{ needs.$job.result }}"
+          for job in "${!job_statuses[@]}"; do
+              status="${job_statuses[$job]}"
               if [[ "$status" != "success" && "$status" != "skipped" ]]; then
                   echo "❌ Job '$job' failed with status: $status"
                   exit 1
