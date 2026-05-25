@@ -333,48 +333,30 @@ func qualityCheckHandler(ctx context.Context, req *mcp.CallToolRequest, input Qu
 	QualityCheckOutput,
 	error,
 ) {
-	var checks []string
-
-	// Format
 	service := devToolOrchestrator()
-	if err := service.FormatCode(ctx, false); err != nil {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Format failed: %v", err)},
-			},
-		}, QualityCheckOutput{Success: false, Checks: checks}, nil
-	}
-	checks = append(checks, "✅ Format")
-
-	// Lint
-	lintResult := service.LintWithResult(ctx, orchestrator.DefaultLintConfig())
-	if !lintResult.Success {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Lint failed: %v", lintResult.Error)},
-			},
-		}, QualityCheckOutput{Success: false, Checks: checks}, nil
-	}
-	checks = append(checks, "✅ Lint")
-
-	// Test
 	config := orchestrator.DefaultTestConfig()
 	config.Cover = true
 	config.CoverProfile = "coverage.out"
 
-	result := service.RunTestsWithResult(ctx, config)
-
-	if !result.Success {
+	summary, err := service.RunQualityChecks(ctx, orchestrator.QualityOptions{
+		Format:     true,
+		Lint:       true,
+		Test:       true,
+		TestConfig: config,
+		Build:      true,
+	})
+	checks := make([]string, 0, len(summary.Checks))
+	for _, check := range summary.Checks {
+		checks = append(checks, "✅ "+check)
+	}
+	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Tests failed: %v", result.Error)},
+				&mcp.TextContent{Text: err.Error()},
 			},
 		}, QualityCheckOutput{Success: false, Checks: checks}, nil
 	}
-	checks = append(checks, "✅ Tests")
 
 	return nil, QualityCheckOutput{
 		Success: true,

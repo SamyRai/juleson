@@ -86,7 +86,7 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 	// Register Juleson extension commands with their dependencies.
 	a.rootCmd.AddCommand(commands.NewInitCommand(a.formatters.ConfigGen.GenerateProjectConfig))
 	a.rootCmd.AddCommand(commands.NewAnalyzeCommand(
-		a.container.AutomationEngine,
+		a.container.AnalyzeProject,
 		commands.DisplayProjectAnalysis,
 	))
 	a.rootCmd.AddCommand(commands.NewTemplateCommand(

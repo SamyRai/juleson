@@ -110,6 +110,48 @@ func TestCLIMCPAdaptersUseOrchestrationRuntimeForAgentAutomation(t *testing.T) {
 	}
 }
 
+func TestOrchestratorDoesNotOwnGoToolCommandConstruction(t *testing.T) {
+	root := repoRoot(t)
+	orchestratorDir := filepath.Join(root, "internal/orchestrator")
+	entries, err := os.ReadDir(orchestratorDir)
+	if err != nil {
+		t.Fatalf("read orchestrator dir: %v", err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		file := filepath.Join(orchestratorDir, entry.Name())
+		content, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("read file: %v", err)
+		}
+		text := string(content)
+		forbidden := []string{
+			`runCommand(ctx, "go"`,
+			`exec.CommandContext(ctx, "go"`,
+			`exec.Command("go"`,
+		}
+		for _, pattern := range forbidden {
+			if strings.Contains(text, pattern) {
+				t.Fatalf("%s constructs Go tool command %q; use internal/build instead", filepath.Join("internal/orchestrator", entry.Name()), pattern)
+			}
+		}
+	}
+}
+
+func TestOrchestratorAvoidsPackageWideInterface(t *testing.T) {
+	root := repoRoot(t)
+	content, err := os.ReadFile(filepath.Join(root, "internal/orchestrator/orchestrator.go"))
+	if err != nil {
+		t.Fatalf("read orchestrator.go: %v", err)
+	}
+	if strings.Contains(string(content), "type Orchestrator interface") {
+		t.Fatal("internal/orchestrator should expose concrete workflows or consumer-owned narrow interfaces, not a package-wide interface")
+	}
+}
+
 func TestOrchestrationExtractionBoundaryImports(t *testing.T) {
 	tests := []struct {
 		name            string

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/SamyRai/juleson/internal/orchestrator"
@@ -35,9 +36,9 @@ func devOrchestrator() *orchestrator.Service {
 	return orchestrator.NewService(orchestrator.DefaultConfig("dev", "", ""))
 }
 
-func buildBinaries(ctx context.Context, version, goos, goarch string, race bool) (*orchestrator.BuildSummary, error) {
+func buildBinaries(ctx context.Context, target, version, goos, goarch string, race bool) (*orchestrator.BuildSummary, error) {
 	summary, err := devOrchestrator().BuildWithResults(ctx, orchestrator.BuildOptions{
-		Target:  "all",
+		Target:  target,
 		Version: version,
 		GOOS:    goos,
 		GOARCH:  goarch,
@@ -73,7 +74,18 @@ func newBuildCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			summary, err := buildBinaries(ctx, version, goos, goarch, race)
+			target := "all"
+			if cli {
+				target = "cli"
+			}
+			if mcp {
+				target = "mcp"
+			}
+			if all {
+				target = "all"
+			}
+
+			summary, err := buildBinaries(ctx, target, version, goos, goarch, race)
 			if err != nil {
 				return err
 			}
@@ -399,34 +411,29 @@ func newCheckCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			// Format
 			fmt.Println("✨ Formatting code...")
 			service := devOrchestrator()
-			if err := service.FormatCode(ctx, false); err != nil {
-				return fmt.Errorf("format failed: %w", err)
-			}
-			fmt.Println("✅ Code formatted")
-
-			// Lint
 			fmt.Println("\n🔍 Running linters...")
-			lintResult := service.LintWithResult(ctx, orchestrator.DefaultLintConfig())
-			if !lintResult.Success {
-				return fmt.Errorf("lint failed: %w", lintResult.Error)
-			}
-			fmt.Println("✅ Linting passed")
-
-			// Test
 			fmt.Println("\n🧪 Running tests...")
 			config := orchestrator.DefaultTestConfig()
 			config.Cover = true
 			config.CoverProfile = "coverage.out"
+			fmt.Println("\n🔨 Building binaries...")
 
-			result := service.RunTestsWithResult(ctx, config)
-
-			if !result.Success {
-				return fmt.Errorf("tests failed: %w", result.Error)
+			summary, err := service.RunQualityChecks(ctx, orchestrator.QualityOptions{
+				Format:     true,
+				Lint:       true,
+				Test:       true,
+				TestConfig: config,
+				Build:      true,
+			})
+			if err != nil {
+				return err
 			}
-			fmt.Printf("✅ %s\n", result.String())
+			fmt.Printf("✅ Completed checks: %s\n", strings.Join(summary.Checks, ", "))
+			if summary.TestResult != nil {
+				fmt.Printf("✅ %s\n", summary.TestResult.String())
+			}
 
 			fmt.Println("\n🎉 All checks passed!")
 			return nil
@@ -454,43 +461,36 @@ func newInstallCommand() *cobra.Command {
 			if !skipChecks {
 				fmt.Println("🔍 Running quality checks...")
 
-				// Format
 				fmt.Println("  ✨ Formatting code...")
 				service := devOrchestrator()
-				if err := service.FormatCode(ctx, false); err != nil {
-					return fmt.Errorf("format failed: %w", err)
-				}
-				fmt.Println("  ✅ Code formatted")
-
-				// Lint (unless skipped)
 				if !skipLint {
 					fmt.Println("  🔍 Running linters...")
-					lintResult := service.LintWithResult(ctx, orchestrator.DefaultLintConfig())
-					if !lintResult.Success {
-						return fmt.Errorf("lint failed: %w", lintResult.Error)
-					}
-					fmt.Println("  ✅ Linting passed")
 				} else {
 					fmt.Println("  ⏭️  Skipping linters (--skip-lint flag used)")
 				}
 
-				// Test (unless skipped)
+				testConfig := orchestrator.DefaultTestConfig()
+				testConfig.Cover = true
+				testConfig.CoverProfile = "coverage.out"
 				if !skipTests {
 					fmt.Println("  🧪 Running tests...")
-					config := orchestrator.DefaultTestConfig()
-					config.Cover = true
-					config.CoverProfile = "coverage.out"
-
-					result := service.RunTestsWithResult(ctx, config)
-
-					if !result.Success {
-						return fmt.Errorf("tests failed: %w", result.Error)
-					}
-					fmt.Printf("  ✅ %s", result.String())
 				} else {
 					fmt.Println("  ⏭️  Skipping tests (--skip-tests flag used)")
 				}
 
+				summary, err := service.RunQualityChecks(ctx, orchestrator.QualityOptions{
+					Format:     true,
+					Lint:       !skipLint,
+					Test:       !skipTests,
+					TestConfig: testConfig,
+				})
+				if err != nil {
+					return err
+				}
+				fmt.Printf("  ✅ Completed checks: %s\n", strings.Join(summary.Checks, ", "))
+				if summary.TestResult != nil {
+					fmt.Printf("  ✅ %s\n", summary.TestResult.String())
+				}
 				fmt.Println("🎉 All quality checks passed!")
 			} else {
 				fmt.Println("⏭️  Skipping quality checks (--skip-checks flag used)")
@@ -499,7 +499,7 @@ func newInstallCommand() *cobra.Command {
 			// Build both binaries
 			fmt.Println("🔨 Building binaries...")
 
-			_, err := buildBinaries(ctx, "dev", runtime.GOOS, runtime.GOARCH, false)
+			_, err := buildBinaries(ctx, "all", "dev", runtime.GOOS, runtime.GOARCH, false)
 			if err != nil {
 				return err
 			}
@@ -553,44 +553,22 @@ func newReleaseCommand() *cobra.Command {
 				return fmt.Errorf("version is required (use --version flag)")
 			}
 
-			platforms := []struct {
-				goos   string
-				goarch string
-			}{
-				{"linux", "amd64"},
-				{"linux", "arm64"},
-				{"darwin", "amd64"},
-				{"darwin", "arm64"},
-				{"windows", "amd64"},
-			}
-
-			fmt.Printf("🚀 Building release %s for %d platforms...\n\n", version, len(platforms)*2)
-
-			successCount := 0
-			failCount := 0
-
-			for _, platform := range platforms {
-				summary, err := buildBinaries(ctx, version, platform.goos, platform.goarch, false)
-				if err != nil {
-					failCount += len(summary.Results)
-					continue
-				}
-
-				for _, result := range summary.Results {
-					if result.Success {
-						successCount++
-					} else {
-						failCount++
-					}
+			fmt.Printf("🚀 Building release %s...\n\n", version)
+			summary, err := devOrchestrator().ReleaseWithResults(ctx, version)
+			for _, result := range summary.Results {
+				if result.Success {
+					fmt.Printf("✅ %s\n", result.String())
+				} else {
+					fmt.Printf("❌ %s\n", result.String())
 				}
 			}
 
 			fmt.Printf("\n📊 Release Summary:\n")
-			fmt.Printf("  Success: %d\n", successCount)
-			fmt.Printf("  Failed: %d\n", failCount)
+			fmt.Printf("  Success: %d\n", summary.SuccessCount)
+			fmt.Printf("  Failed: %d\n", len(summary.Results)-summary.SuccessCount)
 
-			if failCount > 0 {
-				return fmt.Errorf("some builds failed")
+			if err != nil {
+				return err
 			}
 
 			fmt.Println("\n🎉 Release build complete!")

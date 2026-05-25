@@ -2,11 +2,9 @@ package orchestrator
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 )
 
 // Config holds orchestrator configuration
@@ -41,55 +39,6 @@ func DefaultConfig(version, buildDate, gitCommit string) *Config {
 	}
 }
 
-// Orchestrator defines the interface for project orchestration operations
-type Orchestrator interface {
-	// Build operations
-	BuildAll(ctx context.Context) error
-	BuildCLI(ctx context.Context) error
-	BuildMCP(ctx context.Context) error
-
-	// Clean operations
-	Clean(ctx context.Context) error
-
-	// Test operations
-	Test(ctx context.Context, options TestOptions) error
-	Coverage(ctx context.Context) error
-
-	// Code quality operations
-	Lint(ctx context.Context) error
-	Format(ctx context.Context) error
-
-	// Dependency operations
-	DownloadDeps(ctx context.Context) error
-	TidyDeps(ctx context.Context) error
-
-	// Install operations
-	Install(ctx context.Context, targetPath string) error
-
-	// Run operations
-	RunCLI(ctx context.Context, args []string) error
-	RunMCP(ctx context.Context) error
-
-	// Development operations
-	StartDev(ctx context.Context) error
-
-	// Check operations
-	RunAllChecks(ctx context.Context) error
-
-	// Docker operations
-	DockerBuild(ctx context.Context) error
-	DockerRun(ctx context.Context, args []string) error
-	DockerRunCLI(ctx context.Context, args []string) error
-	DockerRunMCP(ctx context.Context) error
-	DockerPush(ctx context.Context) error
-	DockerComposeUp(ctx context.Context) error
-	DockerComposeDown(ctx context.Context) error
-	DockerClean(ctx context.Context) error
-
-	// Info operations
-	GetVersion() VersionInfo
-}
-
 // TestOptions holds options for running tests
 type TestOptions struct {
 	Verbose  bool
@@ -106,7 +55,7 @@ type VersionInfo struct {
 	GitCommit string
 }
 
-// Service implements the Orchestrator interface
+// Service coordinates project-level orchestration workflows.
 type Service struct {
 	config *Config
 	stdout io.Writer
@@ -137,21 +86,6 @@ func (s *Service) runCommand(ctx context.Context, name string, args ...string) e
 	return cmd.Run()
 }
 
-// ensureBinDir creates the bin directory if it doesn't exist
-func (s *Service) ensureBinDir() error {
-	return os.MkdirAll(s.config.BinDir, 0755)
-}
-
-// buildBinary builds a Go binary with ldflags
-func (s *Service) buildBinary(ctx context.Context, outputPath, sourceDir string) error {
-	ldflags := fmt.Sprintf("-s -w -X 'github.com/SamyRai/juleson/internal/cli/commands.Version=%s' "+
-		"-X 'github.com/SamyRai/juleson/internal/cli/commands.BuildDate=%s' "+
-		"-X 'github.com/SamyRai/juleson/internal/cli/commands.GitCommit=%s'",
-		s.config.Version, s.config.BuildDate, s.config.GitCommit)
-
-	return s.runCommand(ctx, "go", "build", "-trimpath", "-ldflags", ldflags, "-o", outputPath, "./"+sourceDir)
-}
-
 // GetVersion returns version information
 func (s *Service) GetVersion() VersionInfo {
 	return VersionInfo{
@@ -159,58 +93,4 @@ func (s *Service) GetVersion() VersionInfo {
 		BuildDate: s.config.BuildDate,
 		GitCommit: s.config.GitCommit,
 	}
-}
-
-// BuildAll builds all binaries
-func (s *Service) BuildAll(ctx context.Context) error {
-	if err := s.ensureBinDir(); err != nil {
-		return fmt.Errorf("failed to create bin directory: %w", err)
-	}
-
-	if err := s.BuildCLI(ctx); err != nil {
-		return fmt.Errorf("failed to build CLI: %w", err)
-	}
-
-	if err := s.BuildMCP(ctx); err != nil {
-		return fmt.Errorf("failed to build MCP: %w", err)
-	}
-
-	return nil
-}
-
-// BuildCLI builds the CLI binary
-func (s *Service) BuildCLI(ctx context.Context) error {
-	if err := s.ensureBinDir(); err != nil {
-		return fmt.Errorf("failed to create bin directory: %w", err)
-	}
-
-	outputPath := filepath.Join(s.config.BinDir, s.config.BinaryCLI)
-	return s.buildBinary(ctx, outputPath, s.config.CmdCLIDir)
-}
-
-// BuildMCP builds the MCP server binary
-func (s *Service) BuildMCP(ctx context.Context) error {
-	if err := s.ensureBinDir(); err != nil {
-		return fmt.Errorf("failed to create bin directory: %w", err)
-	}
-
-	outputPath := filepath.Join(s.config.BinDir, s.config.BinaryMCP)
-	return s.buildBinary(ctx, outputPath, s.config.CmdMCPDir)
-}
-
-// Clean removes build artifacts
-func (s *Service) Clean(ctx context.Context) error {
-	if err := s.runCommand(ctx, "go", "clean"); err != nil {
-		return fmt.Errorf("go clean failed: %w", err)
-	}
-
-	if err := os.RemoveAll(s.config.BinDir); err != nil {
-		return fmt.Errorf("failed to remove bin directory: %w", err)
-	}
-
-	// Remove coverage files
-	os.Remove(s.config.CoverageFile)
-	os.Remove(s.config.CoverageHTML)
-
-	return nil
 }

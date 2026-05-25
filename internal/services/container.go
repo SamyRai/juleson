@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/SamyRai/juleson/internal/analyzer"
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/gemini"
@@ -124,6 +125,11 @@ func (c *Container) templateManagerLocked() (*templates.Manager, error) {
 	}
 
 	return c.templateManager, nil
+}
+
+// AnalyzeProject returns analyzer context without initializing the legacy automation engine.
+func (c *Container) AnalyzeProject(projectPath string) (*analyzer.ProjectContext, error) {
+	return analyzer.NewProjectAnalyzer().Analyze(projectPath)
 }
 
 // AutomationEngine returns the automation engine (lazy initialization)

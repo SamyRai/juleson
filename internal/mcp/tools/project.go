@@ -67,17 +67,7 @@ func analyzeProject(ctx context.Context, req *mcp.CallToolRequest, input Analyze
 	AnalyzeProjectOutput,
 	error,
 ) {
-	engine, err := container.AutomationEngine()
-	if err != nil {
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Failed to initialize automation engine: %v", err)},
-			},
-		}, AnalyzeProjectOutput{}, err
-	}
-
-	context, err := engine.AnalyzeProject(input.ProjectPath)
+	context, err := container.AnalyzeProject(input.ProjectPath)
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,

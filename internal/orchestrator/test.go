@@ -3,40 +3,23 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+
+	"github.com/SamyRai/juleson/internal/build"
 )
 
 // Test runs tests with the given options
 func (s *Service) Test(ctx context.Context, options TestOptions) error {
-	args := []string{"test"}
-
-	if options.Verbose {
-		args = append(args, "-v")
-	}
-
-	if options.Race {
-		args = append(args, "-race")
-	}
-
+	config := build.DefaultTestConfig()
+	config.Verbose = options.Verbose
+	config.Race = options.Race
+	config.Cover = options.Cover
+	config.Short = options.Short
+	config.Packages = options.Packages
 	if options.Cover {
-		args = append(args, "-coverprofile="+s.config.CoverageFile, "-covermode=atomic")
+		config.CoverProfile = s.config.CoverageFile
 	}
-
-	if options.Short {
-		args = append(args, "-short")
-	}
-
-	// Add packages or default to all
-	if len(options.Packages) > 0 {
-		args = append(args, options.Packages...)
-	} else {
-		args = append(args, "./...")
-	}
-
-	if err := s.runCommand(ctx, "go", args...); err != nil {
-		return fmt.Errorf("tests failed: %w", err)
-	}
-
-	return nil
+	result := s.RunTestsWithResult(ctx, config)
+	return result.Error
 }
 
 // Coverage generates test coverage report
@@ -50,10 +33,7 @@ func (s *Service) Coverage(ctx context.Context) error {
 		return err
 	}
 
-	// Generate HTML report
-	if err := s.runCommand(ctx, "go", "tool", "cover",
-		"-html="+s.config.CoverageFile,
-		"-o", s.config.CoverageHTML); err != nil {
+	if err := s.GenerateCoverageHTML(ctx, build.TestConfig{CoverProfile: s.config.CoverageFile}, s.config.CoverageHTML); err != nil {
 		return fmt.Errorf("failed to generate coverage report: %w", err)
 	}
 

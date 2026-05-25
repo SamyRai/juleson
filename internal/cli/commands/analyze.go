@@ -4,13 +4,12 @@ import (
 	"fmt"
 
 	"github.com/SamyRai/juleson/internal/analyzer"
-	"github.com/SamyRai/juleson/internal/automation"
 
 	"github.com/spf13/cobra"
 )
 
 // NewAnalyzeCommand creates the analyze command
-func NewAnalyzeCommand(initializeEngine func() (*automation.Engine, error), displayProjectAnalysis func(*analyzer.ProjectContext)) *cobra.Command {
+func NewAnalyzeCommand(analyzeProject func(string) (*analyzer.ProjectContext, error), displayProjectAnalysis func(*analyzer.ProjectContext)) *cobra.Command {
 	return &cobra.Command{
 		Use:   "analyze [project-path]",
 		Short: "Analyze project structure and context",
@@ -19,21 +18,12 @@ func NewAnalyzeCommand(initializeEngine func() (*automation.Engine, error), disp
 		RunE: func(cmd *cobra.Command, args []string) error {
 			projectPath := args[0]
 
-			// Initialize automation engine
-			engine, err := initializeEngine()
-			if err != nil {
-				return fmt.Errorf("failed to initialize automation engine: %w", err)
-			}
-
-			// Analyze project
-			context, err := engine.AnalyzeProject(projectPath)
+			context, err := analyzeProject(projectPath)
 			if err != nil {
 				return fmt.Errorf("failed to analyze project: %w", err)
 			}
 
-			// Display analysis results
 			displayProjectAnalysis(context)
-
 			return nil
 		},
 	}
