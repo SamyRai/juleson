@@ -17,7 +17,7 @@ The project is pre-1.0. Changes are tracked here until a tagged release process 
 - Setup wizard with shell completion, Jules API configuration, optional GitHub
   configuration, and non-interactive mode.
 - Shell completion generation for Bash, Zsh, Fish, and PowerShell.
-- Gemini-backed orchestration tools and MCP tools gated by Gemini configuration.
+- Gemini-backed orchestration tools and MCP tools gated by Jules and Gemini configuration.
 - Installer scripts for Linux, macOS, and Windows release assets.
 - MCP command-transport E2E coverage and installer tests.
 - Jules API session delete support in the client, CLI, and MCP server.

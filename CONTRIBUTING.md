@@ -39,12 +39,13 @@ juleson dev check
 
 ## Configuration For Local Testing
 
-Use environment variables for credentials:
+Use environment variables for non-interactive setup, or put credentials in an
+untracked local config file:
 
 ```bash
 export JULES_API_KEY="..."
 export GITHUB_TOKEN="..."
-export GEMINI_API_KEY="..."
+juleson setup --non-interactive
 ```
 
 Optional config file:

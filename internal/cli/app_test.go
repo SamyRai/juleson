@@ -15,6 +15,7 @@ func TestCoreCommandsDoNotRequireJulesAPIKeyForHelp(t *testing.T) {
 		{"sessions", "--help"},
 		{"sources", "--help"},
 		{"activities", "--help"},
+		{"official", "--help"},
 	}
 
 	for _, args := range tests {

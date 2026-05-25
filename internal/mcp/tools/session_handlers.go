@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/SamyRai/juleson/pkg/jules"
@@ -80,7 +82,8 @@ func getSessionStatus(ctx context.Context, req *mcp.CallToolRequest, input GetSe
 	}
 
 	// Active sessions count
-	activeCount := stateCounts["IN_PROGRESS"] + stateCounts["PLANNING"]
+	activeCount := stateCounts[string(jules.SessionStateInProgress)] + stateCounts[string(jules.SessionStatePlanning)] + stateCounts[string(jules.SessionStateQueued)]
+	userActionCount := stateCounts[string(jules.SessionStateAwaitingPlanApproval)] + stateCounts[string(jules.SessionStateAwaitingUserFeedback)]
 
 	// Recent sessions (last 5)
 	recentCount := 5
@@ -90,14 +93,15 @@ func getSessionStatus(ctx context.Context, req *mcp.CallToolRequest, input GetSe
 	recentSessions := sessions[:recentCount]
 
 	// Generate summary
-	summary := fmt.Sprintf("Found %d total sessions with %d currently active", totalSessions, activeCount)
+	summary := fmt.Sprintf("Found %d total sessions with %d currently active and %d needing user action", totalSessions, activeCount, userActionCount)
 
 	output := GetSessionStatusOutput{
-		TotalSessions:  totalSessions,
-		StateBreakdown: stateCounts,
-		ActiveSessions: activeCount,
-		RecentSessions: recentSessions,
-		Summary:        summary,
+		TotalSessions:      totalSessions,
+		StateBreakdown:     stateCounts,
+		ActiveSessions:     activeCount,
+		UserActionSessions: userActionCount,
+		RecentSessions:     recentSessions,
+		Summary:            summary,
 	}
 
 	return nil, output, nil
@@ -166,11 +170,53 @@ func applySessionPatches(ctx context.Context, req *mcp.CallToolRequest, input Ap
 	ApplySessionPatchesOutput,
 	error,
 ) {
+	dryRun := input.DryRun || !input.ConfirmApply
+	if !dryRun && !input.AllowDirty {
+		clean, status, err := julesops.IsGitWorkingTreeClean(ctx, input.WorkingDir)
+		if err != nil {
+			return &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{
+						&mcp.TextContent{Text: fmt.Sprintf("Failed to inspect working tree: %v", err)},
+					},
+				}, ApplySessionPatchesOutput{
+					SessionID: input.SessionID,
+					DryRun:    true,
+					Blockers:  []string{err.Error()},
+					Message:   "Refusing to apply patches because working tree status could not be checked",
+				}, err
+		}
+		if !clean {
+			blocker := "target worktree has local changes; commit/stash them or set allow_dirty=true"
+			if status != "" {
+				blocker = blocker + ": " + status
+			}
+			err := fmt.Errorf("%s", blocker)
+			return &mcp.CallToolResult{
+					IsError: true,
+					Content: []mcp.Content{
+						&mcp.TextContent{Text: blocker},
+					},
+				}, ApplySessionPatchesOutput{
+					SessionID: input.SessionID,
+					DryRun:    true,
+					Blockers:  []string{blocker},
+					Message:   "Refusing to apply patches to a dirty working tree",
+				}, err
+		}
+	}
+
 	options := &julesops.PatchApplicationOptions{
-		WorkingDir:   input.WorkingDir,
-		DryRun:       input.DryRun,
-		Force:        input.Force,
-		CreateBackup: input.CreateBackup,
+		WorkingDir:        input.WorkingDir,
+		DryRun:            dryRun,
+		Force:             input.Force,
+		CreateBackup:      input.CreateBackup,
+		ActivityID:        input.ActivityID,
+		AllowBaseMismatch: input.AllowBaseMismatch,
+	}
+	if input.ArtifactIndex != nil {
+		options.ArtifactIndex = *input.ArtifactIndex
+		options.HasArtifactIndex = true
 	}
 
 	result, err := julesops.ApplySessionPatches(ctx, client, input.SessionID, options)
@@ -192,13 +238,16 @@ func applySessionPatches(ctx context.Context, req *mcp.CallToolRequest, input Ap
 	}
 
 	output := ApplySessionPatchesOutput{
-		SessionID:      input.SessionID,
-		PatchesApplied: result.PatchesApplied,
-		PatchesFailed:  result.PatchesFailed,
-		FilesModified:  result.FilesModified,
-		Errors:         result.Errors,
-		DryRun:         result.DryRun,
-		Message:        message,
+		SessionID:               input.SessionID,
+		PatchesApplied:          result.PatchesApplied,
+		PatchesFailed:           result.PatchesFailed,
+		FilesModified:           result.FilesModified,
+		SuggestedCommitMessages: result.SuggestedCommitMessages,
+		Warnings:                result.Warnings,
+		BaseCommitMismatches:    result.BaseCommitMismatches,
+		Errors:                  result.Errors,
+		DryRun:                  result.DryRun,
+		Message:                 message,
 	}
 
 	return nil, output, nil
@@ -210,7 +259,15 @@ func previewSessionChanges(ctx context.Context, req *mcp.CallToolRequest, input 
 	PreviewSessionChangesOutput,
 	error,
 ) {
-	changes, err := julesops.PreviewSessionPatches(ctx, client, input.SessionID, input.WorkingDir)
+	options := &julesops.PatchApplicationOptions{
+		WorkingDir: input.WorkingDir,
+		ActivityID: input.ActivityID,
+	}
+	if input.ArtifactIndex != nil {
+		options.ArtifactIndex = *input.ArtifactIndex
+		options.HasArtifactIndex = true
+	}
+	changes, err := julesops.PreviewSessionPatchesWithOptions(ctx, client, input.SessionID, options)
 
 	canApply := true
 	var errors []string
@@ -243,12 +300,15 @@ func previewSessionChanges(ctx context.Context, req *mcp.CallToolRequest, input 
 	}
 
 	output := PreviewSessionChangesOutput{
-		SessionID:    input.SessionID,
-		TotalPatches: changes.TotalPatches,
-		Files:        changes.Files,
-		CanApply:     canApply,
-		Errors:       errors,
-		Summary:      summary,
+		SessionID:               input.SessionID,
+		TotalPatches:            changes.TotalPatches,
+		Files:                   changes.Files,
+		SuggestedCommitMessages: changes.SuggestedCommitMessages,
+		Warnings:                changes.Warnings,
+		BaseCommitMismatches:    changes.BaseCommitMismatches,
+		CanApply:                canApply,
+		Errors:                  errors,
+		Summary:                 summary,
 	}
 
 	return nil, output, nil
@@ -289,6 +349,38 @@ func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSe
 	CreateSessionOutput,
 	error,
 ) {
+	prompt := strings.TrimSpace(input.Prompt)
+	if input.PromptFile != "" {
+		if prompt != "" {
+			err := fmt.Errorf("provide either prompt or prompt_file, not both")
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: err.Error()},
+				},
+			}, CreateSessionOutput{}, err
+		}
+		data, err := os.ReadFile(input.PromptFile)
+		if err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Failed to read prompt_file: %v", err)},
+				},
+			}, CreateSessionOutput{}, err
+		}
+		prompt = strings.TrimSpace(string(data))
+	}
+	if prompt == "" {
+		err := fmt.Errorf("prompt or prompt_file is required")
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: err.Error()},
+			},
+		}, CreateSessionOutput{}, err
+	}
+
 	var sourceContext *jules.SourceContext
 	if strings.TrimSpace(input.Source) != "" {
 		sourceContext = &jules.SourceContext{
@@ -310,7 +402,7 @@ func createSession(ctx context.Context, req *mcp.CallToolRequest, input CreateSe
 	}
 
 	createReq := &jules.CreateSessionRequest{
-		Prompt:              input.Prompt,
+		Prompt:              prompt,
 		SourceContext:       sourceContext,
 		Title:               input.Title,
 		RequirePlanApproval: input.RequirePlanApproval,
@@ -367,4 +459,186 @@ func getSession(ctx context.Context, req *mcp.CallToolRequest, input GetSessionI
 	}
 
 	return nil, output, nil
+}
+
+func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSessionInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	WatchSessionOutput,
+	error,
+) {
+	interval := time.Duration(input.IntervalSeconds) * time.Second
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	timeout := time.Duration(input.TimeoutSeconds) * time.Second
+	if timeout <= 0 {
+		timeout = 30 * time.Minute
+	}
+
+	watchCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	var cursor time.Time
+	if input.Since != "" {
+		parsed, err := time.Parse(time.RFC3339Nano, input.Since)
+		if err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Invalid since cursor: %v", err)},
+				},
+			}, WatchSessionOutput{}, err
+		}
+		cursor = parsed
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		output, err := currentWatchSessionOutput(watchCtx, input.SessionID, client, cursor)
+		if err != nil {
+			return &mcp.CallToolResult{
+				IsError: true,
+				Content: []mcp.Content{
+					&mcp.TextContent{Text: fmt.Sprintf("Failed to watch session: %v", err)},
+				},
+			}, WatchSessionOutput{}, err
+		}
+		if output.IsTerminal || output.NeedsUserAction || (output.Session != nil && len(output.Session.Outputs) > 0) {
+			return nil, output, nil
+		}
+		if output.NextActivityCursor != "" {
+			if parsed, err := time.Parse(time.RFC3339Nano, output.NextActivityCursor); err == nil && parsed.After(cursor) {
+				cursor = parsed
+			}
+		}
+
+		select {
+		case <-watchCtx.Done():
+			output.NextAction = fmt.Sprintf("watch timed out after %s; call watch_session again or inspect get_session", timeout)
+			return nil, output, nil
+		case <-ticker.C:
+		}
+	}
+}
+
+func currentWatchSessionOutput(ctx context.Context, sessionID string, client *jules.Client, cursor time.Time) (WatchSessionOutput, error) {
+	session, err := client.GetSession(ctx, sessionID)
+	if err != nil {
+		return WatchSessionOutput{}, err
+	}
+
+	activities, err := client.ListActivitiesSince(ctx, sessionID, cursor, 25)
+	if err != nil {
+		activities = nil
+	}
+	nextCursor := jules.ActivityCursor(activities)
+
+	output := WatchSessionOutput{
+		SessionID:        session.ID,
+		State:            string(session.State),
+		NeedsUserAction:  session.State.NeedsUserAction(),
+		IsTerminal:       session.State.IsTerminal(),
+		Session:          session,
+		RecentActivities: activities,
+		NextAction:       "session is still active; keep watching",
+	}
+	if !nextCursor.IsZero() {
+		output.NextActivityCursor = nextCursor.Format(time.RFC3339Nano)
+	}
+	switch {
+	case session.State == jules.SessionStateAwaitingPlanApproval:
+		output.NextAction = "inspect get_session_plans, then call approve_session_plan or send_session_message"
+	case session.State == jules.SessionStateAwaitingUserFeedback:
+		output.NextAction = "inspect recent activities, then call send_session_message"
+	case session.State == jules.SessionStateCompleted:
+		output.NextAction = "call preview_session_changes, then apply_session_patches with confirm_apply=true if acceptable"
+	case session.State == jules.SessionStateFailed:
+		output.NextAction = "inspect get_session and list_session_activities for failure details"
+	case len(session.Outputs) > 0:
+		output.NextAction = "call get_session_outputs to inspect created pull requests or other outputs"
+	}
+	return output, nil
+}
+
+func verifySessionChanges(ctx context.Context, req *mcp.CallToolRequest, input VerifySessionChangesInput) (
+	*mcp.CallToolResult,
+	VerifySessionChangesOutput,
+	error,
+) {
+	result, err := julesops.VerifyProjectChanges(ctx, julesops.VerificationOptions{
+		WorkingDir: input.WorkingDir,
+		Command:    input.Command,
+		Packages:   input.Packages,
+		Short:      input.Short,
+	})
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+		}, VerifySessionChangesOutput{}, err
+	}
+	output := VerifySessionChangesOutput{
+		WorkingDir: result.WorkingDir,
+		Success:    result.Success,
+		Command:    result.Command,
+		Output:     result.Output,
+		Summary:    result.Summary,
+	}
+	if !result.Success {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{Text: output.Summary}},
+		}, output, nil
+	}
+	return nil, output, nil
+}
+
+func listSessionArtifacts(ctx context.Context, req *mcp.CallToolRequest, input ListSessionArtifactsInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	ListSessionArtifactsOutput,
+	error,
+) {
+	artifacts, err := julesops.ListSessionArtifactManifests(ctx, client, input.SessionID)
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to list session artifacts: %v", err)},
+			},
+		}, ListSessionArtifactsOutput{}, err
+	}
+	if artifacts == nil {
+		artifacts = []julesops.ArtifactManifest{}
+	}
+	return nil, ListSessionArtifactsOutput{
+		SessionID:  input.SessionID,
+		Artifacts:  artifacts,
+		TotalCount: len(artifacts),
+	}, nil
+}
+
+func getSessionOutputs(ctx context.Context, req *mcp.CallToolRequest, input GetSessionOutputsInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	GetSessionOutputsOutput,
+	error,
+) {
+	session, err := client.GetSession(ctx, input.SessionID)
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to get session outputs: %v", err)},
+			},
+		}, GetSessionOutputsOutput{}, err
+	}
+	outputs := session.Outputs
+	if outputs == nil {
+		outputs = []jules.Output{}
+	}
+	return nil, GetSessionOutputsOutput{
+		SessionID:  session.ID,
+		Outputs:    outputs,
+		TotalCount: len(outputs),
+	}, nil
 }

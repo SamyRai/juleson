@@ -17,7 +17,8 @@ owner, and present the returned result.
 
 - `orchestrator.go`: interface, config, constructor, and core project build operations.
 - `command_runner.go`: command execution seam for owner-level tests.
-- `dev_workflows.go`: shared dev/build/test/lint/format/clean/module/install/release workflows used by CLI and MCP.
+- `dev_workflows.go`: shared dev/build/test/lint/format/clean/module/install
+  and release workflows used by CLI and MCP.
 - `test.go`: tests and coverage.
 - `quality.go`: linting, formatting, and combined checks.
 - `deps.go`: Go module commands.

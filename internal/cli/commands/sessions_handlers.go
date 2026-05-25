@@ -6,11 +6,39 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/julesops"
 	"github.com/SamyRai/juleson/pkg/jules"
 )
+
+type CreateSessionOptions struct {
+	NoSource            bool
+	PromptFile          string
+	Title               string
+	StartingBranch      string
+	RequirePlanApproval bool
+	AutomationMode      string
+}
+
+type BatchSessionOptions struct {
+	Parallel       int
+	Title          string
+	BatchID        string
+	GroupTitle     string
+	StartingBranch string
+	AutomationMode string
+}
+
+type ApplySessionOptions struct {
+	Confirm           bool
+	AllowDirty        bool
+	ActivityID        string
+	ArtifactIndex     int
+	HasArtifactIndex  bool
+	AllowBaseMismatch bool
+}
 
 // approveSessionPlan approves a plan in a session
 func approveSessionPlan(cfg *config.Config, sessionID string) error {
@@ -31,28 +59,50 @@ func approveSessionPlan(cfg *config.Config, sessionID string) error {
 
 	return nil
 }
-func createSession(cfg *config.Config, sourceID string, prompt string, noSource bool) error {
+func createSession(cfg *config.Config, sourceID string, prompt string, options CreateSessionOptions) error {
 	// Initialize Jules client
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
+	if options.PromptFile != "" {
+		loadedPrompt, err := loadPromptFile(options.PromptFile)
+		if err != nil {
+			return err
+		}
+		prompt = loadedPrompt
+	}
+	sourceName := normalizeSourceID(sourceID)
+	if !options.NoSource && sourceID == "." {
+		source, err := julesops.InferSourceFromGitRemote(ctx, julesClient, ".")
+		if err != nil {
+			return err
+		}
+		sourceName = source.Name
+	}
 
 	fmt.Printf("🚀 Creating new Jules session...\n")
-	if noSource {
+	if options.NoSource {
 		fmt.Printf("Source: repoless\n")
 	} else {
-		fmt.Printf("Source: %s\n", normalizeSourceID(sourceID))
+		fmt.Printf("Source: %s\n", sourceName)
 	}
 	fmt.Printf("Prompt: %s\n\n", prompt)
 
 	req := &jules.CreateSessionRequest{
 		Prompt:              prompt,
-		RequirePlanApproval: false, // Default to auto-approval for CLI
+		Title:               options.Title,
+		RequirePlanApproval: options.RequirePlanApproval,
+		AutomationMode:      jules.AutomationMode(options.AutomationMode),
 	}
-	if !noSource {
+	if !options.NoSource {
 		req.SourceContext = &jules.SourceContext{
-			Source: normalizeSourceID(sourceID),
+			Source: sourceName,
 		}
+		if options.StartingBranch != "" {
+			req.SourceContext.GithubRepoContext = &jules.GithubRepoContext{StartingBranch: options.StartingBranch}
+		}
+	} else if options.StartingBranch != "" {
+		return fmt.Errorf("--starting-branch requires a source-backed session")
 	}
 
 	session, err := julesClient.CreateSession(ctx, req)
@@ -191,11 +241,15 @@ func showSessionStatus(cfg *config.Config) error {
 	}
 
 	// Active sessions summary
-	activeCount := stateCounts["IN_PROGRESS"] + stateCounts["PLANNING"]
+	activeCount := stateCounts[string(jules.SessionStateInProgress)] + stateCounts[string(jules.SessionStatePlanning)] + stateCounts[string(jules.SessionStateQueued)]
+	userActionCount := stateCounts[string(jules.SessionStateAwaitingPlanApproval)] + stateCounts[string(jules.SessionStateAwaitingUserFeedback)]
 	if activeCount > 0 {
 		fmt.Printf("\n⚠️  %d session(s) are currently active/running\n", activeCount)
 	} else {
 		fmt.Println("\n✅ No active sessions currently running")
+	}
+	if userActionCount > 0 {
+		fmt.Printf("⏸  %d session(s) need user action\n", userActionCount)
 	}
 
 	// Recent sessions (last 5)
@@ -209,7 +263,7 @@ func showSessionStatus(cfg *config.Config) error {
 		for i := 0; i < recentCount; i++ {
 			session := sessions[i]
 			statusIcon := getSessionStatusIcon(session.State)
-			fmt.Printf("  %s %s - %s (%s)\n", statusIcon, session.ID[:12], session.Title, session.State)
+			fmt.Printf("  %s %s - %s (%s)\n", statusIcon, shortSessionID(session.ID), session.Title, session.State)
 		}
 	}
 
@@ -224,7 +278,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 	ctx := context.Background()
 
 	fmt.Printf("🔍 Fetching session details for: %s\n", sessionID)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
 	// Get session details
 	session, err := julesClient.GetSession(ctx, sessionID)
@@ -364,6 +418,426 @@ func sendSessionMessage(cfg *config.Config, sessionID string, message string) er
 	return nil
 }
 
+func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue string, followActivities bool, sinceValue, cursorOutput string) error {
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+
+	interval, err := time.ParseDuration(intervalValue)
+	if err != nil {
+		return fmt.Errorf("invalid --interval: %w", err)
+	}
+	timeout, err := time.ParseDuration(timeoutValue)
+	if err != nil {
+		return fmt.Errorf("invalid --timeout: %w", err)
+	}
+	if interval <= 0 {
+		return fmt.Errorf("--interval must be greater than zero")
+	}
+	if timeout <= 0 {
+		return fmt.Errorf("--timeout must be greater than zero")
+	}
+	var cursor time.Time
+	if sinceValue != "" {
+		parsed, err := time.Parse(time.RFC3339Nano, sinceValue)
+		if err != nil {
+			return fmt.Errorf("invalid --since: %w", err)
+		}
+		cursor = parsed
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	fmt.Printf("👁️  Watching session: %s\n", sessionID)
+	fmt.Printf("Polling every %s for up to %s\n", interval, timeout)
+	fmt.Println(strings.Repeat("=", 60))
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	seenActivities := map[string]bool{}
+	for {
+		stop, nextCursor, err := printSessionWatchUpdate(ctx, julesClient, sessionID, followActivities, seenActivities, cursor)
+		if err != nil {
+			return err
+		}
+		if nextCursor.After(cursor) {
+			cursor = nextCursor
+			if cursorOutput != "" {
+				if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0644); err != nil {
+					return fmt.Errorf("failed to write cursor output: %w", err)
+				}
+			}
+		}
+		if stop {
+			if !cursor.IsZero() {
+				fmt.Printf("Next activity cursor: %s\n", cursor.Format(time.RFC3339Nano))
+			}
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout watching session after %s", timeout)
+		case <-ticker.C:
+		}
+	}
+}
+
+func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionID string, followActivities bool, seenActivities map[string]bool, cursor time.Time) (bool, time.Time, error) {
+	session, err := client.GetSession(ctx, sessionID)
+	if err != nil {
+		return false, cursor, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	statusIcon := getSessionStatusIcon(session.State)
+	statusText := getSessionStatusText(session.State)
+	fmt.Printf("%s %s %s", time.Now().Format(time.RFC3339), statusIcon, session.State)
+	if session.Title != "" {
+		fmt.Printf(" - %s", session.Title)
+	}
+	fmt.Println()
+
+	if followActivities {
+		activities, err := client.ListActivitiesSince(ctx, sessionID, cursor, 25)
+		if err != nil {
+			fmt.Printf("⚠️  Could not fetch activities: %v\n", err)
+		} else {
+			nextCursor := jules.ActivityCursor(activities)
+			if nextCursor.After(cursor) {
+				cursor = nextCursor
+			}
+			for i := len(activities) - 1; i >= 0; i-- {
+				activity := activities[i]
+				key := activityResourceKey(activity)
+				if key == "" || seenActivities[key] {
+					continue
+				}
+				seenActivities[key] = true
+				fmt.Printf("  • %s %s\n", activity.CreateTime.Format(time.RFC3339), describeActivity(activity))
+			}
+		}
+	}
+
+	switch {
+	case session.State.NeedsUserAction():
+		fmt.Printf("Next action: %s. Use 'juleson sessions get %s' to inspect, then approve or send feedback.\n", statusText, sessionID)
+		return true, cursor, nil
+	case session.State == jules.SessionStateFailed:
+		fmt.Printf("Next action: inspect failure details with 'juleson sessions get %s'.\n", sessionID)
+		return true, cursor, nil
+	case session.State == jules.SessionStateCompleted:
+		fmt.Printf("Next action: preview changes with 'juleson sessions apply %s <project-path>'.\n", sessionID)
+		if len(session.Outputs) > 0 {
+			fmt.Printf("Next output action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)
+		}
+		return true, cursor, nil
+	case len(session.Outputs) > 0:
+		fmt.Printf("Next action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)
+		return true, cursor, nil
+	default:
+		return false, cursor, nil
+	}
+}
+
+func activityResourceKey(activity jules.Activity) string {
+	if activity.Name != "" {
+		return activity.Name
+	}
+	return activity.ID
+}
+
+func describeActivity(activity jules.Activity) string {
+	switch {
+	case activity.PlanGenerated != nil:
+		return fmt.Sprintf("plan generated (%d steps)", len(activity.PlanGenerated.Plan.Steps))
+	case activity.PlanApproved != nil:
+		return "plan approved"
+	case activity.ProgressUpdated != nil:
+		if activity.ProgressUpdated.Description != "" {
+			return fmt.Sprintf("%s: %s", activity.ProgressUpdated.Title, truncate(activity.ProgressUpdated.Description, 120))
+		}
+		return activity.ProgressUpdated.Title
+	case activity.SessionCompleted != nil:
+		return "session completed"
+	case activity.SessionFailed != nil:
+		return fmt.Sprintf("session failed: %s", activity.SessionFailed.Reason)
+	case activity.UserMessaged != nil:
+		return "user message sent"
+	case activity.AgentMessaged != nil:
+		return fmt.Sprintf("agent message: %s", truncate(activity.AgentMessaged.AgentMessage, 120))
+	default:
+		return fmt.Sprintf("%s activity", activity.Originator)
+	}
+}
+
+func applySessionChanges(cfg *config.Config, sessionID, projectPath string, options ApplySessionOptions) error {
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	ctx := context.Background()
+
+	dryRun := !options.Confirm
+	if !dryRun && !options.AllowDirty {
+		clean, status, err := julesops.IsGitWorkingTreeClean(ctx, projectPath)
+		if err != nil {
+			return err
+		}
+		if !clean {
+			return fmt.Errorf("target worktree has local changes; commit/stash them or pass --allow-dirty\n%s", status)
+		}
+	}
+
+	patchOptions := &julesops.PatchApplicationOptions{
+		WorkingDir:        projectPath,
+		ActivityID:        options.ActivityID,
+		ArtifactIndex:     options.ArtifactIndex,
+		HasArtifactIndex:  options.HasArtifactIndex,
+		AllowBaseMismatch: options.AllowBaseMismatch,
+	}
+	changes, previewErr := julesops.PreviewSessionPatchesWithOptions(ctx, julesClient, sessionID, patchOptions)
+	if changes != nil {
+		printSessionChangesSummary(changes)
+	}
+	if dryRun {
+		if previewErr != nil {
+			return previewErr
+		}
+		fmt.Printf("\nDry-run only. Re-run with --confirm to apply patches.\n")
+		return nil
+	}
+	if previewErr != nil {
+		return fmt.Errorf("refusing to apply because preview failed: %w", previewErr)
+	}
+
+	patchOptions.DryRun = false
+	result, err := julesops.ApplySessionPatches(ctx, julesClient, sessionID, patchOptions)
+	if err != nil {
+		return fmt.Errorf("failed to apply session patches: %w", err)
+	}
+	for _, warning := range result.Warnings {
+		fmt.Printf("⚠️  %s\n", warning)
+	}
+	if len(result.Errors) > 0 {
+		return fmt.Errorf("some patches failed: %s", strings.Join(result.Errors, "; "))
+	}
+
+	fmt.Printf("\n✅ Applied %d patch(es) touching %d file(s).\n", result.PatchesApplied, len(result.FilesModified))
+	return nil
+}
+
+func printSessionChangesSummary(changes *julesops.SessionChanges) {
+	totalAdded := 0
+	totalRemoved := 0
+	for _, file := range changes.Files {
+		totalAdded += file.LinesAdded
+		totalRemoved += file.LinesRemoved
+	}
+	fmt.Printf("Patch summary: %d patch(es), %d file(s), +%d -%d\n", changes.TotalPatches, len(changes.Files), totalAdded, totalRemoved)
+	for _, file := range changes.Files {
+		fmt.Printf("  %s (+%d -%d)\n", file.Path, file.LinesAdded, file.LinesRemoved)
+	}
+	for _, message := range changes.SuggestedCommitMessages {
+		fmt.Printf("Suggested commit message: %s\n", message)
+	}
+	for _, warning := range changes.Warnings {
+		fmt.Printf("Warning: %s\n", warning)
+	}
+}
+
+func listSessionArtifacts(cfg *config.Config, sessionID string) error {
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	manifests, err := julesops.ListSessionArtifactManifests(context.Background(), julesClient, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to list session artifacts: %w", err)
+	}
+	if len(manifests) == 0 {
+		fmt.Println("No artifacts found.")
+		return nil
+	}
+	fmt.Printf("Artifacts for session %s\n", sessionID)
+	fmt.Println(strings.Repeat("=", 60))
+	for _, manifest := range manifests {
+		fmt.Printf("Activity: %s  Index: %d  Type: %s\n", manifest.ActivityID, manifest.Index, manifest.Type)
+		if !manifest.ActivityCreateTime.IsZero() {
+			fmt.Printf("  Created: %s\n", manifest.ActivityCreateTime.Format(time.RFC3339))
+		}
+		if manifest.FileCount > 0 {
+			fmt.Printf("  Files: %d\n", manifest.FileCount)
+			for _, file := range manifest.Files {
+				fmt.Printf("    %s (+%d -%d)\n", file.Path, file.LinesAdded, file.LinesRemoved)
+			}
+		}
+		if manifest.BaseCommitID != "" {
+			fmt.Printf("  Base commit: %s\n", manifest.BaseCommitID)
+		}
+		if manifest.SuggestedCommitMessage != "" {
+			fmt.Printf("  Suggested commit: %s\n", manifest.SuggestedCommitMessage)
+		}
+		if manifest.MediaMIMEType != "" {
+			fmt.Printf("  Media MIME: %s\n", manifest.MediaMIMEType)
+		}
+		if manifest.BashCommand != "" {
+			fmt.Printf("  Bash command: %s\n", manifest.BashCommand)
+		}
+		if manifest.BashExitCode != nil {
+			fmt.Printf("  Bash exit code: %d\n", *manifest.BashExitCode)
+		}
+		fmt.Println()
+	}
+	return nil
+}
+
+func showSessionOutputs(cfg *config.Config, sessionID string) error {
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	session, err := julesClient.GetSession(context.Background(), sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+	if len(session.Outputs) == 0 {
+		fmt.Println("No outputs found.")
+		return nil
+	}
+	fmt.Printf("Outputs for session %s\n", sessionID)
+	fmt.Println(strings.Repeat("=", 60))
+	for i, output := range session.Outputs {
+		fmt.Printf("%d. ", i+1)
+		if output.PullRequest != nil {
+			fmt.Println("Pull Request")
+			fmt.Printf("   URL: %s\n", output.PullRequest.URL)
+			fmt.Printf("   Title: %s\n", output.PullRequest.Title)
+			if output.PullRequest.Description != "" {
+				fmt.Printf("   Description: %s\n", output.PullRequest.Description)
+			}
+		} else {
+			fmt.Println("Unknown documented output")
+		}
+	}
+	return nil
+}
+
+func batchCreateSessions(cfg *config.Config, sourceID, taskFileOrPrompt string, options BatchSessionOptions) error {
+	if options.Parallel < 1 || options.Parallel > 5 {
+		return fmt.Errorf("--parallel must be between 1 and 5")
+	}
+
+	prompt, err := loadPromptArgument(taskFileOrPrompt)
+	if err != nil {
+		return err
+	}
+
+	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
+	ctx := context.Background()
+	sourceName := normalizeSourceID(sourceID)
+	if options.BatchID == "" {
+		options.BatchID = "batch-" + time.Now().UTC().Format("20060102150405")
+	}
+	if options.GroupTitle == "" {
+		options.GroupTitle = options.Title
+	}
+
+	fmt.Printf("🚀 Creating %d parallel Jules session(s)\n", options.Parallel)
+	fmt.Printf("Batch ID: %s\n", options.BatchID)
+	if options.GroupTitle != "" {
+		fmt.Printf("Group title: %s\n", options.GroupTitle)
+	}
+	fmt.Printf("Source: %s\n", sourceName)
+	fmt.Printf("Plan approval: required\n")
+	fmt.Println(strings.Repeat("=", 60))
+
+	for i := 1; i <= options.Parallel; i++ {
+		title := options.Title
+		if title != "" && options.Parallel > 1 {
+			title = fmt.Sprintf("%s (%d/%d)", title, i, options.Parallel)
+		}
+		batchPrompt := fmt.Sprintf("Batch ID: %s\n", options.BatchID)
+		if options.GroupTitle != "" {
+			batchPrompt += fmt.Sprintf("Group title: %s\n", options.GroupTitle)
+		}
+		batchPrompt += fmt.Sprintf("Parallel run: %d/%d\n\n%s", i, options.Parallel, prompt)
+		req := &jules.CreateSessionRequest{
+			Prompt:              batchPrompt,
+			Title:               title,
+			RequirePlanApproval: true,
+			AutomationMode:      jules.AutomationMode(options.AutomationMode),
+			SourceContext: &jules.SourceContext{
+				Source: sourceName,
+			},
+		}
+		if options.StartingBranch != "" {
+			req.SourceContext.GithubRepoContext = &jules.GithubRepoContext{StartingBranch: options.StartingBranch}
+		}
+
+		session, err := julesClient.CreateSession(ctx, req)
+		if err != nil {
+			return fmt.Errorf("created %d/%d sessions before failure: %w", i-1, options.Parallel, err)
+		}
+		fmt.Printf("%d. %s", i, session.ID)
+		if session.URL != "" {
+			fmt.Printf(" - %s", session.URL)
+		}
+		fmt.Println()
+	}
+
+	return nil
+}
+
+func loadPromptFile(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to inspect prompt file: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("prompt file is a directory: %s", path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read prompt file: %w", err)
+	}
+	prompt := strings.TrimSpace(string(data))
+	if prompt == "" {
+		return "", fmt.Errorf("prompt file is empty: %s", path)
+	}
+	return prompt, nil
+}
+
+func loadPromptArgument(value string) (string, error) {
+	info, err := os.Stat(value)
+	if err == nil {
+		if info.IsDir() {
+			return "", fmt.Errorf("task file is a directory: %s", value)
+		}
+		data, err := os.ReadFile(value)
+		if err != nil {
+			return "", fmt.Errorf("failed to read task file: %w", err)
+		}
+		prompt := strings.TrimSpace(string(data))
+		if prompt == "" {
+			return "", fmt.Errorf("task file is empty: %s", value)
+		}
+		return prompt, nil
+	}
+	if !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to inspect task file: %w", err)
+	}
+	if strings.TrimSpace(value) == "" {
+		return "", fmt.Errorf("prompt cannot be empty")
+	}
+	return value, nil
+}
+
+func shortSessionID(sessionID string) string {
+	if len(sessionID) <= 12 {
+		return sessionID
+	}
+	return sessionID[:12]
+}
+
+func truncate(value string, limit int) string {
+	value = strings.TrimSpace(value)
+	if len(value) <= limit {
+		return value
+	}
+	return value[:limit] + "..."
+}
+
 // downloadSessionArtifacts downloads all artifacts from all activities in a session
 func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir string) error {
 	// Initialize Jules client
@@ -373,7 +847,7 @@ func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir st
 
 	fmt.Printf("📥 Downloading artifacts from session: %s\n", sessionID)
 	fmt.Printf("📁 Output directory: %s\n", outputDir)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
 	// Create output directory if it doesn't exist
 	options := &julesops.ArtifactDownloadOptions{
@@ -412,7 +886,7 @@ func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID 
 	fmt.Printf("📥 Downloading artifacts from activity: %s\n", activityID)
 	fmt.Printf("📁 Session: %s\n", sessionID)
 	fmt.Printf("📁 Output directory: %s\n", outputDir)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
 	// Create output directory if it doesn't exist
 	options := &julesops.ArtifactDownloadOptions{
@@ -449,7 +923,7 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	ctx := context.Background()
 
 	fmt.Printf("👁️  Previewing artifacts from session: %s\n", sessionID)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
 	// Get all activities for the session
 	activities, err := julesClient.ListActivities(ctx, sessionID, 100)
@@ -493,7 +967,7 @@ func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID s
 
 	fmt.Printf("👁️  Previewing artifacts from activity: %s\n", activityID)
 	fmt.Printf("📁 Session: %s\n", sessionID)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
 	// Get the activity to access its artifacts
 	activity, err := julesClient.GetActivity(ctx, sessionID, activityID)

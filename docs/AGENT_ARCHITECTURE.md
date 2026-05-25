@@ -11,10 +11,14 @@ Gemini, analyzer, filesystem, or template implementation details with it.
 
 ## Package Layout
 
-- `internal/orchestration/domain`: pure goal, plan, task, decision, workflow, progress, result, review, checkpoint, session, and project types.
-- `internal/orchestration/ports`: consumer-owned interfaces used by the application layer.
-- `internal/orchestration/app`: `AgentRunner`, `TemplateRunner`, `SessionWorkflowRunner`, and `AIWorkflowRunner`.
-- `internal/orchestration/adapters`: Jules, Gemini, analyzer, template, source matching, clock, progress, and tool execution adapters.
+- `internal/orchestration/domain`: pure goal, plan, task, decision, workflow,
+  progress, result, review, checkpoint, session, and project types.
+- `internal/orchestration/ports`: consumer-owned interfaces used by the
+  application layer.
+- `internal/orchestration/app`: `AgentRunner`, `TemplateRunner`,
+  `SessionWorkflowRunner`, and `AIWorkflowRunner`.
+- `internal/orchestration/adapters`: Jules, Gemini, analyzer, template, source
+  matching, clock, progress, and tool execution adapters.
 - `internal/orchestration`: runtime construction facade exposed as `orchestration.NewRuntime(deps)`.
 - `internal/agent/types.go`: legacy goal, state, result, and task types.
 - `internal/agent/core/agent.go`: legacy agent loop and state transitions.
@@ -78,6 +82,8 @@ Useful flags:
 
 ## Current Limits
 
-- Some legacy `internal/agent` and `internal/automation` APIs remain for tests and older callers.
+- Some legacy `internal/agent` and `internal/automation` APIs remain for tests
+  and older callers.
 - Review, memory, checkpoint, and telemetry adapters need follow-up extraction from legacy packages.
-- MCP and CLI adapters should continue moving toward runtime-only construction as legacy commands are retired.
+- MCP and CLI adapters should continue moving toward runtime-only construction
+  as legacy commands are retired.

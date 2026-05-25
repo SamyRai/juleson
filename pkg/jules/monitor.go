@@ -9,12 +9,13 @@ import (
 
 // SessionStatus represents the current status of a session
 type SessionStatus struct {
-	Session   *Session
-	State     SessionState
-	IsActive  bool
-	IsDone    bool
-	IsSuccess bool
-	Error     string
+	Session         *Session
+	State           SessionState
+	IsActive        bool
+	IsDone          bool
+	IsSuccess       bool
+	NeedsUserAction bool
+	Error           string
 }
 
 // SessionMonitor provides session monitoring capabilities
@@ -95,8 +96,8 @@ func (sm *SessionMonitor) pollUntilComplete(ctx context.Context, continuous bool
 				sm.onProgress(status)
 			}
 
-			// Check if session is done
-			if status.IsDone {
+			// Stop when the agent is done or when the user must act.
+			if status.IsDone || status.NeedsUserAction {
 				// Call completion callback if set
 				if sm.onComplete != nil {
 					sm.onComplete(status)
@@ -131,11 +132,12 @@ func (sm *SessionMonitor) getSessionStatus(ctx context.Context) (*SessionStatus,
 	}
 
 	status := &SessionStatus{
-		Session:   session,
-		State:     SessionState(session.State),
-		IsActive:  session.State.IsActive(),
-		IsDone:    session.State.IsTerminal(),
-		IsSuccess: session.State.IsSuccessful(),
+		Session:         session,
+		State:           SessionState(session.State),
+		IsActive:        session.State.IsActive(),
+		IsDone:          session.State.IsTerminal(),
+		IsSuccess:       session.State.IsSuccessful(),
+		NeedsUserAction: session.State.NeedsUserAction(),
 	}
 
 	if session.State == SessionStateFailed {

@@ -27,7 +27,8 @@ Expected response:
 ## Secrets
 
 - Do not commit API keys, tokens, passwords, private keys, or local config containing credentials.
-- Prefer environment variables such as `JULES_API_KEY`, `GITHUB_TOKEN`, and `GEMINI_API_KEY`.
+- Prefer environment variables for setup inputs and untracked local config files
+  for stored credentials.
 - Keep local config files untracked.
 - Redact credentials in logs, issue reports, and screenshots.
 
@@ -36,6 +37,7 @@ Expected response:
 ```bash
 export JULES_API_KEY="..."
 export GITHUB_TOKEN="..."
+juleson setup --non-interactive
 ```
 
 Optional config:

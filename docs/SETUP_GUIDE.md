@@ -26,6 +26,9 @@ export GITHUB_TOKEN="..."
 juleson setup --non-interactive
 ```
 
+Non-interactive setup reads `JULES_API_KEY` and, when present,
+`GITHUB_TOKEN`, then writes those values to `configs/juleson.yaml`.
+
 ## Manual Setup
 
 Create `configs/juleson.yaml`:
@@ -49,11 +52,12 @@ github:
     cache_ttl: "5m"
 ```
 
-Then set credentials through environment variables:
+Then set `JULES_API_KEY` through the environment or fill `jules.api_key` in the
+config file. Put GitHub and Gemini credentials in `juleson.yaml` for commands
+and MCP tools that need them:
 
 ```bash
 export JULES_API_KEY="..."
-export GITHUB_TOKEN="..."
 ```
 
 ## Shell Completion
@@ -85,6 +89,7 @@ juleson github status
 juleson sources list
 ```
 
-Commands that call Jules require a Jules API key. GitHub commands require a GitHub token.
+Commands that call Jules require a Jules API key. GitHub commands require
+`github.token` in config.
 
 See [Configuration](CONFIGURATION.md) for all config paths and defaults.

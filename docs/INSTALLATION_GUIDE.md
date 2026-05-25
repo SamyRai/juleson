@@ -75,11 +75,11 @@ go build -o bin/jules-mcp ./cmd/jules-mcp
 ```bash
 juleson --help
 juleson version
-jules-mcp --help
+go build ./cmd/jules-mcp
 ```
 
-`jules-mcp` uses stdio transport. Running it directly starts the server and waits
-for MCP protocol messages.
+`jules-mcp` uses stdio transport and does not expose a separate help command.
+Running it directly starts the server and waits for MCP protocol messages.
 
 ## Uninstall
 

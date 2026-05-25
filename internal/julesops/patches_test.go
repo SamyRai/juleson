@@ -3,6 +3,7 @@ package julesops
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -120,6 +121,34 @@ index 0000000..1234567
 	assert.Equal(suite.T(), 0, changes[1].LinesRemoved)
 }
 
+func (suite *PatchesTestSuite) TestParsePatchFilesWithSpacesRenameAndDelete() {
+	patch := `diff --git "a/old name.txt" "b/new name.txt"
+similarity index 88%
+rename from old name.txt
+rename to new name.txt
+--- "a/old name.txt"
++++ "b/new name.txt"
+@@ -1 +1,2 @@
+ line
++added
+diff --git "a/deleted file.txt" "b/deleted file.txt"
+deleted file mode 100644
+--- "a/deleted file.txt"
++++ /dev/null
+@@ -1,2 +0,0 @@
+-one
+-two
+`
+
+	changes := parsePatchFiles(patch)
+
+	require.Len(suite.T(), changes, 2)
+	assert.Equal(suite.T(), "new name.txt", changes[0].Path)
+	assert.Equal(suite.T(), 1, changes[0].LinesAdded)
+	assert.Equal(suite.T(), "deleted file.txt", changes[1].Path)
+	assert.Equal(suite.T(), 2, changes[1].LinesRemoved)
+}
+
 func (suite *PatchesTestSuite) TestParseGitApplyOutput() {
 	output := `Checking patch file1.txt...
 Checking patch file2.txt...
@@ -144,9 +173,30 @@ func (suite *PatchesTestSuite) TestApplyGitPatch() {
 	err = os.WriteFile(testFile, []byte("line 1\nline 2\nline 3\n"), 0644)
 	assert.NoError(suite.T(), err)
 
-	// Initialize a git repo (required for git apply)
-	suite.T().Skip("Skipping test that requires git initialization")
-	// Would need: exec.Command("git", "init", tmpDir).Run()
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmpDir
+	assert.NoError(suite.T(), cmd.Run())
+
+	patch := `diff --git a/test.txt b/test.txt
+--- a/test.txt
++++ b/test.txt
+@@ -1,3 +1,3 @@
+ line 1
+-line 2
++line two
+ line 3
+`
+
+	files, err := applyGitPatch(context.Background(), patch, &PatchApplicationOptions{
+		WorkingDir:      tmpDir,
+		StripComponents: 1,
+	})
+
+	require.NoError(suite.T(), err)
+	assert.Contains(suite.T(), files, "test.txt")
+	content, err := os.ReadFile(testFile)
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "line 1\nline two\nline 3\n", string(content))
 }
 
 func (suite *PatchesTestSuite) TestApplyActivityPatches() {

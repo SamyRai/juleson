@@ -42,4 +42,5 @@ juleson sources list
 ```
 
 For MCP setup, verify the configured command is an absolute path to `jules-mcp`.
-Also verify the required environment variables are present.
+Also verify `juleson.yaml` contains any GitHub or Gemini credentials needed by
+the tools you are using, and that `JULES_API_KEY` is available for Jules tools.

@@ -56,18 +56,20 @@ Run the setup wizard:
 juleson setup
 ```
 
-For non-interactive use, set environment variables first:
+For non-interactive setup, set environment variables first. The setup command
+reads them and writes the resulting values to `configs/juleson.yaml`:
 
 ```bash
 export JULES_API_KEY="..."
 export GITHUB_TOKEN="..."
-export GEMINI_API_KEY="..."
 juleson setup --non-interactive
 ```
 
 Juleson looks for `juleson.yaml` in `./configs`, the current directory, `$HOME`,
 and `/etc/juleson`. It also loads `.env`, `$HOME/.env`, `$HOME/.juleson.env`,
-and `/etc/juleson/.env`.
+and `/etc/juleson/.env`. `JULES_API_KEY` is accepted directly from the
+environment. GitHub and Gemini commands read their saved config values, except
+where a command documents a flag or setup-specific environment fallback.
 
 See [Configuration](docs/CONFIGURATION.md) and [Setup](docs/SETUP_GUIDE.md).
 
@@ -81,9 +83,17 @@ juleson --help
 juleson sources list
 juleson sessions list
 juleson sessions create sources/github/owner/repo "Fix failing tests"
+juleson sessions create . --prompt-file task.md
 juleson sessions create --no-source "Draft a migration plan"
+juleson sessions batch sources/github/owner/repo task.md --parallel 3 --group-title "Fix CI"
+juleson sessions watch SESSION_ID --follow-activities --cursor-output .juleson.cursor
 juleson sessions approve SESSION_ID
+juleson sessions artifacts list SESSION_ID
+juleson sessions outputs SESSION_ID
 juleson sessions preview SESSION_ID
+juleson sessions apply SESSION_ID ./path/to/project --activity-id ACTIVITY_ID --artifact-index 0
+juleson sessions apply SESSION_ID ./path/to/project --confirm
+juleson official remote pull SESSION_ID
 
 # Manage templates
 juleson template list
@@ -113,8 +123,8 @@ jules-mcp
 ```
 
 The server uses stdio transport. Configure clients with the absolute path to the
-`jules-mcp` binary and the environment variables needed by the tools you intend
-to use.
+`jules-mcp` binary. Put credentials in `juleson.yaml`; `JULES_API_KEY` may also
+be supplied through the client environment.
 
 See [MCP Server Usage](docs/MCP_SERVER_USAGE.md).
 
@@ -146,9 +156,9 @@ Go applications can import the SDK package directly:
 
 ```go
 client := jules.NewClient(
-	"api-key",
-	jules.WithBaseURL("https://jules.googleapis.com/v1alpha"),
-	jules.WithRetryAttempts(3),
+    "api-key",
+    jules.WithBaseURL("https://jules.googleapis.com/v1alpha"),
+    jules.WithRetryAttempts(3),
 )
 ```
 

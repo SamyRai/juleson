@@ -1,6 +1,7 @@
 # Deployment Guide
 
-This guide covers release assets, local installs, Docker images, and MCP client deployment.
+Deployment uses release assets, local installs, Docker images, or MCP client
+configuration.
 
 ## Local Build
 
@@ -62,13 +63,16 @@ Use the repository `Dockerfile` for container builds:
 docker build -t juleson:local .
 ```
 
-Provide credentials through environment variables or mounted config files. Do not
-bake API keys into images.
+Provide credentials through environment variables for `JULES_API_KEY` or through
+mounted config files for full GitHub and Gemini settings. Do not bake API keys
+into images.
 
 ## MCP Client Deployment
 
 Install `jules-mcp` on the machine running the MCP client. Configure the client
-with an absolute binary path and environment variables:
+with an absolute binary path. `JULES_API_KEY` can be supplied in the client
+environment; GitHub and Gemini MCP tools require `github.token` and
+`gemini.api_key` in `juleson.yaml`:
 
 ```json
 {

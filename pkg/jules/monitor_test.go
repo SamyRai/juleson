@@ -168,6 +168,29 @@ func (suite *MonitorTestSuite) TestWaitForCompletion() {
 	assert.GreaterOrEqual(suite.T(), callCount, 3)
 }
 
+func (suite *MonitorTestSuite) TestWaitForCompletionStopsForUserAction() {
+	callCount := 0
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/test-session-1",
+		func(req *http.Request) (*http.Response, error) {
+			callCount++
+			resp, _ := httpmock.NewJsonResponse(200, Session{
+				ID:    "test-session-1",
+				State: SessionStateAwaitingPlanApproval,
+			})
+			return resp, nil
+		})
+
+	suite.monitor.WithInterval(10 * time.Millisecond).WithMaxWait(1 * time.Second)
+
+	status, err := suite.monitor.WaitForCompletion(context.Background())
+
+	require.NoError(suite.T(), err)
+	assert.Equal(suite.T(), SessionStateAwaitingPlanApproval, status.State)
+	assert.True(suite.T(), status.NeedsUserAction)
+	assert.False(suite.T(), status.IsDone)
+	assert.Equal(suite.T(), 1, callCount)
+}
+
 // TestWaitForPlan tests waiting for plan generation
 func (suite *MonitorTestSuite) TestWaitForPlan() {
 	callCount := 0

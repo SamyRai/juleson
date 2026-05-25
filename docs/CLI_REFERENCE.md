@@ -27,6 +27,7 @@ Available commands:
 | `github` | Manage GitHub integration |
 | `init` | Initialize a project for Jules automation |
 | `orchestrate` | Run predefined multi-task Jules workflows |
+| `official` | Bridge to the official Jules CLI when installed |
 | `pr` | Manage PRs created by Jules sessions |
 | `sessions` | Manage Jules sessions |
 | `setup` | Run first-time setup |
@@ -58,11 +59,19 @@ juleson sources get SOURCE_ID
 
 juleson sessions list
 juleson sessions status
-juleson sessions create SOURCE_ID "Prompt text"
+juleson sessions create SOURCE_ID "Prompt text" --require-plan-approval
+juleson sessions create . --prompt-file task.md --title "Fix failing tests"
 juleson sessions create --no-source "Prompt text"
+juleson sessions batch SOURCE_ID task.md --parallel 3 --batch-id batch-20260525 --group-title "Fix CI"
+juleson sessions watch SESSION_ID --follow-activities --since 2026-05-25T10:00:00Z --cursor-output .juleson.cursor
 juleson sessions get SESSION_ID
 juleson sessions approve SESSION_ID
 juleson sessions message SESSION_ID "Follow-up text"
+juleson sessions apply SESSION_ID PROJECT_PATH
+juleson sessions apply SESSION_ID PROJECT_PATH --activity-id ACTIVITY_ID --artifact-index 0
+juleson sessions apply SESSION_ID PROJECT_PATH --confirm --allow-base-mismatch
+juleson sessions artifacts list SESSION_ID
+juleson sessions outputs SESSION_ID
 juleson sessions delete SESSION_ID --force
 juleson sessions preview SESSION_ID
 juleson sessions preview-activity SESSION_ID ACTIVITY_ID
@@ -70,16 +79,48 @@ juleson sessions download SESSION_ID OUTPUT_DIR
 juleson sessions download-activity SESSION_ID ACTIVITY_ID OUTPUT_DIR
 
 juleson activities list SESSION_ID
+juleson activities list SESSION_ID --since 2026-05-25T10:00:00Z --cursor-output .juleson.cursor
 juleson activities get SESSION_ID ACTIVITY_ID
+juleson official remote new --parallel 3
+juleson official remote pull SESSION_ID
 ```
 
 `sessions create` accepts either `github/owner/repo` or
 `sources/github/owner/repo`. `--no-source` creates a repoless Jules session by
-omitting `sourceContext`.
+omitting `sourceContext`. Source-backed sessions also accept `--title`,
+`--starting-branch`, `--require-plan-approval`, `--automation-mode`, and
+`--prompt-file`. Passing `.` as the source asks Juleson to infer the connected
+Jules source from the local git `origin` remote; ambiguous matches fail with the
+candidate source names.
+
+`sessions batch` creates 1-5 parallel sessions for one source and prompt or task
+file. Batch sessions require plan approval by default and include a `batch_id`,
+optional `group_title`, and run index in each prompt because the REST API has no
+documented bulk-create endpoint.
+
+`sessions watch` polls until a session completes, fails, needs user action, or
+surfaces session outputs. With `--follow-activities`, it uses the activity
+`createTime` cursor and prints the next cursor for resumable watches.
+
+`sessions apply` dry-runs by default. Use `--confirm` to apply patches; dirty
+worktrees are blocked unless `--allow-dirty` is passed. `--activity-id` and
+`--artifact-index` apply one changeset at a time. If an artifact includes
+`baseCommitId`, dry-runs warn on mismatch and real apply blocks unless
+`--allow-base-mismatch` is passed.
+
+`sessions artifacts list` prints an artifact manifest with activity ID, artifact
+index, type, changed files, base commit, suggested commit message, media MIME
+type, and bash exit code. `sessions outputs` prints documented session outputs
+such as Jules-created pull requests.
 
 `sessions delete` calls the Jules API delete endpoint. Without `--force`, it
 asks for the exact session ID before deleting. Session cancel is not exposed by
 the Jules API v1alpha reference used by this project.
+
+`official remote ...` and `official tui ...` hand off to the official `jules`
+binary when it is installed. They are optional parity bridges for exact
+`remote new --parallel`, `remote pull`, and TUI diff-review behavior; REST
+commands remain the default Juleson path.
 
 `sessions preview` and `sessions download` use documented activity artifacts:
 git patches from `changeSet`, command output from `bashOutput`, and decoded
@@ -226,7 +267,9 @@ juleson completion powershell
 
 ## Environment Variables
 
-- `JULES_API_KEY`: required for Jules API calls.
-- `GITHUB_TOKEN`: required for GitHub commands and GitHub MCP tools.
-- `GEMINI_API_KEY`: required for Gemini-backed orchestration.
-- `JULES_BASE_URL`: optional Jules API base URL override.
+- `JULES_API_KEY`: accepted directly by config loading and required for Jules API calls.
+- `GITHUB_TOKEN`: read by `juleson setup --non-interactive`, then saved to config.
+- `GEMINI_API_KEY`: read by `juleson ai-orchestrate --gemini-key` fallback. For
+  MCP Gemini tools, save `gemini.api_key` in `juleson.yaml`.
+
+Other settings should be configured in `juleson.yaml`.

@@ -16,20 +16,28 @@ circuit breakers, and a coordinator used by Juleson services.
 
 ## Integration
 
-The service container creates the event coordinator:
+Create an event coordinator directly from `internal/events`:
 
 ```go
-container := services.NewContainer(cfg)
-coordinator := container.EventCoordinator()
-defer container.Close()
+coordinator, err := events.NewEventCoordinator(nil)
+if err != nil {
+    return err
+}
+
+ctx := context.Background()
+if err := coordinator.Start(ctx); err != nil {
+    return err
+}
+defer coordinator.Shutdown(ctx)
 ```
 
-Jules client operations emit session, activity, and plan events where supported by the client path.
+The current service container does not own a shared event coordinator. Callers
+that need event handling should construct and pass one explicitly.
 
 ## Queues
 
-The default setup creates high, normal, and low priority queues. Use the
-coordinator when code needs to enqueue background work.
+The default setup enables the message queue but does not create named queues.
+Call `CreateQueue` before registering workers or enqueueing messages.
 
 ## Storage
 

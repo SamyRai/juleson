@@ -9,6 +9,7 @@ import (
 )
 
 type TestConfig struct {
+	WorkingDir   string
 	Packages     []string
 	Verbose      bool
 	Race         bool
@@ -104,6 +105,7 @@ func (t *Tester) TestWithResult(ctx context.Context) *TestResult {
 	args = append(args, packages...)
 
 	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Dir = t.config.WorkingDir
 	out, err := cmd.CombinedOutput()
 	result := &TestResult{Duration: time.Since(start), Output: string(out)}
 	if err != nil {

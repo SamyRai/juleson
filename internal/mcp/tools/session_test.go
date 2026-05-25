@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -38,6 +40,33 @@ func TestCreateSessionAllowsRepolessInput(t *testing.T) {
 
 	_, output, err := createSession(context.Background(), nil, CreateSessionInput{
 		Prompt: "Draft a migration plan",
+	}, client)
+
+	require.NoError(t, err)
+	assert.Equal(t, "session-1", output.SessionID)
+}
+
+func TestCreateSessionReadsPromptFile(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	promptFile := t.TempDir() + "/prompt.txt"
+	require.NoError(t, os.WriteFile(promptFile, []byte("Implement cursor watch"), 0644))
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("POST", "https://jules.googleapis.com/v1alpha/sessions",
+		func(req *http.Request) (*http.Response, error) {
+			body, _ := io.ReadAll(req.Body)
+			var received jules.CreateSessionRequest
+			require.NoError(t, json.Unmarshal(body, &received))
+			assert.Equal(t, "Implement cursor watch", received.Prompt)
+			assert.Equal(t, "sources/github/acme/widgets", received.SourceContext.Source)
+			return httpmock.NewJsonResponse(201, jules.Session{ID: "session-1"})
+		})
+
+	_, output, err := createSession(context.Background(), nil, CreateSessionInput{
+		Source:     "github/acme/widgets",
+		PromptFile: promptFile,
 	}, client)
 
 	require.NoError(t, err)
@@ -114,6 +143,8 @@ func TestGetSessionStatusSummarizesSessions(t *testing.T) {
 					{ID: "session-1", State: jules.SessionStatePlanning},
 					{ID: "session-2", State: jules.SessionStateInProgress},
 					{ID: "session-3", State: jules.SessionStateCompleted},
+					{ID: "session-4", State: jules.SessionStateQueued},
+					{ID: "session-5", State: jules.SessionStateAwaitingPlanApproval},
 				},
 			})
 		})
@@ -122,9 +153,81 @@ func TestGetSessionStatusSummarizesSessions(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, 3, output.TotalSessions)
-	assert.Equal(t, 2, output.ActiveSessions)
+	assert.Equal(t, 5, output.TotalSessions)
+	assert.Equal(t, 3, output.ActiveSessions)
+	assert.Equal(t, 1, output.UserActionSessions)
 	assert.Equal(t, 1, output.StateBreakdown[string(jules.SessionStateCompleted)])
-	assert.Len(t, output.RecentSessions, 3)
-	assert.Equal(t, "Found 3 total sessions with 2 currently active", output.Summary)
+	assert.Len(t, output.RecentSessions, 5)
+	assert.Equal(t, "Found 5 total sessions with 3 currently active and 1 needing user action", output.Summary)
+}
+
+func TestApplySessionPatchesRequiresCleanWorktreeForMutation(t *testing.T) {
+	tmpDir := t.TempDir()
+	cmd := exec.Command("git", "init")
+	cmd.Dir = tmpDir
+	require.NoError(t, cmd.Run())
+	require.NoError(t, os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0644))
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	result, output, err := applySessionPatches(context.Background(), nil, ApplySessionPatchesInput{
+		SessionID:    "session-1",
+		WorkingDir:   tmpDir,
+		ConfirmApply: true,
+	}, client)
+
+	require.Error(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.IsError)
+	assert.True(t, output.DryRun)
+	assert.NotEmpty(t, output.Blockers)
+}
+
+func TestListSessionArtifactsMCP(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
+				Activities: []jules.Activity{
+					{
+						ID: "activity-1",
+						Artifacts: []jules.Artifact{
+							{BashOutput: &jules.BashOutput{Command: "go test ./...", ExitCode: 0}},
+						},
+					},
+				},
+			})
+		})
+
+	result, output, err := listSessionArtifacts(context.Background(), nil, ListSessionArtifactsInput{SessionID: "session-1"}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, 1, output.TotalCount)
+	assert.Equal(t, "bash_output", output.Artifacts[0].Type)
+}
+
+func TestGetSessionOutputsMCP(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID: "session-1",
+				Outputs: []jules.Output{
+					{PullRequest: &jules.PullRequest{URL: "https://github.com/acme/widgets/pull/1", Title: "Update widgets"}},
+				},
+			})
+		})
+
+	result, output, err := getSessionOutputs(context.Background(), nil, GetSessionOutputsInput{SessionID: "session-1"}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, 1, output.TotalCount)
+	assert.Equal(t, "https://github.com/acme/widgets/pull/1", output.Outputs[0].PullRequest.URL)
 }

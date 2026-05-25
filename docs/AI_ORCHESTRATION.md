@@ -28,7 +28,8 @@ Flags:
 
 ## MCP Tools
 
-Gemini-backed MCP tools are registered only when the Gemini API key is configured:
+Gemini-backed MCP tools are registered when a Jules client is available and
+`gemini.api_key` is configured in `juleson.yaml`:
 
 - `plan_project_automation`
 - `orchestrate_workflow`

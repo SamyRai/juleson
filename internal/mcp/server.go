@@ -39,15 +39,16 @@ func NewServer(cfg *config.Config) *Server {
 		Instructions: `You are Juleson MCP Server, a powerful tool for project analysis, automation, and session management.
 
 Available capabilities:
+- Source Discovery: List connected Jules sources before creating source-backed sessions
 - Project Analysis: Analyze project structure, languages, frameworks, and complexity
 - Template Management: Create, list, search, and execute automation templates
-- Session Management: Monitor and control Jules automation sessions
+- Session Management: Create, watch, guide, preview, explicitly apply, and verify Jules automation sessions
 - GitHub Integration: Create sessions from GitHub repos, merge PRs, and manage repositories
 
 Note: Session delete is available through the guarded delete_session tool. Session
 cancel is not available through the Jules API v1alpha.
 
-Use the available tools to help users with their automation needs. Always provide clear, actionable results.`,
+Safety workflow: list sources when needed, create sessions with plan approval for risky work, watch until completion or user action, inspect plans/activities, preview patches, apply only with confirm_apply=true, then verify changes. Tool annotations are hints only; enforce confirmations in tool arguments.`,
 	}
 
 	server := &Server{
@@ -126,6 +127,9 @@ func (s *Server) addTools() {
 	if julesClient != nil {
 		log.Println("Registering session tools...")
 		tools.RegisterSessionTools(s.server, julesClient)
+
+		log.Println("Registering source tools...")
+		tools.RegisterSourceTools(s.server, julesClient)
 
 		log.Println("Registering activity tools...")
 		tools.RegisterActivityTools(s.server, julesClient)
@@ -209,6 +213,8 @@ Capabilities:
 - Automation Execution: Run templates to automate development tasks
 
 Tools Available:
+- list_sources: List connected Jules sources
+- get_source: Get one connected Jules source
 - analyze_project: Analyze project structure and dependencies
 - sync_project: Sync project with remote repository
 - list_templates: List available automation templates
@@ -217,8 +223,12 @@ Tools Available:
 - execute_template: Execute templates on projects
 - list_sessions: List all Jules sessions
 - get_session_status: Get detailed session status summary
+- watch_session: Watch until completion, failure, or user action
 - approve_session_plan: Approve session plans for execution
 - delete_session: Delete a session after explicit confirmation
+- preview_session_changes: Preview session patch changes
+- apply_session_patches: Dry-run by default; requires confirm_apply=true to apply
+- verify_session_changes: Run Go verification for a working directory
 - github_create_session_from_repo: Create Jules session from GitHub repository
 - github_merge_session_pr: Merge PR created by Jules session
 - github_list_repos: List accessible GitHub repositories
@@ -243,7 +253,7 @@ Tools Available:
 - module_maintenance: Go module operations
 - build_release: Build release binaries for all platforms
 
-Note: cancel_session is not available because Jules API v1alpha does not expose a cancel endpoint.
+Note: cancel_session is not available because Jules API v1alpha does not expose a cancel endpoint. Always preview before apply and verify after apply.
 
 For more information, use the available tools or check the Jules documentation.`
 
@@ -401,12 +411,16 @@ func (s *Server) handleSessionManagementGuidePrompt(ctx context.Context, req *mc
 Available actions:
 - list: Get all current sessions
 - status: Get detailed status summary
+- watch: Poll until completion, failure, or user action
 - approve: Approve a session plan for execution
+- preview: Preview generated patches without mutating files
+- apply: Apply patches only after preview and explicit confirmation
+- verify: Run repository verification after applying changes
 - delete: Delete a session after explicit confirmation
 
 Note: Cancel is not supported by Jules API v1alpha. Use the Jules web UI to cancel sessions.
 
-Start by listing sessions to see what's available, then use status for detailed information.`
+Start by listing sessions to see what's available, use watch for progress, preview before applying patches, then verify changes.`
 	} else {
 		switch action {
 		case "list":
@@ -415,12 +429,20 @@ Start by listing sessions to see what's available, then use status for detailed 
 			content = "Use the get_session_status tool to get a comprehensive overview of all sessions, including counts by state and recent activity."
 		case "approve":
 			content = "Use the approve_session_plan tool with a session_id to approve a planned session for execution."
+		case "watch":
+			content = "Use watch_session with a session_id. It stops when the session completes, fails, or needs user action."
+		case "preview":
+			content = "Use preview_session_changes before applying patches. Review files, patch counts, and suggested commit messages."
+		case "apply":
+			content = "Use apply_session_patches first without confirm_apply for a dry-run. Set confirm_apply=true only after review; dirty worktrees are blocked unless allow_dirty=true."
+		case "verify":
+			content = "Use verify_session_changes after applying patches to run Go verification in the target working directory."
 		case "delete":
 			content = "Use the delete_session tool with session_id and confirm=true to delete a session."
 		case "cancel":
 			content = "Session cancel is not available via API. Use the Jules web UI for cancellation. Each session response includes a 'url' field that opens the session in the web interface."
 		default:
-			content = fmt.Sprintf("Unknown action: %s. Valid actions are: list, status, approve, delete.", action)
+			content = fmt.Sprintf("Unknown action: %s. Valid actions are: list, status, watch, approve, preview, apply, verify, delete.", action)
 		}
 	}
 

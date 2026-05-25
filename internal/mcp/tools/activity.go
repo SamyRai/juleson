@@ -20,6 +20,7 @@ func RegisterActivityTools(server *mcp.Server, julesClient *jules.Client) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_session_activities",
 		Description: "List all activities within a Jules session including messages, plans, and progress updates",
+		Annotations: readOnlyOpenWorldTool("List Session Activities"),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input ListActivitiesInput) (*mcp.CallToolResult, ListActivitiesOutput, error) {
 		return listActivities(ctx, req, input, julesClient)
 	})
@@ -28,6 +29,7 @@ func RegisterActivityTools(server *mcp.Server, julesClient *jules.Client) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_session_activity",
 		Description: "Get detailed information about a specific activity within a session",
+		Annotations: readOnlyOpenWorldTool("Get Session Activity"),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetActivityInput) (*mcp.CallToolResult, GetActivityOutput, error) {
 		return getActivity(ctx, req, input, julesClient)
 	})
@@ -36,6 +38,7 @@ func RegisterActivityTools(server *mcp.Server, julesClient *jules.Client) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "search_session_activities",
 		Description: "Search activities within a session by query text",
+		Annotations: readOnlyOpenWorldTool("Search Session Activities"),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input SearchActivitiesInput) (*mcp.CallToolResult, SearchActivitiesOutput, error) {
 		return searchActivities(ctx, req, input, julesClient)
 	})
@@ -44,6 +47,7 @@ func RegisterActivityTools(server *mcp.Server, julesClient *jules.Client) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "get_session_plans",
 		Description: "Get all activities that generated plans in a session",
+		Annotations: readOnlyOpenWorldTool("Get Session Plans"),
 	}, func(ctx context.Context, req *mcp.CallToolRequest, input GetActivitiesWithPlansInput) (*mcp.CallToolResult, GetActivitiesWithPlansOutput, error) {
 		return getActivitiesWithPlans(ctx, req, input, julesClient)
 	})

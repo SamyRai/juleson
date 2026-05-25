@@ -5,15 +5,18 @@ Actions, and session-related GitHub operations.
 
 ## Configure
 
-Set a GitHub token:
+Set a GitHub token through the setup command or by writing `github.token` in
+`juleson.yaml`:
 
 ```bash
 export GITHUB_TOKEN="..."
+juleson setup --non-interactive
 juleson github status
 ```
 
-The token is used by GitHub CLI commands and by MCP GitHub tools. Required scopes
-depend on the operation:
+`juleson github login` can also validate a token interactively and save it to the
+config file. GitHub CLI commands and MCP GitHub tools read the saved config
+value. Required scopes depend on the operation:
 
 - repository read access for repository discovery
 - pull request write access for merge operations
@@ -54,7 +57,8 @@ juleson actions cache list owner/repo
 
 ## MCP Tools
 
-GitHub MCP tools are registered only when both the Jules client and GitHub token are available:
+GitHub MCP tools are registered only when a Jules client is available and
+`github.token` is set in config:
 
 - `github_create_session_from_repo`
 - `github_merge_session_pr`

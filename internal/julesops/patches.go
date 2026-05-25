@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/SamyRai/juleson/pkg/jules"
@@ -13,21 +14,28 @@ import (
 
 // PatchApplicationOptions represents options for applying patches
 type PatchApplicationOptions struct {
-	WorkingDir      string // Working directory where patches should be applied (default: current directory)
-	DryRun          bool   // Whether to perform a dry-run without actually applying changes
-	CreateBackup    bool   // Whether to create backup files before applying patches
-	Force           bool   // Whether to force application even if some hunks fail
-	StripComponents int    // Number of leading path components to strip (default: 1 for git patches)
+	WorkingDir        string // Working directory where patches should be applied (default: current directory)
+	DryRun            bool   // Whether to perform a dry-run without actually applying changes
+	CreateBackup      bool   // Whether to create backup files before applying patches
+	Force             bool   // Whether to force application even if some hunks fail
+	StripComponents   int    // Number of leading path components to strip (default: 1 for git patches)
+	ActivityID        string // Optional activity ID/resource name to scope patch handling
+	ArtifactIndex     int    // Optional artifact index to scope patch handling
+	HasArtifactIndex  bool   // Whether ArtifactIndex should be applied as a filter
+	AllowBaseMismatch bool   // Whether to allow actual apply when gitPatch.baseCommitId differs from HEAD
 }
 
 // PatchApplicationResult represents the result of applying patches
 type PatchApplicationResult struct {
-	ActivityID     string   // Activity from which patches were applied
-	PatchesApplied int      // Number of patches successfully applied
-	PatchesFailed  int      // Number of patches that failed to apply
-	FilesModified  []string // List of files that were modified
-	Errors         []string // List of errors encountered
-	DryRun         bool     // Whether this was a dry-run
+	ActivityID              string   // Activity from which patches were applied
+	PatchesApplied          int      // Number of patches successfully applied
+	PatchesFailed           int      // Number of patches that failed to apply
+	FilesModified           []string // List of files that were modified
+	SuggestedCommitMessages []string // Suggested commit messages from patch artifacts
+	Warnings                []string // Non-fatal warnings encountered during preview/apply
+	BaseCommitMismatches    []string // Base commit mismatch warnings
+	Errors                  []string // List of errors encountered
+	DryRun                  bool     // Whether this was a dry-run
 }
 
 // ApplySessionPatches applies all git patches from a session's activities
@@ -44,6 +52,10 @@ func ApplySessionPatches(ctx context.Context, client *jules.Client, sessionID st
 	}
 	if options.StripComponents == 0 {
 		options.StripComponents = 1 // Default for git patches
+	}
+
+	if options.ActivityID != "" {
+		return ApplyActivityPatches(ctx, client, sessionID, options.ActivityID, options)
 	}
 
 	// Get all activities for the session
@@ -68,6 +80,10 @@ func ApplySessionPatches(ctx context.Context, client *jules.Client, sessionID st
 			result.PatchesApplied += activityResult.PatchesApplied
 			result.PatchesFailed += activityResult.PatchesFailed
 			result.FilesModified = append(result.FilesModified, activityResult.FilesModified...)
+			result.SuggestedCommitMessages = appendUniqueStrings(result.SuggestedCommitMessages, activityResult.SuggestedCommitMessages...)
+			result.Warnings = append(result.Warnings, activityResult.Warnings...)
+			result.BaseCommitMismatches = append(result.BaseCommitMismatches, activityResult.BaseCommitMismatches...)
+			result.Errors = append(result.Errors, activityResult.Errors...)
 		}
 	}
 
@@ -108,13 +124,36 @@ func applyActivityPatches(ctx context.Context, client *jules.Client, sessionID, 
 
 	// Look for changeset artifacts with git patches
 	for i, artifact := range activity.Artifacts {
+		if options.HasArtifactIndex && i != options.ArtifactIndex {
+			continue
+		}
 		if artifact.ChangeSet != nil && artifact.ChangeSet.GitPatch != nil {
 			// Get the patch content
-			patchContent := artifact.ChangeSet.GitPatch.UnidiffPatch
+			gitPatch := artifact.ChangeSet.GitPatch
+			patchContent := gitPatch.UnidiffPatch
+			result.SuggestedCommitMessages = appendUniqueStrings(result.SuggestedCommitMessages, gitPatch.SuggestedCommitMessage)
 			if patchContent == "" {
 				result.Errors = append(result.Errors, fmt.Sprintf("Artifact %d: empty patch content", i))
 				result.PatchesFailed++
 				continue
+			}
+
+			if gitPatch.BaseCommitID != "" {
+				mismatch, warning, err := checkBaseCommitMismatch(ctx, options.WorkingDir, gitPatch.BaseCommitID, i)
+				if err != nil {
+					result.Errors = append(result.Errors, fmt.Sprintf("Artifact %d: %v", i, err))
+					result.PatchesFailed++
+					continue
+				}
+				if mismatch {
+					result.Warnings = append(result.Warnings, warning)
+					result.BaseCommitMismatches = append(result.BaseCommitMismatches, warning)
+					if !options.DryRun && !options.AllowBaseMismatch {
+						result.Errors = append(result.Errors, warning+"; pass --allow-base-mismatch to apply anyway")
+						result.PatchesFailed++
+						continue
+					}
+				}
 			}
 
 			// Apply the patch
@@ -229,6 +268,21 @@ func parseGitApplyOutput(output string) []string {
 	return unique
 }
 
+func checkBaseCommitMismatch(ctx context.Context, workingDir, baseCommitID string, artifactIndex int) (bool, string, error) {
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "HEAD")
+	cmd.Dir = workingDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, "", fmt.Errorf("failed to resolve target HEAD for base commit check: %w\nOutput: %s", err, strings.TrimSpace(string(output)))
+	}
+	head := strings.TrimSpace(string(output))
+	base := strings.TrimSpace(baseCommitID)
+	if head == "" || base == "" || strings.EqualFold(head, base) || strings.HasPrefix(head, base) || strings.HasPrefix(base, head) {
+		return false, "", nil
+	}
+	return true, fmt.Sprintf("Artifact %d base commit %s does not match target HEAD %s", artifactIndex, base, head), nil
+}
+
 // copyFile copies a file from src to dst
 func copyFile(src, dst string) error {
 	data, err := os.ReadFile(src)
@@ -238,21 +292,83 @@ func copyFile(src, dst string) error {
 	return os.WriteFile(dst, data, 0644)
 }
 
+// IsGitWorkingTreeClean reports whether a git working tree has no tracked or
+// untracked changes. It returns an error when dir is not a git repository.
+func IsGitWorkingTreeClean(ctx context.Context, dir string) (bool, string, error) {
+	if dir == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return false, "", fmt.Errorf("failed to get working directory: %w", err)
+		}
+		dir = wd
+	}
+
+	cmd := exec.CommandContext(ctx, "git", "status", "--porcelain")
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	status := strings.TrimSpace(string(output))
+	if err != nil {
+		return false, status, fmt.Errorf("git status failed: %w\nOutput: %s", err, status)
+	}
+	return status == "", status, nil
+}
+
+func appendUniqueStrings(values []string, candidates ...string) []string {
+	seen := make(map[string]bool, len(values)+len(candidates))
+	for _, value := range values {
+		seen[value] = true
+	}
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		values = append(values, candidate)
+		seen[candidate] = true
+	}
+	return values
+}
+
 // GetSessionChanges retrieves a summary of all changes in a session
 func GetSessionChanges(ctx context.Context, client *jules.Client, sessionID string) (*SessionChanges, error) {
+	return GetSessionChangesWithOptions(ctx, client, sessionID, &PatchApplicationOptions{})
+}
+
+// GetSessionChangesWithOptions retrieves a summary of changes in a session,
+// optionally scoped to one activity or artifact index.
+func GetSessionChangesWithOptions(ctx context.Context, client *jules.Client, sessionID string, options *PatchApplicationOptions) (*SessionChanges, error) {
+	if options == nil {
+		options = &PatchApplicationOptions{}
+	}
+	if options.ActivityID != "" {
+		activity, err := client.GetActivity(ctx, sessionID, options.ActivityID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get activity: %w", err)
+		}
+		return changesFromActivities(sessionID, []jules.Activity{*activity}, options), nil
+	}
+
 	activities, err := client.ListActivities(ctx, sessionID, 100)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list activities: %w", err)
 	}
 
+	return changesFromActivities(sessionID, activities, options), nil
+}
+
+func changesFromActivities(sessionID string, activities []jules.Activity, options *PatchApplicationOptions) *SessionChanges {
 	changes := &SessionChanges{
 		SessionID: sessionID,
 	}
 
 	for _, activity := range activities {
-		for _, artifact := range activity.Artifacts {
+		for i, artifact := range activity.Artifacts {
+			if options.HasArtifactIndex && i != options.ArtifactIndex {
+				continue
+			}
 			if artifact.ChangeSet != nil && artifact.ChangeSet.GitPatch != nil {
 				changes.TotalPatches++
+				changes.SuggestedCommitMessages = appendUniqueStrings(changes.SuggestedCommitMessages, artifact.ChangeSet.GitPatch.SuggestedCommitMessage)
 
 				// Parse the patch to extract file changes
 				patch := artifact.ChangeSet.GitPatch.UnidiffPatch
@@ -277,14 +393,17 @@ func GetSessionChanges(ctx context.Context, client *jules.Client, sessionID stri
 		}
 	}
 
-	return changes, nil
+	return changes
 }
 
 // SessionChanges represents a summary of changes in a session
 type SessionChanges struct {
-	SessionID    string       `json:"sessionId"`
-	TotalPatches int          `json:"totalPatches"`
-	Files        []FileChange `json:"files"`
+	SessionID               string       `json:"sessionId"`
+	TotalPatches            int          `json:"totalPatches"`
+	Files                   []FileChange `json:"files"`
+	SuggestedCommitMessages []string     `json:"suggestedCommitMessages,omitempty"`
+	Warnings                []string     `json:"warnings,omitempty"`
+	BaseCommitMismatches    []string     `json:"baseCommitMismatches,omitempty"`
 }
 
 // FileChange represents changes to a single file
@@ -308,13 +427,12 @@ func parsePatchFiles(patch string) []FileChange {
 				changes = append(changes, *currentFile)
 			}
 
-			// Extract file path (use the b/ version for new path)
-			parts := strings.Fields(line)
-			if len(parts) >= 4 {
-				path := strings.TrimPrefix(parts[3], "b/")
-				currentFile = &FileChange{Path: path}
-			}
+			currentFile = &FileChange{Path: extractDiffGitPath(line)}
 		} else if currentFile != nil {
+			if renamedPath, ok := strings.CutPrefix(line, "rename to "); ok {
+				currentFile.Path = strings.TrimSpace(renamedPath)
+				continue
+			}
 			// Count additions and deletions
 			if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
 				currentFile.LinesAdded++
@@ -332,31 +450,81 @@ func parsePatchFiles(patch string) []FileChange {
 	return changes
 }
 
+func extractDiffGitPath(line string) string {
+	remainder := strings.TrimSpace(strings.TrimPrefix(line, "diff --git "))
+	first, rest := nextPatchToken(remainder)
+	second, _ := nextPatchToken(rest)
+	if second != "" && second != "/dev/null" {
+		return stripPatchPrefix(second)
+	}
+	return stripPatchPrefix(first)
+}
+
+func nextPatchToken(value string) (string, string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", ""
+	}
+	if value[0] == '"' {
+		for i := 1; i < len(value); i++ {
+			if value[i] == '"' && value[i-1] != '\\' {
+				token := value[:i+1]
+				unquoted, err := strconv.Unquote(token)
+				if err != nil {
+					unquoted = strings.Trim(token, `"`)
+				}
+				return unquoted, value[i+1:]
+			}
+		}
+	}
+	parts := strings.SplitN(value, " ", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
+	return parts[0], parts[1]
+}
+
+func stripPatchPrefix(path string) string {
+	path = strings.TrimSpace(path)
+	path = strings.TrimPrefix(path, "a/")
+	path = strings.TrimPrefix(path, "b/")
+	return path
+}
+
 // PreviewSessionPatches shows what would be changed if patches were applied
 func PreviewSessionPatches(ctx context.Context, client *jules.Client, sessionID string, workingDir string) (*SessionChanges, error) {
-	if workingDir == "" {
+	return PreviewSessionPatchesWithOptions(ctx, client, sessionID, &PatchApplicationOptions{WorkingDir: workingDir})
+}
+
+// PreviewSessionPatchesWithOptions shows what would be changed if patches were applied.
+func PreviewSessionPatchesWithOptions(ctx context.Context, client *jules.Client, sessionID string, options *PatchApplicationOptions) (*SessionChanges, error) {
+	if options == nil {
+		options = &PatchApplicationOptions{}
+	}
+	if options.WorkingDir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get working directory: %w", err)
 		}
-		workingDir = wd
+		options.WorkingDir = wd
 	}
 
 	// Get the changes summary
-	changes, err := GetSessionChanges(ctx, client, sessionID)
+	changes, err := GetSessionChangesWithOptions(ctx, client, sessionID, options)
 	if err != nil {
 		return nil, err
 	}
 
 	// Test if patches can be applied (dry-run)
-	result, err := ApplySessionPatches(ctx, client, sessionID, &PatchApplicationOptions{
-		WorkingDir: workingDir,
-		DryRun:     true,
-	})
+	previewOptions := *options
+	previewOptions.DryRun = true
+	result, err := ApplySessionPatches(ctx, client, sessionID, &previewOptions)
 
 	if err != nil {
 		return changes, fmt.Errorf("preview failed: %w", err)
 	}
+	changes.Warnings = append(changes.Warnings, result.Warnings...)
+	changes.BaseCommitMismatches = append(changes.BaseCommitMismatches, result.BaseCommitMismatches...)
 
 	// Add error information to the changes
 	if len(result.Errors) > 0 {

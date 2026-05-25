@@ -3,6 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/pkg/jules"
@@ -18,16 +21,20 @@ func NewActivitiesCommand(cfg *config.Config) *cobra.Command {
 		Long:  "List and manage activities within Jules sessions",
 	}
 
-	// List activities
-	activitiesCmd.AddCommand(&cobra.Command{
+	var since string
+	var cursorOutput string
+	listCmd := &cobra.Command{
 		Use:   "list [session-id]",
 		Short: "List all activities in a session",
 		Long:  "List all activities for the specified session",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return listActivities(cfg, args[0])
+			return listActivities(cfg, args[0], since, cursorOutput)
 		},
-	})
+	}
+	listCmd.Flags().StringVar(&since, "since", "", "Only list activities at or after this RFC3339 createTime cursor")
+	listCmd.Flags().StringVar(&cursorOutput, "cursor-output", "", "Write the latest activity createTime cursor to this file")
+	activitiesCmd.AddCommand(listCmd)
 
 	// Get activity
 	activitiesCmd.AddCommand(&cobra.Command{
@@ -44,18 +51,39 @@ func NewActivitiesCommand(cfg *config.Config) *cobra.Command {
 }
 
 // listActivities lists all activities in a session
-func listActivities(cfg *config.Config, sessionID string) error {
+func listActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutput string) error {
 	// Initialize Jules client
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts))
 
 	ctx := context.Background()
 
 	fmt.Printf("📋 Listing activities for session: %s\n", sessionID)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
-	activities, err := julesClient.ListActivities(ctx, sessionID, 100)
+	var since time.Time
+	if sinceValue != "" {
+		parsed, err := time.Parse(time.RFC3339Nano, sinceValue)
+		if err != nil {
+			return fmt.Errorf("invalid --since: %w", err)
+		}
+		since = parsed
+	}
+
+	var activities []jules.Activity
+	var err error
+	if since.IsZero() {
+		activities, err = julesClient.ListActivities(ctx, sessionID, 100)
+	} else {
+		activities, err = julesClient.ListActivitiesSince(ctx, sessionID, since, 100)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to list activities: %w", err)
+	}
+	cursor := jules.ActivityCursor(activities)
+	if cursorOutput != "" && !cursor.IsZero() {
+		if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0644); err != nil {
+			return fmt.Errorf("failed to write cursor output: %w", err)
+		}
 	}
 
 	if len(activities) == 0 {
@@ -99,6 +127,9 @@ func listActivities(cfg *config.Config, sessionID string) error {
 
 		fmt.Println()
 	}
+	if !cursor.IsZero() {
+		fmt.Printf("Next activity cursor: %s\n", cursor.Format(time.RFC3339Nano))
+	}
 
 	return nil
 }
@@ -112,7 +143,7 @@ func getActivity(cfg *config.Config, sessionID string, activityID string) error 
 
 	fmt.Printf("🔍 Fetching activity details: %s\n", activityID)
 	fmt.Printf("📁 Session: %s\n", sessionID)
-	fmt.Println("=" + string(make([]byte, 60)))
+	fmt.Println(strings.Repeat("=", 60))
 
 	activity, err := julesClient.GetActivity(ctx, sessionID, activityID)
 	if err != nil {

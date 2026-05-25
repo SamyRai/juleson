@@ -1,6 +1,8 @@
 # Configuration
 
-Juleson loads configuration with Viper from files, environment variables, and defaults.
+Juleson loads configuration with Viper from config files, `.env` files, and
+defaults. `JULES_API_KEY` is also accepted directly when a Jules client is
+required.
 
 ## Search Paths
 
@@ -72,14 +74,16 @@ templates:
 
 ## Environment Variables
 
-Common variables:
+Common direct environment variables:
 
-- `JULES_API_KEY`
-- `GITHUB_TOKEN`
-- `GEMINI_API_KEY`
+- `JULES_API_KEY`: used as a fallback for `jules.api_key`.
+- `GITHUB_TOKEN`: read by `juleson setup --non-interactive` and saved into config.
+- `GEMINI_API_KEY`: read by `juleson ai-orchestrate` when `--gemini-key` is omitted.
 
-Viper also reads uppercase environment keys matching config paths. For example,
-`JULES_BASE_URL` maps to `jules.base_url`.
+For GitHub CLI commands, GitHub MCP tools, and Gemini MCP tools, store the token
+or API key in `juleson.yaml` through `juleson setup`, `juleson github login`, or
+manual config editing. Other nested settings such as `jules.base_url` should be
+set in `juleson.yaml`.
 
 ## Validation
 
@@ -88,7 +92,8 @@ Jules API still require `JULES_API_KEY` or `jules.api_key`.
 
 `jules-mcp` starts with minimal config when the Jules API key is missing. Tools
 that require Jules, GitHub, or Gemini configuration are skipped or fail with a
-credential error.
+credential error. GitHub and Gemini MCP tool registration is based on values in
+the loaded config object.
 
 The Go SDK in `pkg/jules` does not load this configuration directly. Applications
 pass credentials and options explicitly with `jules.NewClient` and client
