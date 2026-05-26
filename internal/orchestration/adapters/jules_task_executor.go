@@ -3,6 +3,8 @@ package adapters
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
@@ -75,7 +77,7 @@ func (e *JulesTaskExecutor) ExecuteTask(ctx context.Context, task domain.Task, e
 	branch := firstNonEmpty(execution.Goal.Context.Branch, defaultBranchName)
 	requirePlanApproval := requirePlanApproval(execution.ApprovalPolicy)
 	session, err := e.gateway.CreateSession(ctx, domain.SessionRequest{
-		Prompt:              firstNonEmpty(task.Prompt, task.Description),
+		Prompt:              buildJulesPrompt(task, execution),
 		Title:               title,
 		Source:              *source,
 		Branch:              branch,
@@ -134,6 +136,163 @@ func taskTitle(task domain.Task) string {
 	taskType := firstNonEmpty(task.Type, "jules")
 	description := firstNonEmpty(task.Description, task.Name)
 	return fmt.Sprintf("Execute %s task: %s", taskType, description)
+}
+
+func buildJulesPrompt(task domain.Task, execution domain.ExecutionContext) string {
+	var b strings.Builder
+	basePrompt := firstNonEmpty(task.Prompt, task.Description, task.Name)
+	if basePrompt != "" {
+		b.WriteString(strings.TrimSpace(basePrompt))
+		b.WriteString("\n\n")
+	}
+
+	b.WriteString("## Juleson Context\n")
+	writeLine(&b, "Goal", execution.Goal.Description)
+	writeList(&b, "Constraints", execution.Goal.Constraints)
+	writeLine(&b, "Task", firstNonEmpty(task.Name, task.ID))
+	writeLine(&b, "Task type", task.Type)
+	writeLine(&b, "Priority", string(task.Priority))
+	writeMap(&b, "Task context", task.Context)
+	writeGoalContext(&b, execution.Goal.Context)
+	writeProjectContext(&b, execution.Project)
+	writeCompletedTasks(&b, execution.Completed)
+	writeMap(&b, "Execution values", execution.Values)
+
+	b.WriteString("\n## Engineering Guidelines\n")
+	for _, guideline := range []string{
+		"Make the smallest correct change that satisfies the goal.",
+		"Inspect relevant files and usages before editing; follow the existing architecture and style.",
+		"Do not touch secrets, credentials, authentication settings, key rotation, or production data unless the task explicitly asks for it.",
+		"Maintain backward compatibility unless the goal explicitly allows a breaking change.",
+		"Keep side effects explicit and error handling consistent with the surrounding code.",
+		"Add or update focused tests when behavior changes, and update existing docs or comments when public behavior changes.",
+		"Run the relevant format, lint, or test commands when possible, then report results and any residual risks.",
+	} {
+		b.WriteString("- ")
+		b.WriteString(guideline)
+		b.WriteByte('\n')
+	}
+
+	return strings.TrimSpace(b.String())
+}
+
+func writeGoalContext(b *strings.Builder, context domain.GoalContext) {
+	if context.ProjectPath == "" && context.SourceID == "" && context.Repository == "" &&
+		context.Branch == "" && len(context.RelatedIssues) == 0 && len(context.RelatedPRs) == 0 &&
+		len(context.Values) == 0 {
+		return
+	}
+	b.WriteString("\n### Goal Context\n")
+	writeLine(b, "Project path", context.ProjectPath)
+	writeLine(b, "Source ID", context.SourceID)
+	writeLine(b, "Repository", context.Repository)
+	writeLine(b, "Branch", context.Branch)
+	writeList(b, "Related issues", context.RelatedIssues)
+	writeList(b, "Related PRs", context.RelatedPRs)
+	writeMap(b, "Values", context.Values)
+}
+
+func writeProjectContext(b *strings.Builder, project *domain.ProjectContext) {
+	if project == nil {
+		return
+	}
+	b.WriteString("\n### Project Context\n")
+	writeLine(b, "Project path", project.ProjectPath)
+	writeLine(b, "Project name", project.ProjectName)
+	writeLine(b, "Project type", project.ProjectType)
+	writeList(b, "Languages", project.Languages)
+	writeList(b, "Frameworks", project.Frameworks)
+	writeLine(b, "Architecture", project.Architecture)
+	writeLine(b, "Complexity", project.Complexity)
+	writeLine(b, "Git status", project.GitStatus)
+	writeLine(b, "Branch", project.Branch)
+	writeMap(b, "Dependencies", project.Dependencies)
+	writeMap(b, "Values", project.Values)
+	if project.Quality != nil {
+		b.WriteString("- Quality: ")
+		b.WriteString(fmt.Sprintf("coverage %.2f, complexity %.2f, maintainability %.2f, security issues %d, code smells %d",
+			project.Quality.TestCoverage,
+			project.Quality.CodeComplexity,
+			project.Quality.Maintainability,
+			project.Quality.SecurityIssues,
+			project.Quality.CodeSmells,
+		))
+		b.WriteByte('\n')
+	}
+}
+
+func writeCompletedTasks(b *strings.Builder, completed []domain.TaskResult) {
+	if len(completed) == 0 {
+		return
+	}
+	b.WriteString("\n### Completed Tasks\n")
+	for _, task := range completed {
+		name := firstNonEmpty(task.TaskName, task.TaskID)
+		if name == "" {
+			continue
+		}
+		status := "failed"
+		if task.Success {
+			status = "succeeded"
+		}
+		b.WriteString("- ")
+		b.WriteString(name)
+		b.WriteString(": ")
+		b.WriteString(status)
+		if task.Output != "" {
+			b.WriteString(" - ")
+			b.WriteString(task.Output)
+		}
+		b.WriteByte('\n')
+	}
+}
+
+func writeLine(b *strings.Builder, label, value string) {
+	if value == "" {
+		return
+	}
+	b.WriteString("- ")
+	b.WriteString(label)
+	b.WriteString(": ")
+	b.WriteString(value)
+	b.WriteByte('\n')
+}
+
+func writeList(b *strings.Builder, label string, values []string) {
+	if len(values) == 0 {
+		return
+	}
+	cleaned := make([]string, 0, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			cleaned = append(cleaned, value)
+		}
+	}
+	if len(cleaned) == 0 {
+		return
+	}
+	writeLine(b, label, strings.Join(cleaned, ", "))
+}
+
+func writeMap(b *strings.Builder, label string, values map[string]string) {
+	if len(values) == 0 {
+		return
+	}
+	keys := make([]string, 0, len(values))
+	for key, value := range values {
+		if strings.TrimSpace(key) != "" && strings.TrimSpace(value) != "" {
+			keys = append(keys, key)
+		}
+	}
+	if len(keys) == 0 {
+		return
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%s", key, values[key]))
+	}
+	writeLine(b, label, strings.Join(parts, ", "))
 }
 
 func resultWithError(result *domain.TaskResult, err error) *domain.TaskResult {

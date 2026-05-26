@@ -51,6 +51,20 @@ When Gemini is configured, orchestration expects structured JSON from planning
 and decision prompts. Malformed or unsupported responses fail the run instead of
 falling back to a generic task.
 
+## Jules Task Prompts
+
+When AI orchestration creates a Jules session, Juleson keeps the planned task
+prompt as the leading instruction and appends structured context from the run:
+goal, constraints, source/repository/branch details, project analysis, task
+metadata, completed tasks, and execution values.
+
+Every generated Jules prompt also includes engineering guidelines for safe
+changes: prefer the smallest correct diff, inspect relevant files and usages
+before editing, avoid secrets and production data unless explicitly requested,
+preserve compatibility unless a breaking change is part of the goal, keep error
+handling consistent with the codebase, update tests or docs when behavior
+changes, and report verification results with any residual risks.
+
 ## Use Carefully
 
 `--auto-approve` skips manual approval gates. Use it only in repositories where

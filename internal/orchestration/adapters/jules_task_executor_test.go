@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
@@ -90,6 +91,71 @@ func TestJulesTaskExecutorHonorsAutoApprovePolicy(t *testing.T) {
 	}
 	if result.Metrics["require_plan_approval"] != false {
 		t.Fatalf("require approval metric = %v, want false", result.Metrics["require_plan_approval"])
+	}
+}
+
+func TestJulesTaskExecutorAddsContextAndGuidelinesToPrompt(t *testing.T) {
+	gateway := &recordingSessionGateway{
+		created: &domain.Session{ID: "session-1", URL: "https://jules.example/session-1"},
+	}
+	executor := NewJulesTaskExecutor(gateway, nil)
+
+	_, err := executor.ExecuteTask(context.Background(), domain.Task{
+		ID:          "task-1",
+		Name:        "Improve coverage",
+		Description: "Add tests",
+		Prompt:      "Cover the session apply workflow.",
+		Type:        "testing",
+		Priority:    domain.PriorityHigh,
+		Context:     map[string]string{"focus": "patch application"},
+	}, domain.ExecutionContext{
+		Goal: domain.Goal{
+			Description: "Improve test confidence",
+			Constraints: []string{
+				"Keep public CLI behavior unchanged",
+			},
+			Context: domain.GoalContext{
+				SourceID:   "source-1",
+				Repository: "acme/widgets",
+				Branch:     "main",
+			},
+		},
+		Project: &domain.ProjectContext{
+			ProjectPath:  "/repo",
+			ProjectName:  "widgets",
+			ProjectType:  "go-cli",
+			Languages:    []string{"Go"},
+			Architecture: "CLI and MCP server",
+			GitStatus:    "clean",
+		},
+		Completed: []domain.TaskResult{{
+			TaskID:   "analysis",
+			TaskName: "Analyze tests",
+			Success:  true,
+			Output:   "found gaps",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("ExecuteTask() error = %v", err)
+	}
+
+	for _, want := range []string{
+		"Cover the session apply workflow.",
+		"## Juleson Context",
+		"- Goal: Improve test confidence",
+		"- Constraints: Keep public CLI behavior unchanged",
+		"- Repository: acme/widgets",
+		"- Project name: widgets",
+		"- Architecture: CLI and MCP server",
+		"- Task context: focus=patch application",
+		"- Analyze tests: succeeded - found gaps",
+		"## Engineering Guidelines",
+		"Make the smallest correct change that satisfies the goal.",
+		"Run the relevant format, lint, or test commands when possible",
+	} {
+		if !strings.Contains(gateway.request.Prompt, want) {
+			t.Fatalf("created prompt missing %q:\n%s", want, gateway.request.Prompt)
+		}
 	}
 }
 
