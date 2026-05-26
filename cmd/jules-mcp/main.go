@@ -1,7 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -9,7 +12,20 @@ import (
 	"github.com/SamyRai/juleson/internal/mcp"
 )
 
+var (
+	version   = "dev"
+	buildTime = "unknown"
+	gitCommit = "unknown"
+)
+
+const julesAPIVersion = "v1alpha"
+
 func main() {
+	if shouldPrintVersion(os.Args[1:]) {
+		fmt.Print(versionText())
+		return
+	}
+
 	// Logging goes to stderr by default, which is correct for MCP stdio transport
 	// MCP JSON-RPC messages go to stdout, logs to stderr
 	log.SetPrefix("[juleson-mcp] ")
@@ -36,6 +52,22 @@ func main() {
 	}
 
 	log.Println("MCP server stopped")
+}
+
+func shouldPrintVersion(args []string) bool {
+	return len(args) == 1 && (args[0] == "version" || args[0] == "--version" || args[0] == "-v")
+}
+
+func versionText() string {
+	return fmt.Sprintf("Juleson MCP %s\nJules API Version: %s\nBuild Date: %s\nGit Commit: %s\nGo Version: %s\nOS/Arch: %s/%s\n",
+		version,
+		julesAPIVersion,
+		buildTime,
+		gitCommit,
+		runtime.Version(),
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
 }
 
 // loadConfigForMCP loads configuration for MCP context, allowing missing API keys
