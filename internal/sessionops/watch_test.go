@@ -70,6 +70,72 @@ func TestEvaluateWatchDecision(t *testing.T) {
 	}
 }
 
+func TestWatchUpdateTypeForDecision(t *testing.T) {
+	tests := []struct {
+		name     string
+		decision WatchDecision
+		want     WatchUpdateType
+	}{
+		{name: "progress", decision: WatchDecision{Kind: WatchDecisionContinue}, want: WatchUpdateProgress},
+		{name: "needs user action", decision: WatchDecision{Kind: WatchDecisionNeedsUserAction}, want: WatchUpdateNeedsUserAction},
+		{name: "failed", decision: WatchDecision{Kind: WatchDecisionFailed}, want: WatchUpdateTerminalFailure},
+		{name: "completed", decision: WatchDecision{Kind: WatchDecisionCompletedWithDeliverables}, want: WatchUpdateTerminalSuccess},
+		{name: "outputs", decision: WatchDecision{Kind: WatchDecisionOutputs}, want: WatchUpdateOutputsAvailable},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := WatchUpdateTypeForDecision(tt.decision); got != tt.want {
+				t.Fatalf("WatchUpdateTypeForDecision = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEvaluateWatchWake(t *testing.T) {
+	tests := []struct {
+		name         string
+		policy       WakePolicy
+		updateType   WatchUpdateType
+		stateChanged bool
+		wantWake     bool
+		wantReason   string
+	}{
+		{name: "actionable progress does not wake", policy: WakePolicyActionable, updateType: WatchUpdateProgress},
+		{name: "actionable user action wakes", policy: WakePolicyActionable, updateType: WatchUpdateNeedsUserAction, wantWake: true, wantReason: "user_action"},
+		{name: "actionable completed wakes", policy: WakePolicyActionable, updateType: WatchUpdateTerminalSuccess, wantWake: true, wantReason: "terminal_state"},
+		{name: "actionable failed wakes", policy: WakePolicyActionable, updateType: WatchUpdateTerminalFailure, wantWake: true, wantReason: "terminal_state"},
+		{name: "actionable outputs wake", policy: WakePolicyActionable, updateType: WatchUpdateOutputsAvailable, wantWake: true, wantReason: "session_outputs"},
+		{name: "any status wakes on state change", policy: WakePolicyAnyStatus, updateType: WatchUpdateProgress, stateChanged: true, wantWake: true, wantReason: "status_change"},
+		{name: "terminal ignores user action", policy: WakePolicyTerminal, updateType: WatchUpdateNeedsUserAction},
+		{name: "terminal wakes on completed", policy: WakePolicyTerminal, updateType: WatchUpdateTerminalSuccess, wantWake: true, wantReason: "terminal_state"},
+		{name: "none ignores outputs", policy: WakePolicyNone, updateType: WatchUpdateOutputsAvailable},
+		{name: "agent message wakes regardless policy", policy: WakePolicyNone, updateType: WatchUpdateAgentMessage, wantWake: true, wantReason: "agent_message"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := EvaluateWatchWake(tt.policy, tt.updateType, tt.stateChanged)
+			if got.ShouldWake != tt.wantWake || got.WakeReason != tt.wantReason || got.UpdateType != tt.updateType {
+				t.Fatalf("EvaluateWatchWake = %+v, want wake %t reason %q type %q", got, tt.wantWake, tt.wantReason, tt.updateType)
+			}
+		})
+	}
+}
+
+func TestParseWakePolicy(t *testing.T) {
+	for _, value := range []string{"", "actionable", "any-status", "terminal", "none"} {
+		t.Run(value, func(t *testing.T) {
+			if _, err := ParseWakePolicy(value); err != nil {
+				t.Fatalf("ParseWakePolicy(%q) returned error: %v", value, err)
+			}
+		})
+	}
+	if _, err := ParseWakePolicy("later"); err == nil {
+		t.Fatal("expected invalid wake policy to fail")
+	}
+}
+
 func TestHasJulesAgentMessageAfter(t *testing.T) {
 	cursor := time.Date(2026, 5, 25, 10, 0, 0, 0, time.UTC)
 	activities := []jules.Activity{

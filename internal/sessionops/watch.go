@@ -21,9 +21,35 @@ const (
 	WatchDecisionOutputs                         WatchDecisionKind = "outputs"
 )
 
+type WatchUpdateType string
+
+const (
+	WatchUpdateProgress         WatchUpdateType = "progress"
+	WatchUpdateNeedsUserAction  WatchUpdateType = "needs_user_action"
+	WatchUpdateTerminalSuccess  WatchUpdateType = "terminal_success"
+	WatchUpdateTerminalFailure  WatchUpdateType = "terminal_failure"
+	WatchUpdateOutputsAvailable WatchUpdateType = "outputs_available"
+	WatchUpdateAgentMessage     WatchUpdateType = "agent_message"
+)
+
+type WakePolicy string
+
+const (
+	WakePolicyActionable WakePolicy = "actionable"
+	WakePolicyAnyStatus  WakePolicy = "any-status"
+	WakePolicyTerminal   WakePolicy = "terminal"
+	WakePolicyNone       WakePolicy = "none"
+)
+
 type WatchDecision struct {
 	Kind WatchDecisionKind
 	Stop bool
+}
+
+type WatchWake struct {
+	UpdateType WatchUpdateType
+	ShouldWake bool
+	WakeReason string
 }
 
 type CurrentWatchOptions struct {
@@ -105,6 +131,86 @@ func EvaluateWatchDecision(session *jules.Session, hasDeliverables *bool, delive
 	}
 }
 
+func ParseWakePolicy(value string) (WakePolicy, error) {
+	switch WakePolicy(value) {
+	case "", WakePolicyActionable:
+		return WakePolicyActionable, nil
+	case WakePolicyAnyStatus:
+		return WakePolicyAnyStatus, nil
+	case WakePolicyTerminal:
+		return WakePolicyTerminal, nil
+	case WakePolicyNone:
+		return WakePolicyNone, nil
+	default:
+		return "", fmt.Errorf("invalid wake policy %q", value)
+	}
+}
+
+func WatchUpdateTypeForDecision(decision WatchDecision) WatchUpdateType {
+	switch decision.Kind {
+	case WatchDecisionNeedsUserAction:
+		return WatchUpdateNeedsUserAction
+	case WatchDecisionFailed:
+		return WatchUpdateTerminalFailure
+	case WatchDecisionCompletedDeliverableCheckFailed, WatchDecisionCompletedNoDeliverables, WatchDecisionCompletedWithDeliverables:
+		return WatchUpdateTerminalSuccess
+	case WatchDecisionOutputs:
+		return WatchUpdateOutputsAvailable
+	default:
+		return WatchUpdateProgress
+	}
+}
+
+func EvaluateWatchWake(policy WakePolicy, updateType WatchUpdateType, stateChanged bool) WatchWake {
+	wake := WatchWake{UpdateType: updateType}
+	if updateType == WatchUpdateAgentMessage {
+		wake.ShouldWake = true
+		wake.WakeReason = string(WatchUpdateAgentMessage)
+		return wake
+	}
+
+	switch policy {
+	case WakePolicyAnyStatus:
+		if stateChanged {
+			wake.ShouldWake = true
+			wake.WakeReason = "status_change"
+			return wake
+		}
+		if isActionableUpdate(updateType) {
+			wake.ShouldWake = true
+			wake.WakeReason = DefaultWatchWakeReasonForUpdate(updateType)
+		}
+	case WakePolicyTerminal:
+		if updateType == WatchUpdateTerminalSuccess || updateType == WatchUpdateTerminalFailure {
+			wake.ShouldWake = true
+			wake.WakeReason = DefaultWatchWakeReasonForUpdate(updateType)
+		}
+	case WakePolicyNone:
+		return wake
+	default:
+		if isActionableUpdate(updateType) {
+			wake.ShouldWake = true
+			wake.WakeReason = DefaultWatchWakeReasonForUpdate(updateType)
+		}
+	}
+	return wake
+}
+
+func DefaultWatchWakeReasonForUpdate(updateType WatchUpdateType) string {
+	switch updateType {
+	case WatchUpdateNeedsUserAction:
+		return "user_action"
+	case WatchUpdateTerminalSuccess, WatchUpdateTerminalFailure:
+		return "terminal_state"
+	case WatchUpdateOutputsAvailable:
+		return "session_outputs"
+	case WatchUpdateAgentMessage:
+		return string(WatchUpdateAgentMessage)
+	default:
+		return ""
+	}
+}
+
 func HasJulesAgentMessageAfter(activities []jules.Activity, cursor time.Time) bool {
 	for _, activity := range activities {
 		if activity.AgentMessaged == nil {
@@ -115,6 +221,15 @@ func HasJulesAgentMessageAfter(activities []jules.Activity, cursor time.Time) bo
 		}
 	}
 	return false
+}
+
+func isActionableUpdate(updateType WatchUpdateType) bool {
+	switch updateType {
+	case WatchUpdateNeedsUserAction, WatchUpdateTerminalSuccess, WatchUpdateTerminalFailure, WatchUpdateOutputsAvailable:
+		return true
+	default:
+		return false
+	}
 }
 
 func DefaultWatchWakeReason(decision WatchDecision) string {

@@ -113,6 +113,18 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 	if timeout <= 0 {
 		timeout = 30 * time.Minute
 	}
+	wakePolicy, err := sessionops.ParseWakePolicy(input.WakePolicy)
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: err.Error()},
+			},
+		}, WatchSessionOutput{}, err
+	}
+	if input.ReturnOnStatusChange {
+		wakePolicy = sessionops.WakePolicyAnyStatus
+	}
 
 	watchCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -148,36 +160,41 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 			}, WatchSessionOutput{}, err
 		}
 		currentState := jules.SessionState(output.State)
-		if input.ReturnOnStatusChange {
-			if !hasStateBaseline {
-				baselineState = currentState
-				hasStateBaseline = true
-			} else if currentState != baselineState {
-				output.WakeReason = "status_change"
-				output.NextAction = fmt.Sprintf("session state changed from %s to %s; inspect get_session before taking action", baselineState, currentState)
-				return nil, output, nil
-			}
+		stateChanged := false
+		if !hasStateBaseline {
+			baselineState = currentState
+			hasStateBaseline = true
+		} else if currentState != baselineState {
+			stateChanged = true
 		}
+		wake := sessionops.EvaluateWatchWake(wakePolicy, sessionops.WatchUpdateType(output.UpdateType), stateChanged)
 		if input.ReturnOnJulesAgentMessage {
 			if !hasActivityBaseline {
 				hasActivityBaseline = true
 			} else if sessionops.HasJulesAgentMessageAfter(output.RecentActivities, cursor) {
-				output.WakeReason = "jules_agent_message"
-				output.NextAction = "inspect recent activities and reply with send_session_message if needed"
-				return nil, output, nil
+				wake = sessionops.EvaluateWatchWake(wakePolicy, sessionops.WatchUpdateAgentMessage, false)
+				output.UpdateType = string(sessionops.WatchUpdateAgentMessage)
 			}
-		}
-		if output.IsTerminal || output.NeedsUserAction || (output.Session != nil && len(output.Session.Outputs) > 0) {
-			output.WakeReason = sessionops.DefaultWatchWakeReason(sessionops.WatchDecision{
-				Kind: watchDecisionKindFromOutput(output),
-				Stop: true,
-			})
-			return nil, output, nil
 		}
 		if output.NextActivityCursor != "" {
 			if parsed, err := time.Parse(time.RFC3339Nano, output.NextActivityCursor); err == nil && parsed.After(cursor) {
 				cursor = parsed
 			}
+		}
+		if wake.ShouldWake {
+			output.ShouldWake = true
+			output.WakeReason = wake.WakeReason
+			if wake.WakeReason == "status_change" {
+				output.WakeReason = "status_change"
+				output.NextAction = fmt.Sprintf("session state changed from %s to %s; inspect get_session before taking action", baselineState, currentState)
+			}
+			if wake.UpdateType == sessionops.WatchUpdateAgentMessage {
+				output.NextAction = "inspect recent activities and reply with send_session_message if needed"
+			}
+			return nil, output, nil
+		}
+		if stateChanged {
+			baselineState = currentState
 		}
 
 		select {
@@ -201,6 +218,7 @@ func currentWatchSessionOutput(ctx context.Context, sessionID string, client *ju
 	output := WatchSessionOutput{
 		SessionID:        session.ID,
 		State:            string(session.State),
+		UpdateType:       string(sessionops.WatchUpdateTypeForDecision(snapshot.Decision)),
 		NeedsUserAction:  session.State.NeedsUserAction(),
 		IsTerminal:       session.State.IsTerminal(),
 		Session:          session,
@@ -211,24 +229,4 @@ func currentWatchSessionOutput(ctx context.Context, sessionID string, client *ju
 		output.NextActivityCursor = snapshot.NextCursor.Format(time.RFC3339Nano)
 	}
 	return output, nil
-}
-
-func watchDecisionKindFromOutput(output WatchSessionOutput) sessionops.WatchDecisionKind {
-	switch {
-	case output.NeedsUserAction:
-		return sessionops.WatchDecisionNeedsUserAction
-	case output.IsTerminal:
-		switch output.State {
-		case string(jules.SessionStateFailed):
-			return sessionops.WatchDecisionFailed
-		case string(jules.SessionStateCompleted):
-			return sessionops.WatchDecisionCompletedWithDeliverables
-		default:
-			return sessionops.WatchDecisionFailed
-		}
-	case output.Session != nil && len(output.Session.Outputs) > 0:
-		return sessionops.WatchDecisionOutputs
-	default:
-		return sessionops.WatchDecisionContinue
-	}
 }

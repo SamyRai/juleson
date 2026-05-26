@@ -70,6 +70,7 @@ juleson sessions create . --prompt-file task.md --title "Fix failing tests"
 juleson sessions create --no-source "Prompt text"
 juleson sessions batch SOURCE_ID task.md --parallel 3 --batch-id batch-20260525 --group-title "Fix CI"
 juleson sessions watch SESSION_ID --follow-activities --since 2026-05-25T10:00:00Z --cursor-output .juleson.cursor
+juleson sessions watch SESSION_ID --wake-policy actionable
 juleson sessions watch SESSION_ID --wake-on-status-change --initial-state PLANNING
 juleson sessions watch SESSION_ID --wake-on-agent-message --since 2026-05-25T10:00:00Z
 juleson sessions get SESSION_ID
@@ -107,14 +108,19 @@ file. Batch sessions require plan approval by default and include a `batch_id`,
 optional `group_title`, and run index in each prompt because the REST API has no
 documented bulk-create endpoint.
 
-`sessions watch` polls until a session completes, fails, needs user action, or
-surfaces session outputs. With `--follow-activities`, it uses the activity
+`sessions watch` prints every observed session status with an update type. By
+default, `--wake-policy actionable` returns only when a session needs user
+action, completes, fails, or surfaces session outputs; queued, planning,
+in-progress, and paused statuses are reflected as progress without waking the
+caller. With `--follow-activities`, it uses the activity
 `createTime` cursor for client-side filtering and prints the next cursor for
-resumable watches. Use
-`--wake-on-status-change` to stop on the next state transition from
-`--initial-state` or the first observed state. Use `--wake-on-agent-message` to
-stop when Jules posts a new agent message after `--since`; without `--since`,
-the first poll establishes the activity baseline.
+resumable watches. Use `--wake-policy any-status` to stop on the next state
+transition, `--wake-policy terminal` to return only on completed or failed
+sessions, or `--wake-policy none` to keep polling until timeout unless an
+explicit agent-message wake is enabled. `--wake-on-status-change` is retained as
+a compatibility alias for `--wake-policy any-status`. Use
+`--wake-on-agent-message` to stop when Jules posts a new agent message after
+`--since`; without `--since`, the first poll establishes the activity baseline.
 When a completed session has no pull request output and only empty changeset
 artifacts, watch reports that no retrievable deliverable was produced instead
 of directing operators to apply an empty patch.

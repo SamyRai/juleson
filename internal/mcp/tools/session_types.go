@@ -161,12 +161,15 @@ type WatchSessionInput struct {
 	InitialState              string `json:"initial_state,omitempty" jsonschema:"Known current session state; used with return_on_status_change"`
 	ReturnOnStatusChange      bool   `json:"return_on_status_change,omitempty" jsonschema:"Return when session state changes from initial_state or the first observed state"`
 	ReturnOnJulesAgentMessage bool   `json:"return_on_jules_agent_message,omitempty" jsonschema:"Return when a new Jules-authored message activity appears after since or after the initial poll"`
+	WakePolicy                string `json:"wake_policy,omitempty" jsonschema:"When to return from watch: actionable, any-status, terminal, or none (default: actionable)"`
 }
 
 // WatchSessionOutput represents output for watch_session tool.
 type WatchSessionOutput struct {
 	SessionID          string           `json:"session_id"`
 	State              string           `json:"state"`
+	UpdateType         string           `json:"update_type"`
+	ShouldWake         bool             `json:"should_wake"`
 	NeedsUserAction    bool             `json:"needs_user_action"`
 	IsTerminal         bool             `json:"is_terminal"`
 	NextAction         string           `json:"next_action"`

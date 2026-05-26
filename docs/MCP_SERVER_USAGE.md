@@ -124,13 +124,17 @@ block mutation on mismatch unless `allow_base_mismatch=true`.
 
 `watch_session.since` accepts an RFC3339 activity `createTime` cursor, filters
 activities client-side, and returns `next_activity_cursor` for resumable watches.
-It returns when a session reaches a terminal state, needs user action, times out,
-or exposes outputs.
-Set `return_on_status_change=true` with optional `initial_state` to return on the
-next session state transition. Set `return_on_jules_agent_message=true` to return
-when Jules posts a new agent message after `since`; without `since`, the first
-poll establishes the activity baseline. Returned watch wakeups include
-`wake_reason`.
+It returns with `update_type`, `should_wake`, and `wake_reason` when the selected
+wake policy is satisfied. The default `wake_policy` is `actionable`, which wakes
+only for user action, completed or failed terminal states, and session outputs;
+queued, planning, in-progress, and paused states are reflected as progress
+updates without waking. Use `wake_policy=any-status` for every state transition,
+`terminal` for completed or failed only, or `none` to wait until timeout unless
+agent-message wake is enabled. Set `return_on_status_change=true` with optional
+`initial_state` to preserve the older any-status behavior. Set
+`return_on_jules_agent_message=true` to return when Jules posts a new agent
+message after `since`; without `since`, the first poll establishes the activity
+baseline.
 When a completed session has no pull request output and only empty changeset
 artifacts, `next_action` reports that no retrievable deliverable was produced
 instead of directing callers to apply an empty patch.

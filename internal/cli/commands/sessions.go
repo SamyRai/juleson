@@ -77,6 +77,7 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 		watchInitialState     string
 		watchOnStatusChange   bool
 		watchOnAgentMessage   bool
+		watchWakePolicy       string
 	)
 	watchCmd := &cobra.Command{
 		Use:   "watch [session-id]",
@@ -84,7 +85,7 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 		Long:  "Poll a Jules session until it completes, fails, or needs user action such as plan approval or feedback",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return watchSession(cfg, args[0], watchInterval, watchTimeout, watchFollowActivities, watchSince, watchCursorOutput, watchInitialState, watchOnStatusChange, watchOnAgentMessage)
+			return watchSession(cfg, args[0], watchInterval, watchTimeout, watchFollowActivities, watchSince, watchCursorOutput, watchInitialState, watchOnStatusChange, watchOnAgentMessage, watchWakePolicy)
 		},
 	}
 	watchCmd.Flags().StringVar(&watchInterval, "interval", "30s", "Polling interval")
@@ -95,6 +96,7 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 	watchCmd.Flags().StringVar(&watchInitialState, "initial-state", "", "Known current session state for --wake-on-status-change")
 	watchCmd.Flags().BoolVar(&watchOnStatusChange, "wake-on-status-change", false, "Stop when the session state changes from --initial-state or the first observed state")
 	watchCmd.Flags().BoolVar(&watchOnAgentMessage, "wake-on-agent-message", false, "Stop when a new Jules-authored message activity appears")
+	watchCmd.Flags().StringVar(&watchWakePolicy, "wake-policy", "actionable", "When to stop watching: actionable, any-status, terminal, or none")
 	sessionsCmd.AddCommand(watchCmd)
 
 	// Approve plan
