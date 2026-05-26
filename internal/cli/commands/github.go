@@ -132,7 +132,9 @@ func runGitHubLogin(cmd *cobra.Command, args []string) error {
 		fmt.Println("⚠️  GitHub token is already configured.")
 		fmt.Print("Do you want to update it? (y/N): ")
 		var response string
-		fmt.Scanln(&response)
+		if err := scanPromptValue(&response); err != nil {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
 		if strings.ToLower(strings.TrimSpace(response)) != "y" {
 			fmt.Println("Login cancelled.")
 			return nil
@@ -142,7 +144,9 @@ func runGitHubLogin(cmd *cobra.Command, args []string) error {
 	// Prompt for token
 	fmt.Print("Enter your GitHub Personal Access Token: ")
 	var token string
-	fmt.Scanln(&token)
+	if err := scanPromptValue(&token); err != nil {
+		return fmt.Errorf("failed to read token: %w", err)
+	}
 	token = strings.TrimSpace(token)
 
 	if token == "" {
@@ -155,7 +159,9 @@ func runGitHubLogin(cmd *cobra.Command, args []string) error {
 		fmt.Println("   This might not be a valid GitHub Personal Access Token.")
 		fmt.Print("Continue anyway? (y/N): ")
 		var response string
-		fmt.Scanln(&response)
+		if err := scanPromptValue(&response); err != nil {
+			return fmt.Errorf("failed to read response: %w", err)
+		}
 		if strings.ToLower(strings.TrimSpace(response)) != "y" {
 			fmt.Println("Login cancelled.")
 			return nil

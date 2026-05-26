@@ -109,7 +109,9 @@ func newActionsCacheDeleteCommand(cfg *config.Config) *cobra.Command {
 					fmt.Printf("Delete cache #%d? (y/N): ", id)
 				}
 				var response string
-				fmt.Scanln(&response)
+				if err := scanPromptValue(&response); err != nil {
+					return fmt.Errorf("failed to read response: %w", err)
+				}
 				if strings.ToLower(response) != "y" {
 					fmt.Println("Cancelled")
 					return nil

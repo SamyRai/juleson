@@ -126,6 +126,7 @@ func TestReleaseWorkflowPublishesInstallAssets(t *testing.T) {
 		"-X main.buildTime=${build_time}",
 		"-X main.gitCommit=${{ github.sha }}",
 		"Coverage is below 20%",
+		"--new-from-rev=${{ steps.lint-base.outputs.base }}",
 		"if: github.event_name == 'workflow_dispatch'",
 	} {
 		if !strings.Contains(text, want) {

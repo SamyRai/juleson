@@ -305,7 +305,9 @@ func NewPRCommand(cfg *config.Config) *cobra.Command {
 func confirmAction(prompt string) bool {
 	fmt.Printf("%s (y/N): ", prompt)
 	var response string
-	fmt.Scanln(&response)
+	if err := scanPromptValue(&response); err != nil {
+		return false
+	}
 	response = strings.ToLower(strings.TrimSpace(response))
 	return response == "y" || response == "yes"
 }

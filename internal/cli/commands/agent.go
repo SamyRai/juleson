@@ -197,7 +197,7 @@ Examples:
 	cmd.Flags().StringVar(&strictness, "strictness", "medium", "Code review strictness (low, medium, high)")
 	cmd.Flags().IntVar(&maxIters, "max-iterations", 20, "Maximum number of iterations")
 
-	cmd.MarkFlagRequired("source")
+	mustMarkFlagRequired(cmd, "source")
 
 	return cmd
 }
