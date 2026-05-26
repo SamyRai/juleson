@@ -38,6 +38,8 @@ type WatchSnapshot struct {
 	NextCursor           time.Time
 	HasJulesAgentMessage bool
 	Decision             WatchDecision
+	WakeReason           string
+	NextAction           string
 }
 
 func CurrentWatchSnapshot(ctx context.Context, client *jules.Client, sessionID string, cursor time.Time, options CurrentWatchOptions) (WatchSnapshot, error) {
@@ -77,6 +79,8 @@ func CurrentWatchSnapshot(ctx context.Context, client *jules.Client, sessionID s
 		}
 	}
 	snapshot.Decision = EvaluateWatchDecision(session, hasDeliverables, deliverablesErr)
+	snapshot.WakeReason = DefaultWatchWakeReason(snapshot.Decision)
+	snapshot.NextAction = MCPNextAction(snapshot)
 
 	return snapshot, nil
 }

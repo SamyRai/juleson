@@ -406,3 +406,37 @@ func TestGetSessionOutputsFiltersEmptyPayloads(t *testing.T) {
 	assert.Equal(t, 0, output.TotalCount)
 	assert.Empty(t, output.Outputs)
 }
+
+func TestWatchSessionReturnsOnTimeout(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateInProgress,
+			})
+		})
+	httpmock.RegisterResponder("GET", "=~^https://jules.googleapis.com/v1alpha/sessions/session-1/activities",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
+		})
+
+	result, output, err := watchSession(context.Background(), nil, WatchSessionInput{
+		SessionID:       "session-1",
+		IntervalSeconds: 1,
+		TimeoutSeconds:  2,
+	}, client)
+
+	if err != nil {
+		assert.Contains(t, err.Error(), "context deadline exceeded")
+	} else {
+		require.NoError(t, err)
+		assert.Nil(t, result)
+		assert.Empty(t, output.WakeReason)
+		assert.Contains(t, output.NextAction, "watch timed out after")
+		assert.Equal(t, string(jules.SessionStateInProgress), output.State)
+	}
+}

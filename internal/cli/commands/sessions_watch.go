@@ -122,7 +122,6 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 	}
 
 	statusIcon := presentation.SessionStatusIcon(string(session.State))
-	statusText := presentation.SessionStatusText(string(session.State))
 	fmt.Printf("%s %s %s", time.Now().Format(time.RFC3339), statusIcon, session.State)
 	if session.Title != "" {
 		fmt.Printf(" - %s", session.Title)
@@ -148,40 +147,30 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 		}
 	}
 
+	if snapshot.Decision.Stop {
+		update.Stop = true
+	}
+
+	if snapshot.Decision.Stop {
+		update.Stop = true
+	}
+
 	switch snapshot.Decision.Kind {
-	case sessionops.WatchDecisionNeedsUserAction:
-		fmt.Printf("Next action: %s. Use 'juleson sessions get %s' to inspect, then approve or send feedback.\n", statusText, sessionID)
-		update.Stop = true
-		return update, nil
-	case sessionops.WatchDecisionFailed:
-		fmt.Printf("Next action: inspect failure details with 'juleson sessions get %s'.\n", sessionID)
-		update.Stop = true
-		return update, nil
-	case sessionops.WatchDecisionCompletedDeliverableCheckFailed:
-		fmt.Printf("⚠️  Could not check deliverables: %v\n", snapshot.DeliverablesError)
-		fmt.Printf("Next action: inspect activities with 'juleson sessions artifacts list %s', then preview changes with 'juleson sessions apply %s <project-path>'.\n", sessionID, sessionID)
-		update.Stop = true
-		return update, nil
-	case sessionops.WatchDecisionCompletedNoDeliverables:
-		fmt.Printf("Next action: no retrievable deliverable was produced. Inspect activities with 'juleson sessions artifacts list %s' or create a follow-up session.\n", sessionID)
-		update.Stop = true
-		return update, nil
-	case sessionops.WatchDecisionCompletedWithDeliverables:
-		fmt.Printf("Next action: preview changes with 'juleson sessions apply %s <project-path>'.\n", sessionID)
-		if len(session.Outputs) > 0 {
-			fmt.Printf("Next output action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)
+	case sessionops.WatchDecisionNeedsUserAction,
+		sessionops.WatchDecisionFailed,
+		sessionops.WatchDecisionCompletedDeliverableCheckFailed,
+		sessionops.WatchDecisionCompletedNoDeliverables,
+		sessionops.WatchDecisionCompletedWithDeliverables,
+		sessionops.WatchDecisionOutputs:
+		if snapshot.DeliverablesError != nil && snapshot.Decision.Kind == sessionops.WatchDecisionCompletedDeliverableCheckFailed {
+			fmt.Printf("⚠️  Could not check deliverables: %v\n", snapshot.DeliverablesError)
 		}
-		update.Stop = true
-		return update, nil
-	case sessionops.WatchDecisionOutputs:
-		fmt.Printf("Next action: inspect outputs with 'juleson sessions outputs %s'.\n", sessionID)
-		update.Stop = true
+		fmt.Printf("Next action: %s\n", snapshot.NextAction)
 		return update, nil
 	default:
 		return update, nil
 	}
 }
-
 func activityResourceKey(activity jules.Activity) string {
 	if activity.Name != "" {
 		return activity.Name

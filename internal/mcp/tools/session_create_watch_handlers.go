@@ -167,11 +167,10 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 				return nil, output, nil
 			}
 		}
-		if output.IsTerminal || output.NeedsUserAction || (output.Session != nil && len(output.Session.Outputs) > 0) {
-			output.WakeReason = sessionops.DefaultWatchWakeReason(sessionops.WatchDecision{
-				Kind: watchDecisionKindFromOutput(output),
-				Stop: true,
-			})
+
+		// if there's a wake reason set from the underlying watch snapshot evaluation, use it.
+		if output.WakeReason != "" {
+			// WakeReason and NextAction are already set via CurrentWatchSnapshot and currentWatchSessionOutput
 			return nil, output, nil
 		}
 		if output.NextActivityCursor != "" {
@@ -205,7 +204,8 @@ func currentWatchSessionOutput(ctx context.Context, sessionID string, client *ju
 		IsTerminal:       session.State.IsTerminal(),
 		Session:          session,
 		RecentActivities: snapshot.Activities,
-		NextAction:       sessionops.MCPNextAction(snapshot),
+		NextAction:       snapshot.NextAction,
+		WakeReason:       snapshot.WakeReason,
 	}
 	if !snapshot.NextCursor.IsZero() {
 		output.NextActivityCursor = snapshot.NextCursor.Format(time.RFC3339Nano)
