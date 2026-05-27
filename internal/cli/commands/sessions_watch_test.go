@@ -16,14 +16,20 @@ import (
 func captureOutput(f func()) string {
 	var buf bytes.Buffer
 	old := os.Stdout
-	r, w, _ := os.Pipe()
+	defer func() {
+		os.Stdout = old
+	}()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		panic(err)
+	}
 	os.Stdout = w
 
 	f()
 
-	w.Close()
-	os.Stdout = old
-	buf.ReadFrom(r)
+	_ = w.Close()
+	_, _ = buf.ReadFrom(r)
 	return buf.String()
 }
 

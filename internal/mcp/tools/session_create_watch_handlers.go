@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -136,10 +137,14 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	var lastOutput WatchSessionOutput
 
 	for {
 		output, err := currentWatchSessionOutput(watchCtx, input.SessionID, client, cursor)
 		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || watchCtx.Err() != nil {
+				return nil, timeoutWatchSessionOutput(lastOutput, input.SessionID, timeout), nil
+			}
 			return &mcp.CallToolResult{
 				IsError: true,
 				Content: []mcp.Content{
@@ -147,6 +152,7 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 				},
 			}, WatchSessionOutput{}, err
 		}
+		lastOutput = output
 		currentState := jules.SessionState(output.State)
 		if input.ReturnOnStatusChange {
 			if !hasStateBaseline {
@@ -181,11 +187,19 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 
 		select {
 		case <-watchCtx.Done():
-			output.NextAction = fmt.Sprintf("watch timed out after %s; call watch_session again or inspect get_session", timeout)
-			return nil, output, nil
+			return nil, timeoutWatchSessionOutput(output, input.SessionID, timeout), nil
 		case <-ticker.C:
 		}
 	}
+}
+
+func timeoutWatchSessionOutput(output WatchSessionOutput, sessionID string, timeout time.Duration) WatchSessionOutput {
+	if output.SessionID == "" {
+		output.SessionID = sessionID
+	}
+	output.WakeReason = ""
+	output.NextAction = fmt.Sprintf("watch timed out after %s; call watch_session again or inspect get_session", timeout)
+	return output
 }
 
 func currentWatchSessionOutput(ctx context.Context, sessionID string, client *jules.Client, cursor time.Time) (WatchSessionOutput, error) {

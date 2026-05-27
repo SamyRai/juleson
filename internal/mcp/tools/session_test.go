@@ -430,13 +430,9 @@ func TestWatchSessionReturnsOnTimeout(t *testing.T) {
 		TimeoutSeconds:  2,
 	}, client)
 
-	if err != nil {
-		assert.Contains(t, err.Error(), "context deadline exceeded")
-	} else {
-		require.NoError(t, err)
-		assert.Nil(t, result)
-		assert.Empty(t, output.WakeReason)
-		assert.Contains(t, output.NextAction, "watch timed out after")
-		assert.Equal(t, string(jules.SessionStateInProgress), output.State)
-	}
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.Empty(t, output.WakeReason)
+	assert.Contains(t, output.NextAction, "watch timed out after")
+	assert.Equal(t, string(jules.SessionStateInProgress), output.State)
 }

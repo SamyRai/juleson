@@ -151,10 +151,6 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 		update.Stop = true
 	}
 
-	if snapshot.Decision.Stop {
-		update.Stop = true
-	}
-
 	switch snapshot.Decision.Kind {
 	case sessionops.WatchDecisionNeedsUserAction,
 		sessionops.WatchDecisionFailed,
