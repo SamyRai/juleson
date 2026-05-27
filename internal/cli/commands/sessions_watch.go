@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -61,6 +62,9 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 	for {
 		update, err := printSessionWatchUpdate(ctx, julesClient, sessionID, followActivities, wakeOnAgentMessage, seenActivities, cursor)
 		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) || ctx.Err() != nil {
+				return fmt.Errorf("timeout watching session after %s", timeout)
+			}
 			return err
 		}
 		stateChanged := false

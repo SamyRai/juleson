@@ -155,7 +155,7 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 		output, err := currentWatchSessionOutput(watchCtx, input.SessionID, client, cursor)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) || watchCtx.Err() != nil {
-				return nil, timeoutWatchSessionOutput(lastOutput, input.SessionID, timeout), nil
+				return nil, timeoutWatchSessionOutput(&lastOutput, input.SessionID, timeout), nil
 			}
 			return &mcp.CallToolResult{
 				IsError: true,
@@ -205,20 +205,24 @@ func watchSession(ctx context.Context, req *mcp.CallToolRequest, input WatchSess
 
 		select {
 		case <-watchCtx.Done():
-			return nil, timeoutWatchSessionOutput(output, input.SessionID, timeout), nil
+			return nil, timeoutWatchSessionOutput(&output, input.SessionID, timeout), nil
 		case <-ticker.C:
 		}
 	}
 }
 
-func timeoutWatchSessionOutput(output WatchSessionOutput, sessionID string, timeout time.Duration) WatchSessionOutput {
-	if output.SessionID == "" {
-		output.SessionID = sessionID
+func timeoutWatchSessionOutput(output *WatchSessionOutput, sessionID string, timeout time.Duration) WatchSessionOutput {
+	result := WatchSessionOutput{}
+	if output != nil {
+		result = *output
 	}
-	output.ShouldWake = false
-	output.WakeReason = ""
-	output.NextAction = fmt.Sprintf("watch timed out after %s; call watch_session again or inspect get_session", timeout)
-	return output
+	if result.SessionID == "" {
+		result.SessionID = sessionID
+	}
+	result.ShouldWake = false
+	result.WakeReason = ""
+	result.NextAction = fmt.Sprintf("watch timed out after %s; call watch_session again or inspect get_session", timeout)
+	return result
 }
 
 func currentWatchSessionOutput(ctx context.Context, sessionID string, client *jules.Client, cursor time.Time) (WatchSessionOutput, error) {

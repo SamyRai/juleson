@@ -24,12 +24,15 @@ func captureOutput(f func()) string {
 	if err != nil {
 		panic(err)
 	}
+	defer r.Close()
 	os.Stdout = w
 
 	f()
 
 	_ = w.Close()
-	_, _ = buf.ReadFrom(r)
+	if _, err := buf.ReadFrom(r); err != nil {
+		panic(err)
+	}
 	return buf.String()
 }
 
