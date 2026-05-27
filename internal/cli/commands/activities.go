@@ -106,6 +106,10 @@ func listActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutp
 		}
 
 		fmt.Printf("%d. %s [%s] - %s\n", i+1, originator, activity.Originator, activity.CreateTime)
+		fmt.Printf("   ID: %s\n", activity.ID)
+		if activity.Name != "" {
+			fmt.Printf("   Name: %s\n", activity.Name)
+		}
 
 		// Show activity type and details
 		if activity.PlanGenerated != nil {

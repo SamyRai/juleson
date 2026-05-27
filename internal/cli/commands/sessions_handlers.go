@@ -292,6 +292,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 		fmt.Println()
 	}
 
+	fmt.Printf("💡 Use `juleson sessions plans %s` to inspect full generated plans.\n", sessionID)
 	fmt.Printf("💡 View full session at: %s\n", session.URL)
 
 	return nil

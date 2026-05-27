@@ -94,6 +94,7 @@ Registered when the Jules client is available:
 - `approve_session_plan`
 - `apply_session_patches`
 - `preview_session_changes`
+- `review_session`
 - `list_session_artifacts`
 - `get_session_outputs`
 - `watch_session`
@@ -121,6 +122,19 @@ checks for a clean worktree unless `allow_dirty=true` is passed. Use
 Both preview and apply accept `activity_id` and `artifact_index` to scope a
 single changeset. Patch artifacts with `baseCommitId` warn during dry-run and
 block mutation on mismatch unless `allow_base_mismatch=true`.
+
+`get_session_plans` remains backward compatible by returning the raw
+`activities` field and additionally returns `plans`, a structured array with
+activity ID/name, plan ID, creation time, approval state, approval activity ID,
+and full plan steps.
+
+`review_session` is read-only. It accepts `session_id`, optional `working_dir`,
+`activity_id`, and `artifact_index`, then returns a `review` object containing
+session state, plan summaries, documented outputs, artifact manifests, patch
+dry-run preview, base commit mismatch warnings, dirty-worktree blockers,
+verification suggestions, and structured `next_actions`. It never approves
+plans, sends messages, or applies patches; when safe it suggests the exact
+`juleson sessions apply ... --confirm` command for an operator to run.
 
 `watch_session.since` accepts an RFC3339 activity `createTime` cursor, filters
 activities client-side, and returns `next_activity_cursor` for resumable watches.

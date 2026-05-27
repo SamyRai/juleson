@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/go-jules"
+	"github.com/SamyRai/juleson/internal/sessionops"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -248,9 +249,10 @@ type GetActivitiesWithPlansInput struct {
 
 // GetActivitiesWithPlansOutput represents output for get_session_plans tool
 type GetActivitiesWithPlansOutput struct {
-	SessionID  string           `json:"session_id"`
-	Activities []jules.Activity `json:"activities"`
-	TotalCount int              `json:"total_count"`
+	SessionID  string                   `json:"session_id"`
+	Activities []jules.Activity         `json:"activities"`
+	Plans      []sessionops.PlanSummary `json:"plans"`
+	TotalCount int                      `json:"total_count"`
 }
 
 func getActivitiesWithPlans(ctx context.Context, req *mcp.CallToolRequest, input GetActivitiesWithPlansInput, client *jules.Client) (
@@ -276,6 +278,7 @@ func getActivitiesWithPlans(ctx context.Context, req *mcp.CallToolRequest, input
 	output := GetActivitiesWithPlansOutput{
 		SessionID:  input.SessionID,
 		Activities: activities,
+		Plans:      sessionops.ExtractPlanSummaries(activities),
 		TotalCount: len(activities),
 	}
 
