@@ -15,7 +15,7 @@ import (
 
 func TestBuildSessionReviewActiveSession(t *testing.T) {
 	tmpDir := cleanGitRepo(t)
-	client := mockedReviewClient(t, jules.Session{
+	client := mockedReviewClient(t, &jules.Session{
 		ID:    "session-1",
 		State: jules.SessionStateInProgress,
 	}, []jules.Activity{})
@@ -37,7 +37,7 @@ func TestBuildSessionReviewActiveSession(t *testing.T) {
 
 func TestBuildSessionReviewAwaitingPlanNextAction(t *testing.T) {
 	tmpDir := cleanGitRepo(t)
-	client := mockedReviewClient(t, jules.Session{
+	client := mockedReviewClient(t, &jules.Session{
 		ID:    "session-1",
 		State: jules.SessionStateAwaitingPlanApproval,
 	}, []jules.Activity{
@@ -60,7 +60,7 @@ func TestBuildSessionReviewCompletedWithArtifacts(t *testing.T) {
 	tmpDir := cleanGitRepo(t)
 	base := gitHead(t, tmpDir)
 	patch := filePatch(base)
-	client := mockedReviewClient(t, jules.Session{
+	client := mockedReviewClient(t, &jules.Session{
 		ID:    "session-1",
 		State: jules.SessionStateCompleted,
 		Outputs: []jules.Output{
@@ -96,7 +96,7 @@ func TestBuildSessionReviewCompletedWithArtifacts(t *testing.T) {
 
 func TestBuildSessionReviewCompletedWithoutArtifacts(t *testing.T) {
 	tmpDir := cleanGitRepo(t)
-	client := mockedReviewClient(t, jules.Session{
+	client := mockedReviewClient(t, &jules.Session{
 		ID:    "session-1",
 		State: jules.SessionStateCompleted,
 	}, []jules.Activity{{ID: "activity-complete", SessionCompleted: &jules.SessionCompleted{}}})
@@ -116,7 +116,7 @@ func TestBuildSessionReviewCompletedWithoutArtifacts(t *testing.T) {
 func TestBuildSessionReviewBaseMismatchBlocksApply(t *testing.T) {
 	tmpDir := cleanGitRepo(t)
 	patch := filePatch("0000000000000000000000000000000000000000")
-	client := mockedReviewClient(t, jules.Session{ID: "session-1", State: jules.SessionStateCompleted}, []jules.Activity{
+	client := mockedReviewClient(t, &jules.Session{ID: "session-1", State: jules.SessionStateCompleted}, []jules.Activity{
 		{
 			ID: "activity-patch",
 			Artifacts: []jules.Artifact{
@@ -143,7 +143,7 @@ func TestBuildSessionReviewBaseMismatchBlocksApply(t *testing.T) {
 func TestBuildSessionReviewDirtyWorktreeBlocksApply(t *testing.T) {
 	tmpDir := cleanGitRepo(t)
 	base := gitHead(t, tmpDir)
-	client := mockedReviewClient(t, jules.Session{ID: "session-1", State: jules.SessionStateCompleted}, []jules.Activity{
+	client := mockedReviewClient(t, &jules.Session{ID: "session-1", State: jules.SessionStateCompleted}, []jules.Activity{
 		{
 			ID: "activity-patch",
 			Artifacts: []jules.Artifact{
@@ -154,7 +154,7 @@ func TestBuildSessionReviewDirtyWorktreeBlocksApply(t *testing.T) {
 			},
 		},
 	})
-	if err := os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0644); err != nil {
+	if err := os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0600); err != nil {
 		t.Fatalf("write dirty file: %v", err)
 	}
 
@@ -170,7 +170,7 @@ func TestBuildSessionReviewDirtyWorktreeBlocksApply(t *testing.T) {
 	}
 }
 
-func mockedReviewClient(t *testing.T, session jules.Session, activities []jules.Activity) *jules.Client {
+func mockedReviewClient(t *testing.T, session *jules.Session, activities []jules.Activity) *jules.Client {
 	t.Helper()
 	httpmock.Activate()
 	t.Cleanup(httpmock.DeactivateAndReset)
@@ -183,8 +183,8 @@ func mockedReviewClient(t *testing.T, session jules.Session, activities []jules.
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{Activities: activities})
 		})
-	for _, activity := range activities {
-		activity := activity
+	for i := range activities {
+		activity := activities[i]
 		httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities/"+activity.ID,
 			func(req *http.Request) (*http.Response, error) {
 				return httpmock.NewJsonResponse(200, activity)
@@ -201,7 +201,7 @@ func cleanGitRepo(t *testing.T) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	runGit(t, tmpDir, "init")
-	if err := os.WriteFile(tmpDir+"/file.txt", []byte("one\n"), 0644); err != nil {
+	if err := os.WriteFile(tmpDir+"/file.txt", []byte("one\n"), 0600); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
 	runGit(t, tmpDir, "add", "file.txt")

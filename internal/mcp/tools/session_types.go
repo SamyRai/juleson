@@ -110,6 +110,8 @@ type PreviewSessionChangesOutput struct {
 }
 
 // ReviewSessionInput represents input for review_session tool.
+//
+//nolint:govet // Field order keeps the MCP JSON contract grouped by operator-facing inputs.
 type ReviewSessionInput struct {
 	SessionID     string `json:"session_id" jsonschema:"ID of the session to review"`
 	WorkingDir    string `json:"working_dir,omitempty" jsonschema:"Target project working directory for read-only patch preview and worktree checks"`

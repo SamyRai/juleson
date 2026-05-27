@@ -73,7 +73,8 @@ func printPlanSummaries(sessionID string, plans []sessionops.PlanSummary) {
 		fmt.Printf("  juleson sessions watch %s\n", sessionID)
 		return
 	}
-	for i, plan := range plans {
+	for i := range plans {
+		plan := &plans[i]
 		fmt.Printf("%d. Activity ID: %s\n", i+1, plan.ActivityID)
 		if plan.ActivityName != "" {
 			fmt.Printf("   Activity Name: %s\n", plan.ActivityName)
@@ -112,6 +113,20 @@ func printSessionReview(review *sessionops.SessionReview) {
 	if review.Session.URL != "" {
 		fmt.Printf("URL: %s\n", review.Session.URL)
 	}
+	printReviewLatestPlan(review)
+	printReviewOutputs(review)
+	printReviewArtifacts(review)
+	printReviewPatchPreview(review)
+	printReviewWorktree(review)
+
+	printStringList("Warnings", review.Warnings)
+	printStringList("Blockers", review.Blockers)
+	printStringList("Verification suggestions", review.VerificationSuggestions)
+
+	printReviewNextActions(review)
+}
+
+func printReviewLatestPlan(review *sessionops.SessionReview) {
 	if review.LatestPlan != nil {
 		fmt.Printf("\nLatest plan: %s (%d step(s), approved: %t)\n", review.LatestPlan.PlanID, len(review.LatestPlan.Steps), review.LatestPlan.Approved)
 		for stepIndex, step := range review.LatestPlan.Steps {
@@ -123,7 +138,9 @@ func printSessionReview(review *sessionops.SessionReview) {
 	} else {
 		fmt.Println("\nLatest plan: none")
 	}
+}
 
+func printReviewOutputs(review *sessionops.SessionReview) {
 	fmt.Printf("\nOutputs: %d\n", len(review.Outputs))
 	for _, output := range review.Outputs {
 		if output.PullRequest != nil {
@@ -133,16 +150,21 @@ func printSessionReview(review *sessionops.SessionReview) {
 			fmt.Println("  ChangeSet output")
 		}
 	}
+}
 
+func printReviewArtifacts(review *sessionops.SessionReview) {
 	fmt.Printf("\nArtifacts: %d\n", len(review.ArtifactManifests))
-	for _, manifest := range review.ArtifactManifests {
+	for i := range review.ArtifactManifests {
+		manifest := &review.ArtifactManifests[i]
 		fmt.Printf("  Activity %s artifact %d: %s", manifest.ActivityID, manifest.Index, manifest.Type)
 		if manifest.FileCount > 0 {
 			fmt.Printf(" (%d file(s))", manifest.FileCount)
 		}
 		fmt.Println()
 	}
+}
 
+func printReviewPatchPreview(review *sessionops.SessionReview) {
 	fmt.Printf("\nPatch preview: %s\n", review.PatchPreview.Summary)
 	for _, file := range review.PatchPreview.Files {
 		fmt.Printf("  %s (+%d -%d)\n", file.Path, file.LinesAdded, file.LinesRemoved)
@@ -153,21 +175,22 @@ func printSessionReview(review *sessionops.SessionReview) {
 	if review.PatchPreview.Error != "" {
 		fmt.Printf("  Preview error: %s\n", review.PatchPreview.Error)
 	}
+}
 
+func printReviewWorktree(review *sessionops.SessionReview) {
 	fmt.Printf("\nWorktree: %s\n", review.Worktree.WorkingDir)
-	if review.Worktree.Error != "" {
+	switch {
+	case review.Worktree.Error != "":
 		fmt.Printf("  Error: %s\n", review.Worktree.Error)
-	} else if review.Worktree.Clean {
+	case review.Worktree.Clean:
 		fmt.Println("  Clean: true")
-	} else {
+	default:
 		fmt.Println("  Clean: false")
 		fmt.Printf("  Status:\n%s\n", review.Worktree.Status)
 	}
+}
 
-	printStringList("Warnings", review.Warnings)
-	printStringList("Blockers", review.Blockers)
-	printStringList("Verification suggestions", review.VerificationSuggestions)
-
+func printReviewNextActions(review *sessionops.SessionReview) {
 	fmt.Println("\nNext actions:")
 	for _, action := range review.NextActions {
 		if action.Command != "" {

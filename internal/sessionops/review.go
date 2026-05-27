@@ -25,21 +25,21 @@ type ReviewNextAction struct {
 }
 
 type PatchPreviewSummary struct {
-	TotalPatches            int                   `json:"total_patches"`
 	Files                   []julesops.FileChange `json:"files,omitempty"`
 	SuggestedCommitMessages []string              `json:"suggested_commit_messages,omitempty"`
 	Warnings                []string              `json:"warnings,omitempty"`
 	BaseCommitMismatches    []string              `json:"base_commit_mismatches,omitempty"`
-	CanApply                bool                  `json:"can_apply"`
 	Error                   string                `json:"error,omitempty"`
 	Summary                 string                `json:"summary"`
+	TotalPatches            int                   `json:"total_patches"`
+	CanApply                bool                  `json:"can_apply"`
 }
 
 type WorktreeReview struct {
 	WorkingDir string `json:"working_dir"`
-	Clean      bool   `json:"clean"`
 	Status     string `json:"status,omitempty"`
 	Error      string `json:"error,omitempty"`
+	Clean      bool   `json:"clean"`
 }
 
 type SessionReview struct {
@@ -109,11 +109,11 @@ func BuildSessionReview(ctx context.Context, client *jules.Client, request Revie
 		review.Blockers = append(review.Blockers, "target worktree has local changes; commit or stash them before applying")
 	}
 
-	review.NextActions = ReviewNextActions(*review, request)
+	review.NextActions = ReviewNextActions(review, request)
 	return review, nil
 }
 
-func ReviewNextActions(review SessionReview, request ReviewRequest) []ReviewNextAction {
+func ReviewNextActions(review *SessionReview, request ReviewRequest) []ReviewNextAction {
 	sessionID := review.SessionID
 	if sessionID == "" {
 		sessionID = request.SessionID
@@ -174,9 +174,10 @@ func buildPatchPreview(changes *julesops.SessionChanges, err error) PatchPreview
 
 func buildArtifactManifests(activities []jules.Activity) []julesops.ArtifactManifest {
 	var manifests []julesops.ArtifactManifest
-	for _, activity := range activities {
+	for activityIndex := range activities {
+		activity := &activities[activityIndex]
 		for i, artifact := range activity.Artifacts {
-			manifests = append(manifests, julesops.BuildArtifactManifest(activity, i, artifact))
+			manifests = append(manifests, julesops.BuildArtifactManifest(*activity, i, artifact))
 		}
 	}
 	return manifests

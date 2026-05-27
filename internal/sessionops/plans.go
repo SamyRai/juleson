@@ -9,26 +9,27 @@ import (
 
 type PlanStepSummary struct {
 	ID          string `json:"id,omitempty"`
-	Index       int    `json:"index,omitempty"`
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
+	Index       int    `json:"index,omitempty"`
 }
 
 type PlanSummary struct {
 	ActivityID         string            `json:"activity_id"`
 	ActivityName       string            `json:"activity_name,omitempty"`
-	ActivityCreateTime time.Time         `json:"activity_create_time,omitempty"`
 	PlanID             string            `json:"plan_id"`
-	PlanCreateTime     time.Time         `json:"plan_create_time,omitempty"`
-	Approved           bool              `json:"approved"`
 	ApprovalActivityID string            `json:"approval_activity_id,omitempty"`
 	Steps              []PlanStepSummary `json:"steps"`
+	ActivityCreateTime time.Time         `json:"activity_create_time,omitempty"`
+	PlanCreateTime     time.Time         `json:"plan_create_time,omitempty"`
+	Approved           bool              `json:"approved"`
 }
 
 func ExtractPlanSummaries(activities []jules.Activity) []PlanSummary {
 	approvedPlans := approvedPlanActivities(activities)
 	var plans []PlanSummary
-	for _, activity := range activities {
+	for i := range activities {
+		activity := &activities[i]
 		if activity.PlanGenerated == nil {
 			continue
 		}
@@ -71,7 +72,8 @@ func LatestPlanSummary(plans []PlanSummary) *PlanSummary {
 
 func approvedPlanActivities(activities []jules.Activity) map[string]string {
 	approved := make(map[string]string)
-	for _, activity := range activities {
+	for i := range activities {
+		activity := &activities[i]
 		if activity.PlanApproved == nil || activity.PlanApproved.PlanID == "" {
 			continue
 		}
