@@ -14,6 +14,7 @@ type PlanStepSummary struct {
 	Index       int    `json:"index,omitempty"`
 }
 
+//nolint:govet // Field order follows the public JSON summary contract.
 type PlanSummary struct {
 	ActivityID         string            `json:"activity_id"`
 	ActivityName       string            `json:"activity_name,omitempty"`

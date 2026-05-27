@@ -154,7 +154,7 @@ func TestBuildSessionReviewDirtyWorktreeBlocksApply(t *testing.T) {
 			},
 		},
 	})
-	if err := os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0600); err != nil {
+	if err := os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0o600); err != nil {
 		t.Fatalf("write dirty file: %v", err)
 	}
 
@@ -201,7 +201,7 @@ func cleanGitRepo(t *testing.T) string {
 	t.Helper()
 	tmpDir := t.TempDir()
 	runGit(t, tmpDir, "init")
-	if err := os.WriteFile(tmpDir+"/file.txt", []byte("one\n"), 0600); err != nil {
+	if err := os.WriteFile(tmpDir+"/file.txt", []byte("one\n"), 0o600); err != nil {
 		t.Fatalf("write file: %v", err)
 	}
 	runGit(t, tmpDir, "add", "file.txt")

@@ -24,6 +24,7 @@ type ReviewNextAction struct {
 	Reason  string `json:"reason,omitempty"`
 }
 
+//nolint:govet // Field order follows the public JSON review contract.
 type PatchPreviewSummary struct {
 	Files                   []julesops.FileChange `json:"files,omitempty"`
 	SuggestedCommitMessages []string              `json:"suggested_commit_messages,omitempty"`
@@ -42,6 +43,7 @@ type WorktreeReview struct {
 	Clean      bool   `json:"clean"`
 }
 
+//nolint:govet // Field order follows the operator review flow and JSON contract.
 type SessionReview struct {
 	SessionID               string                      `json:"session_id"`
 	Session                 jules.Session               `json:"session"`
