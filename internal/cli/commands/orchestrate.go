@@ -72,7 +72,7 @@ Total estimated duration: 2h 45min in a single session!`,
 
 	cmd.Flags().StringVarP(&sourceID, "source", "s", "", "Source ID (GitHub repo)")
 	cmd.Flags().BoolVarP(&autoApprove, "auto-approve", "a", false, "Automatically approve plans")
-	cmd.MarkFlagRequired("source")
+	mustMarkFlagRequired(cmd, "source")
 
 	return cmd
 }
@@ -110,7 +110,7 @@ Total estimated duration: 3h 45min in a single session!`,
 
 	cmd.Flags().StringVarP(&sourceID, "source", "s", "", "Source ID (GitHub repo)")
 	cmd.Flags().BoolVarP(&autoApprove, "auto-approve", "a", false, "Automatically approve plans")
-	cmd.MarkFlagRequired("source")
+	mustMarkFlagRequired(cmd, "source")
 
 	return cmd
 }

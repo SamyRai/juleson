@@ -13,28 +13,33 @@ known gaps without committing to release dates.
 
 ## Next Jules Sprint Objective
 
-Add opt-in debug logging for Jules API requests and responses with secret
-redaction. Operators should be able to troubleshoot Jules API behavior without
-ever exposing API keys, bearer tokens, or other credential material in logs.
+Ship operator-grade Jules session monitoring and patch review workflows.
+Long-running sessions should produce useful status reflections without waking
+operators unnecessarily, while approval requests, feedback requests, completion,
+failures, and outputs should wake the caller with a clear next action.
+
+Window: 2026-05-27 through 2026-06-09
 
 Acceptance criteria:
 
-- Keep logging opt-in through configuration, environment, or an explicit client
-  option; default behavior should remain quiet.
-- Log method, URL path, status code, duration, retry attempt context, and concise
-  error details for Jules API calls.
-- Redact `X-Goog-Api-Key`, `Authorization`, API key query params, and obvious
-  token-like values in request/response metadata before logging.
-- Avoid logging full response bodies by default; if body snippets are added,
-  bound their size and apply redaction first.
-- Reuse existing `slog` patterns where practical and keep ownership close to
-  `github.com/SamyRai/go-jules` client request handling.
-- Cover redaction, disabled-by-default behavior, enabled request/response
-  logging, retry logging, and error-path logging with focused tests.
-- Update `docs/CONFIGURATION.md` and `docs/JULES_API.md` if new user-visible
-  options or troubleshooting workflows are added.
-- Verify with `go test ./...`, `git diff --check`, and a local Juleson command
-  that exercises the client without printing secrets.
+- Finish the actionable watch policy work across CLI and MCP: progress states
+  should be reflected without waking by default, while user-action, terminal, and
+  output states wake with structured reasons.
+- Preserve compatibility for existing `--wake-on-status-change` callers by
+  mapping it to an explicit any-status wake policy.
+- Add an operator review command or documented flow that combines session
+  status, artifacts, outputs, dry-run patch summary, base commit checks, and
+  suggested verification commands before any mutation.
+- Make timeout behavior resumable by returning the latest state, next activity
+  cursor, update type, and next action.
+- Keep patch application gated by clean worktree and explicit confirmation.
+- Cover CLI, MCP, and `internal/sessionops` behavior with focused tests for
+  progress-only updates, approval wakeups, completion wakeups, failures, outputs,
+  agent messages, timeouts, and cursor continuity.
+- Update `docs/CLI_REFERENCE.md`, `docs/MCP_SERVER_USAGE.md`, and this roadmap
+  alongside user-visible workflow changes.
+- Verify with `go test ./...`, `git diff --check`, and a local `juleson sessions
+  watch --help` smoke command.
 
 ## Next Sprint Track
 

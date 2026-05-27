@@ -1,8 +1,12 @@
 # Changelog
 
-The project is pre-1.0. Changes are tracked here until a tagged release process is established.
+The project is pre-1.0. Changes are tracked here between tagged releases.
 
 ## Unreleased
+
+No unreleased changes.
+
+## v0.1.0 - 2026-05-26
 
 ### Added
 

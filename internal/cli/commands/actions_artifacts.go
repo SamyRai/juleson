@@ -141,7 +141,9 @@ func newActionsArtifactsDeleteCommand(cfg *config.Config) *cobra.Command {
 			if !force {
 				fmt.Printf("Delete artifact #%d? (y/N): ", artifactID)
 				var response string
-				fmt.Scanln(&response)
+				if err := scanPromptValue(&response); err != nil {
+					return fmt.Errorf("failed to read response: %w", err)
+				}
 				if strings.ToLower(response) != "y" {
 					fmt.Println("Cancelled")
 					return nil

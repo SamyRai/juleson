@@ -275,7 +275,7 @@ jobs:
           fi
           build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           go build -v \
-            -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time}" \
+            -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time} -X main.gitCommit=${{ github.sha }}" \
             -trimpath \
             -o "bin/juleson${ext}" \
             ./cmd/juleson
@@ -289,7 +289,7 @@ jobs:
           fi
           build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           go build -v \
-            -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time}" \
+            -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time} -X main.gitCommit=${{ github.sha }}" \
             -trimpath \
             -o "bin/jules-mcp${ext}" \
             ./cmd/jules-mcp
@@ -297,15 +297,15 @@ jobs:
       - name: Test binaries (Unix)
         if: runner.os != 'Windows'
         run: |
-          ./bin/juleson --version || echo "Version flag not implemented yet"
-          ./bin/jules-mcp --help || echo "Help flag not implemented yet"
+          ./bin/juleson --version
+          ./bin/jules-mcp --version
 
       - name: Test binaries (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          .\bin\juleson.exe --version || echo "Version flag not implemented yet"
-          .\bin\jules-mcp.exe --help || echo "Help flag not implemented yet"
+          .\bin\juleson.exe --version
+          .\bin\jules-mcp.exe --version
 
       - name: Run go vet
         run: go vet ./...

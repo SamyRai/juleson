@@ -154,7 +154,7 @@ Examples:
 	cmd.Flags().IntVar(&maxIters, "max-iterations", 20, "Maximum number of AI decision iterations")
 	cmd.Flags().BoolVar(&autoApprove, "auto-approve", false, "Automatically approve AI plans (use with caution)")
 
-	cmd.MarkFlagRequired("source")
+	mustMarkFlagRequired(cmd, "source")
 
 	return cmd
 }

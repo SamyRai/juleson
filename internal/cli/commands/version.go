@@ -29,14 +29,21 @@ var versionCmd = &cobra.Command{
 
 // runVersion displays version information
 func runVersion(cmd *cobra.Command, args []string) error {
-	fmt.Printf("Juleson CLI %s\n", Version)
-	fmt.Printf("Jules API Version: %s\n", JulesAPIVersion)
-	fmt.Printf("Build Date: %s\n", BuildDate)
-	fmt.Printf("Git Commit: %s\n", GitCommit)
-	fmt.Printf("Go Version: %s\n", runtime.Version())
-	fmt.Printf("OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-
+	fmt.Print(VersionText())
 	return nil
+}
+
+// VersionText returns the complete CLI version output.
+func VersionText() string {
+	return fmt.Sprintf("Juleson CLI %s\nJules API Version: %s\nBuild Date: %s\nGit Commit: %s\nGo Version: %s\nOS/Arch: %s/%s\n",
+		Version,
+		JulesAPIVersion,
+		BuildDate,
+		GitCommit,
+		runtime.Version(),
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
 }
 
 // NewVersionCommand creates the version command

@@ -51,10 +51,12 @@ func (a *App) Execute() error {
 // setupCommands configures all CLI commands with proper dependency injection
 func (a *App) setupCommands() {
 	a.rootCmd = &cobra.Command{
-		Use:   "juleson",
-		Short: "Jules automation CLI tool",
-		Long:  "A comprehensive CLI tool for automating project tasks using Google's Jules AI coding agent",
+		Use:     "juleson",
+		Short:   "Jules automation CLI tool",
+		Long:    "A comprehensive CLI tool for automating project tasks using Google's Jules AI coding agent",
+		Version: commands.Version,
 	}
+	a.rootCmd.SetVersionTemplate(commands.VersionText())
 
 	// Customize help template to reduce redundancy
 	a.rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}

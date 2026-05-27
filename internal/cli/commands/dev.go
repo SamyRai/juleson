@@ -577,7 +577,7 @@ func newReleaseCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&version, "version", "", "Release version (required)")
-	cmd.MarkFlagRequired("version")
+	mustMarkFlagRequired(cmd, "version")
 
 	return cmd
 }

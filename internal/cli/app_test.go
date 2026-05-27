@@ -11,6 +11,7 @@ import (
 func TestCoreCommandsDoNotRequireJulesAPIKeyForHelp(t *testing.T) {
 	tests := [][]string{
 		{"--help"},
+		{"--version"},
 		{"version"},
 		{"sessions", "--help"},
 		{"sources", "--help"},

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/go-jules"
+	"github.com/SamyRai/juleson/internal/sessionops"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -199,7 +200,43 @@ func TestWatchSessionReturnsOnStatusChange(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, "status_change", output.WakeReason)
+	assert.True(t, output.ShouldWake)
 	assert.Equal(t, string(jules.SessionStateInProgress), output.State)
+	assert.Equal(t, string(sessionops.WatchUpdateProgress), output.UpdateType)
+}
+
+func TestWatchSessionActionableDoesNotWakeOnProgress(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateInProgress,
+			})
+		})
+	httpmock.RegisterRegexpResponder("GET", regexp.MustCompile(`^https://jules\.googleapis\.com/v1alpha/sessions/session-1/activities\?.*`),
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
+		})
+
+	result, output, err := watchSession(context.Background(), nil, WatchSessionInput{
+		SessionID:       "session-1",
+		InitialState:    string(jules.SessionStatePlanning),
+		IntervalSeconds: 2,
+		TimeoutSeconds:  1,
+		WakePolicy:      string(sessionops.WakePolicyActionable),
+	}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.False(t, output.ShouldWake)
+	assert.Empty(t, output.WakeReason)
+	assert.Equal(t, string(jules.SessionStateInProgress), output.State)
+	assert.Equal(t, string(sessionops.WatchUpdateProgress), output.UpdateType)
+	assert.Contains(t, output.NextAction, "watch timed out")
 }
 
 func TestWatchSessionReturnsOnJulesAgentMessage(t *testing.T) {
@@ -237,8 +274,116 @@ func TestWatchSessionReturnsOnJulesAgentMessage(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "jules_agent_message", output.WakeReason)
+	assert.True(t, output.ShouldWake)
+	assert.Equal(t, "agent_message", output.WakeReason)
+	assert.Equal(t, string(sessionops.WatchUpdateAgentMessage), output.UpdateType)
 	assert.Len(t, output.RecentActivities, 1)
+}
+
+func TestWatchSessionDoesNotReturnOnAgentMessageWhenDisabled(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	cursor := time.Date(2026, 5, 25, 10, 0, 0, 0, time.UTC)
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateInProgress,
+			})
+		})
+	httpmock.RegisterRegexpResponder("GET", regexp.MustCompile(`^https://jules\.googleapis\.com/v1alpha/sessions/session-1/activities\?.*`),
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
+				Activities: []jules.Activity{
+					{
+						ID:            "activity-1",
+						CreateTime:    cursor.Add(time.Minute),
+						Originator:    jules.ActivityOriginatorAgent,
+						AgentMessaged: &jules.AgentMessaged{AgentMessage: "I need feedback on the plan."},
+					},
+				},
+			})
+		})
+
+	result, output, err := watchSession(context.Background(), nil, WatchSessionInput{
+		SessionID:       "session-1",
+		Since:           cursor.Format(time.RFC3339Nano),
+		IntervalSeconds: 2,
+		TimeoutSeconds:  1,
+	}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.False(t, output.ShouldWake)
+	assert.Empty(t, output.WakeReason)
+	assert.Equal(t, string(sessionops.WatchUpdateProgress), output.UpdateType)
+}
+
+func TestWatchSessionReturnsOnCompleted(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateCompleted,
+			})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=25",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
+		})
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1/activities?pageSize=100",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
+				Activities: []jules.Activity{{
+					ID: "activity-1",
+					Artifacts: []jules.Artifact{{
+						ChangeSet: &jules.ChangeSet{GitPatch: &jules.GitPatch{UnidiffPatch: "diff --git a/file b/file\n"}},
+					}},
+				}},
+			})
+		})
+
+	result, output, err := watchSession(context.Background(), nil, WatchSessionInput{SessionID: "session-1"}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.True(t, output.ShouldWake)
+	assert.Equal(t, "terminal_state", output.WakeReason)
+	assert.Equal(t, string(sessionops.WatchUpdateTerminalSuccess), output.UpdateType)
+	assert.Contains(t, output.NextAction, "preview_session_changes")
+}
+
+func TestWatchSessionReturnsOnFailed(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{
+				ID:    "session-1",
+				State: jules.SessionStateFailed,
+			})
+		})
+	httpmock.RegisterRegexpResponder("GET", regexp.MustCompile(`^https://jules\.googleapis\.com/v1alpha/sessions/session-1/activities\?.*`),
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{})
+		})
+
+	result, output, err := watchSession(context.Background(), nil, WatchSessionInput{SessionID: "session-1"}, client)
+
+	require.NoError(t, err)
+	assert.Nil(t, result)
+	assert.True(t, output.ShouldWake)
+	assert.Equal(t, "terminal_state", output.WakeReason)
+	assert.Equal(t, string(sessionops.WatchUpdateTerminalFailure), output.UpdateType)
+	assert.Contains(t, output.NextAction, "failure")
 }
 
 func TestCurrentWatchSessionOutputCompletedWithoutDeliverables(t *testing.T) {
