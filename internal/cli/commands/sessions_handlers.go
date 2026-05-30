@@ -44,9 +44,16 @@ func approveSessionPlan(cfg *config.Config, sessionID string) error {
 	julesClient := newJulesClient(cfg)
 	ctx := context.Background()
 
+	// Check if session is explicitly waiting for feedback
+	session, err := julesClient.Sessions().Get(ctx, sessionID)
+	if err == nil && session.State == jules.SessionStateAwaitingUserFeedback {
+		fmt.Println("💡 Warning: This session is in AWAITING_USER_FEEDBACK state. The agent requires a direct message response.")
+		fmt.Printf("💡 If you meant to reply to a question, use: juleson sessions message %s \"Your reply\"\n\n", sessionID)
+	}
+
 	fmt.Printf("✅ Approving plan for session: %s\n", sessionID)
 
-	err := julesClient.Sessions().ApprovePlan(ctx, sessionID)
+	err = julesClient.Sessions().ApprovePlan(ctx, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to approve plan: %w", err)
 	}
@@ -267,6 +274,14 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 
 		if activity.PlanApproved != nil {
 			fmt.Printf("   ✅ Plan Approved (Plan ID: %s)\n", activity.PlanApproved.PlanID)
+		}
+
+		if activity.AgentMessaged != nil {
+			fmt.Printf("   💬 Agent Message: %s\n", activity.AgentMessaged.AgentMessage)
+		}
+
+		if activity.UserMessaged != nil {
+			fmt.Printf("   💬 User Message: %s\n", activity.UserMessaged.UserMessage)
 		}
 
 		if activity.ProgressUpdated != nil {
