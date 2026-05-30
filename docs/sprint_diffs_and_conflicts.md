@@ -18,7 +18,7 @@ This sprint focuses on overhauling the developer experience when dealing with di
   - Implement a check for external diff pagers in the user's `$PATH` (specifically `difftastic` or `delta`).
   - If present, pipe the patch output through the external tool when running `juleson sessions preview`.
 - **Task 1.2: Native Go Fallback implementation**
-  - Add `github.com/sergi/go-diff` to parse raw diff patches.
+  - Add `github.com/bluekeyes/go-gitdiff` or `github.com/sourcegraph/go-diff` to parse raw unified diff patches (as `sergi/go-diff` is better for computing diffs, not parsing patches).
   - Integrate `github.com/alecthomas/chroma` for code syntax highlighting.
   - Use `charmbracelet/lipgloss` to render the syntax-highlighted diff gracefully in the terminal.
 - **Task 1.3: Add configuration flags**
@@ -30,9 +30,9 @@ This sprint focuses on overhauling the developer experience when dealing with di
 
 **Objective:** When `juleson sessions apply <ID>` encounters a conflict, launch an interactive wizard to gather necessary resolution context.
 
-- **Task 2.1: Implement TUI using `charmbracelet/bubbletea`**
-  - Create a new package `internal/tui/conflict` to house the Bubble Tea application logic.
-  - Implement a checkbox list allowing the developer to select which context to include:
+- **Task 2.1: Implement TUI using `charmbracelet/huh`**
+  - Create a new package `internal/tui/conflict` to house the form application logic.
+  - Use `charmbracelet/huh` to implement a multi-select form allowing the developer to select which context to include:
     - `[x]` Current state of the local file
     - `[x]` The failing patch diff
     - `[ ]` Recent compiler/linter errors
@@ -41,7 +41,7 @@ This sprint focuses on overhauling the developer experience when dealing with di
   - Write a utility to collect the selected information from the local file system or `go build` output.
   - Package this context into a structured JSON/Markdown payload.
 - **Task 2.3: Developer Guidance Input**
-  - Add a free-form text input field in the TUI allowing developers to leave specific instructions for the agent (e.g., "Keep my local changes on line 42, but apply the rest").
+  - Use `charmbracelet/huh` to add a free-form text input field in the TUI allowing developers to leave specific instructions for the agent (e.g., "Keep my local changes on line 42, but apply the rest").
 
 ---
 
