@@ -1,0 +1,11 @@
+with-expecter: true
+packages:
+  github.com/SamyRai/juleson/internal/llm:
+    interfaces:
+      Provider:
+  github.com/SamyRai/juleson/internal/agent/memory:
+    interfaces:
+      Memory:
+  github.com/SamyRai/juleson/internal/agent/review:
+    interfaces:
+      Reviewer:
