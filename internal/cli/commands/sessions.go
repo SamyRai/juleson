@@ -335,5 +335,16 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 		},
 	})
 
+	// Autoclean completed sessions
+	sessionsCmd.AddCommand(&cobra.Command{
+		Use:   "autoclean",
+		Short: "Automatically clean up merged sessions globally",
+		Long:  "List all COMPLETED sessions, clone their repo to a tmpfs to verify if the patch is merged, and delete the remote session if it is.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return autocleanSessions(cfg)
+		},
+	})
+
 	return sessionsCmd
 }
