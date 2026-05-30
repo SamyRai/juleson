@@ -18,6 +18,7 @@ type Config struct {
 	Automation AutomationConfig `mapstructure:"automation"`
 	Projects   ProjectsConfig   `mapstructure:"projects"`
 	Templates  TemplatesConfig  `mapstructure:"templates"`
+	Diff       DiffConfig       `mapstructure:"diff"`
 }
 
 // JulesConfig contains Jules API configuration
@@ -98,6 +99,12 @@ type TemplatesConfig struct {
 	BuiltinPath  string `mapstructure:"builtin_path"`
 	CustomPath   string `mapstructure:"custom_path"`
 	EnableCustom bool   `mapstructure:"enable_custom"`
+}
+
+// DiffConfig contains diff viewing settings
+type DiffConfig struct {
+	Tool        string `mapstructure:"tool"`
+	ForceNative bool   `mapstructure:"force_native"`
 }
 
 // Load loads configuration from file and environment variables
@@ -233,6 +240,9 @@ func setDefaults() {
 	viper.SetDefault("templates.builtin_path", "./templates/builtin")
 	viper.SetDefault("templates.custom_path", "${JULES_TEMPLATES_CUSTOM_PATH:-./templates/custom}")
 	viper.SetDefault("templates.enable_custom", true)
+
+	viper.SetDefault("diff.tool", "")
+	viper.SetDefault("diff.force_native", false)
 }
 
 // validate validates the configuration
@@ -293,6 +303,9 @@ func (c *Config) Save() error {
 	viper.Set("templates.builtin_path", c.Templates.BuiltinPath)
 	viper.Set("templates.custom_path", c.Templates.CustomPath)
 	viper.Set("templates.enable_custom", c.Templates.EnableCustom)
+
+	viper.Set("diff.tool", c.Diff.Tool)
+	viper.Set("diff.force_native", c.Diff.ForceNative)
 
 	// Try to write to the config file
 	if err := viper.WriteConfig(); err != nil {
