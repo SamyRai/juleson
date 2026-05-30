@@ -74,6 +74,10 @@ juleson sessions watch SESSION_ID --wake-policy actionable
 juleson sessions watch SESSION_ID --wake-on-status-change --initial-state PLANNING
 juleson sessions watch SESSION_ID --wake-on-agent-message --since 2026-05-25T10:00:00Z
 juleson sessions get SESSION_ID
+juleson sessions plans SESSION_ID
+juleson sessions plans SESSION_ID --latest --json
+juleson sessions review SESSION_ID PROJECT_PATH
+juleson sessions review SESSION_ID PROJECT_PATH --activity-id ACTIVITY_ID --artifact-index 0 --json
 juleson sessions approve SESSION_ID
 juleson sessions message SESSION_ID "Follow-up text"
 juleson sessions apply SESSION_ID PROJECT_PATH
@@ -125,6 +129,23 @@ When a completed session has no pull request output and only empty changeset
 artifacts, watch reports that no retrievable deliverable was produced instead
 of directing operators to apply an empty patch.
 
+`sessions get` keeps a concise activity and plan preview for compatibility and
+prints a hint to use `sessions plans SESSION_ID` for full plan inspection.
+`sessions plans` lists every generated plan activity with activity ID/name, plan
+ID, created time, approval state, and every step title and description. Pass
+`--latest` to show only the newest generated plan or `--json` for structured
+output. Human output ends with explicit next commands for approval, feedback,
+review, and watching.
+
+`sessions review SESSION_ID PROJECT_PATH` is a read-only operator snapshot. It
+combines session state, the latest plan, documented outputs, artifact manifests,
+patch dry-run summary, base commit mismatch warnings, dirty-worktree blockers,
+verification suggestions, and safe next actions. It never applies patches. When
+the patch dry-run passes and the target worktree is clean, it recommends the
+exact `sessions apply ... --confirm` command. Use `--activity-id` and
+`--artifact-index` to review one changeset and `--json` for MCP-like structured
+output.
+
 `sessions apply` dry-runs by default. Use `--confirm` to apply patches; dirty
 worktrees are blocked unless `--allow-dirty` is passed. `--activity-id` and
 `--artifact-index` apply one changeset at a time. If an artifact includes
@@ -150,6 +171,10 @@ commands remain the default Juleson path.
 `sessions preview` and `sessions download` use documented activity artifacts:
 git patches from `changeSet`, command output from `bashOutput`, and decoded
 base64 media from `media`.
+
+`activities list` prints each activity ID and resource name so the value can be
+copied directly into `activities get SESSION_ID ACTIVITY_ID`, `sessions review
+--activity-id`, or `sessions apply --activity-id`.
 
 ## Templates
 

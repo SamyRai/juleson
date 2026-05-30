@@ -3,6 +3,7 @@ package tools
 import (
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/sessionops"
 )
 
 // ListSessionsInput represents input for list_sessions tool
@@ -106,6 +107,21 @@ type PreviewSessionChangesOutput struct {
 	CanApply                bool                  `json:"can_apply"`
 	Errors                  []string              `json:"errors,omitempty"`
 	Summary                 string                `json:"summary"`
+}
+
+// ReviewSessionInput represents input for review_session tool.
+//
+//nolint:govet // Field order keeps the MCP JSON contract grouped by operator-facing inputs.
+type ReviewSessionInput struct {
+	SessionID     string `json:"session_id" jsonschema:"ID of the session to review"`
+	WorkingDir    string `json:"working_dir,omitempty" jsonschema:"Target project working directory for read-only patch preview and worktree checks"`
+	ActivityID    string `json:"activity_id,omitempty" jsonschema:"Optional activity ID or resource name to scope patch review"`
+	ArtifactIndex *int   `json:"artifact_index,omitempty" jsonschema:"Optional artifact index to review within the selected scope"`
+}
+
+// ReviewSessionOutput represents output for review_session tool.
+type ReviewSessionOutput struct {
+	Review sessionops.SessionReview `json:"review"`
 }
 
 // SendSessionMessageInput represents input for send_session_message tool

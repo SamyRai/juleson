@@ -131,6 +131,47 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 		},
 	})
 
+	var (
+		plansLatest bool
+		plansJSON   bool
+	)
+	plansCmd := &cobra.Command{
+		Use:   "plans [session-id]",
+		Short: "Show generated session plans",
+		Long:  "Show generated Jules plans with activity IDs, plan IDs, approval state, and full step details.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return showSessionPlans(cfg, args[0], plansLatest, plansJSON)
+		},
+	}
+	plansCmd.Flags().BoolVar(&plansLatest, "latest", false, "Show only the newest generated plan")
+	plansCmd.Flags().BoolVar(&plansJSON, "json", false, "Print machine-readable JSON")
+	sessionsCmd.AddCommand(plansCmd)
+
+	var (
+		reviewActivityID    string
+		reviewArtifactIndex int
+		reviewJSON          bool
+	)
+	reviewCmd := &cobra.Command{
+		Use:   "review [session-id] [project-path]",
+		Short: "Review session state and patch readiness",
+		Long:  "Read-only operator review combining session state, latest plan, outputs, artifact manifests, patch dry-run preview, blockers, and next actions.",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return reviewSession(cfg, args[0], args[1], ReviewSessionOptions{
+				ActivityID:       reviewActivityID,
+				ArtifactIndex:    reviewArtifactIndex,
+				HasArtifactIndex: cmd.Flags().Changed("artifact-index"),
+				JSON:             reviewJSON,
+			})
+		},
+	}
+	reviewCmd.Flags().StringVar(&reviewActivityID, "activity-id", "", "Review patches only from this activity ID or resource name")
+	reviewCmd.Flags().IntVar(&reviewArtifactIndex, "artifact-index", 0, "Review only this artifact index within the selected scope")
+	reviewCmd.Flags().BoolVar(&reviewJSON, "json", false, "Print machine-readable JSON")
+	sessionsCmd.AddCommand(reviewCmd)
+
 	// Send message to session
 	sessionsCmd.AddCommand(&cobra.Command{
 		Use:   "message [session-id] [message]",

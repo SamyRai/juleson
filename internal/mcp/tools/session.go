@@ -70,6 +70,14 @@ func RegisterSessionTools(server *mcp.Server, julesClient *jules.Client) {
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "review_session",
+		Description: "Read-only operator review of session state, latest plan, outputs, artifacts, patch dry-run preview, blockers, and safe next actions.",
+		Annotations: readOnlyOpenWorldTool("Review Session"),
+	}, func(ctx context.Context, req *mcp.CallToolRequest, input ReviewSessionInput) (*mcp.CallToolResult, ReviewSessionOutput, error) {
+		return reviewSession(ctx, req, input, julesClient)
+	})
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_session_artifacts",
 		Description: "List documented session artifacts as a manifest with activity IDs, artifact indexes, patch metadata, media MIME types, and bash exit codes.",
 		Annotations: readOnlyOpenWorldTool("List Session Artifacts"),

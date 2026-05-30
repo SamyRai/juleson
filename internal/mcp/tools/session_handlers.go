@@ -270,3 +270,32 @@ func getSessionOutputs(ctx context.Context, req *mcp.CallToolRequest, input GetS
 		TotalCount: len(documentedOutputs),
 	}, nil
 }
+
+func reviewSession(ctx context.Context, req *mcp.CallToolRequest, input ReviewSessionInput, client *jules.Client) (
+	*mcp.CallToolResult,
+	ReviewSessionOutput,
+	error,
+) {
+	artifactIndex := 0
+	hasArtifactIndex := false
+	if input.ArtifactIndex != nil {
+		artifactIndex = *input.ArtifactIndex
+		hasArtifactIndex = true
+	}
+	review, err := sessionops.BuildSessionReview(ctx, client, sessionops.ReviewRequest{
+		SessionID:        input.SessionID,
+		WorkingDir:       input.WorkingDir,
+		ActivityID:       input.ActivityID,
+		ArtifactIndex:    artifactIndex,
+		HasArtifactIndex: hasArtifactIndex,
+	})
+	if err != nil {
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to review session: %v", err)},
+			},
+		}, ReviewSessionOutput{}, err
+	}
+	return nil, ReviewSessionOutput{Review: *review}, nil
+}

@@ -46,7 +46,11 @@ client := jules.NewClient(
 )
 ```
 
-Debug logging for HTTP requests can be enabled via `jules.WithDebugLog(true)` and requires setting `jules.WithLogger`. When enabled, it logs HTTP method, URL, duration, status code, and errors at the `Debug` level, while redacting any values resembling keys or tokens in query parameters to ensure secrets are not exposed.
+Debug logging for HTTP requests can be enabled via `jules.WithDebugLog(true)`
+and requires setting `jules.WithLogger`. When enabled, it logs HTTP method,
+URL, duration, status code, and errors at the `Debug` level, while redacting any
+values resembling keys or tokens in query parameters to ensure secrets are not
+exposed.
 
 The SDK uses typed session states, automation modes, activity originators, and
 `time.Time` values for documented RFC3339 timestamps. Methods accepting resource
@@ -123,6 +127,12 @@ For immutable activity streams, SDK callers can use `ListActivitiesSince` with a
 stored `createTime` cursor and `ActivityCursor` to compute the next cursor from a
 batch.
 
+Plan inspection is built from documented activity payloads. `sessions plans` and
+the MCP `get_session_plans` tool read activities with `planGenerated` and
+`planApproved`, then summarize plan IDs, activity IDs/resource names, creation
+times, approval state, and every step title and description. The MCP response
+keeps the existing raw `activities` field and adds a structured `plans` field.
+
 Full file outputs are mentioned in the upstream changelog, but the public
 reference does not document a stable typed response shape in the pages above.
 Juleson does not model a file output type until that schema is confirmed.
@@ -132,14 +142,23 @@ Juleson does not model a file output type until that schema is confirmed.
 Juleson can preview and apply patches from session artifacts:
 
 ```bash
+juleson sessions plans SESSION_ID
+juleson sessions review SESSION_ID ./repo
 juleson sessions artifacts list SESSION_ID
 juleson sessions apply SESSION_ID ./repo --activity-id ACTIVITY_ID --artifact-index 0
 juleson sessions apply SESSION_ID ./repo --confirm
 juleson sessions download SESSION_ID ./artifacts
 ```
 
-MCP tools also expose `preview_session_changes`, `list_session_artifacts`, and
-`apply_session_patches`.
+MCP tools also expose `review_session`, `preview_session_changes`,
+`list_session_artifacts`, and `apply_session_patches`.
+
+`sessions review` and MCP `review_session` are read-only operator snapshots.
+They combine session state, latest plan, documented outputs, artifact manifests,
+patch dry-run preview, base commit mismatch warnings, dirty-worktree blockers,
+verification suggestions, and safe next actions. They do not approve plans,
+send messages, mutate worktrees, or apply patches; when safe they only
+recommend the exact `sessions apply ... --confirm` command.
 
 Preview and apply can be scoped to one activity and artifact index. `git apply
 --check` remains the source of truth for whether a patch can apply. Juleson
