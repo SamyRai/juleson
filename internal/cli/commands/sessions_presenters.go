@@ -1,14 +1,20 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/SamyRai/go-jules"
+	"github.com/SamyRai/juleson/internal/build"
+	"github.com/SamyRai/juleson/internal/config"
+	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/bluekeyes/go-gitdiff/gitdiff"
 )
 
 // previewActivityArtifactsContent displays artifact content based on type
-func previewActivityArtifactsContent(artifacts []jules.Artifact) error {
+func previewActivityArtifactsContent(cfg *config.Config, artifacts []jules.Artifact) error {
 	for i, artifact := range artifacts {
 		fmt.Printf("\n  📄 Artifact %d:\n", i+1)
 
@@ -16,7 +22,7 @@ func previewActivityArtifactsContent(artifacts []jules.Artifact) error {
 		if artifact.BashOutput != nil {
 			previewBashOutput(artifact.BashOutput)
 		} else if artifact.ChangeSet != nil && artifact.ChangeSet.GitPatch != nil {
-			err := previewGitPatch(artifact.ChangeSet.GitPatch)
+			err := previewGitPatch(cfg, artifact.ChangeSet.GitPatch)
 			if err != nil {
 				fmt.Printf("    ⚠️  Failed to preview git patch: %v\n", err)
 			}
@@ -51,7 +57,7 @@ func previewBashOutput(output *jules.BashOutput) error {
 }
 
 // previewGitPatch displays git diff content
-func previewGitPatch(patch *jules.GitPatch) error {
+func previewGitPatch(cfg *config.Config, patch *jules.GitPatch) error {
 	fmt.Printf("    🔀 Git Patch:\n")
 
 	if patch.SuggestedCommitMessage != "" {
@@ -62,23 +68,77 @@ func previewGitPatch(patch *jules.GitPatch) error {
 		fmt.Printf("    Base Commit: %s\n", patch.BaseCommitID)
 	}
 
-	// If we have unidiff content, display it
-	if patch.UnidiffPatch != "" {
-		fmt.Printf("    Diff:\n")
-		fmt.Printf("    ```diff\n")
-
-		// Split into lines and add proper indentation
-		lines := strings.Split(patch.UnidiffPatch, "\n")
-		for _, line := range lines {
-			if len(line) > 120 { // Truncate very long lines
-				line = line[:120] + "..."
-			}
-			fmt.Printf("    %s\n", line)
-		}
-		fmt.Printf("    ```\n")
-	} else {
+	if patch.UnidiffPatch == "" {
 		fmt.Printf("    No diff content.\n")
+		return nil
 	}
+
+	if !cfg.Diff.ForceNative {
+		var diffTool string
+		if cfg.Diff.Tool != "" {
+			diffTool = cfg.Diff.Tool
+		} else {
+			// Look for common diff pagers
+			if path, err := build.LookPath("difftastic"); err == nil {
+				diffTool = path
+			} else if path, err := build.LookPath("delta"); err == nil {
+				diffTool = path
+			}
+		}
+
+		if diffTool != "" {
+			err := build.RunDiffTool(context.Background(), diffTool, patch.UnidiffPatch)
+			if err != nil {
+				fmt.Printf("    ⚠️  Diff tool exited with error: %v\n", err)
+			}
+			return nil
+		}
+	}
+
+	// Fallback to native text diff
+	fmt.Printf("    Diff:\n")
+
+	// Parse the patch using go-gitdiff
+	files, _, err := gitdiff.Parse(strings.NewReader(patch.UnidiffPatch))
+	if err == nil && len(files) > 0 {
+		var b strings.Builder
+		for _, file := range files {
+			b.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", file.OldName, file.NewName))
+			for _, fragment := range file.TextFragments {
+				b.WriteString(fragment.Header())
+				for _, line := range fragment.Lines {
+					switch line.Op {
+					case gitdiff.OpAdd:
+						b.WriteString("+")
+					case gitdiff.OpDelete:
+						b.WriteString("-")
+					case gitdiff.OpContext:
+						b.WriteString(" ")
+					}
+					b.WriteString(line.Line)
+				}
+			}
+		}
+
+		err = quick.Highlight(os.Stdout, b.String(), "diff", "terminal256", "monokai")
+		if err != nil {
+			// Fallback if highlight fails
+			fmt.Println(b.String())
+		}
+		return nil
+	}
+
+	// Fallback if parsing fails
+	fmt.Printf("    ```diff\n")
+	// Split into lines and add proper indentation
+	lines := strings.Split(patch.UnidiffPatch, "\n")
+	for _, line := range lines {
+		if len(line) > 120 { // Truncate very long lines
+			line = line[:120] + "..."
+		}
+		fmt.Printf("    %s\n", line)
+	}
+	fmt.Printf("    ```\n")
 
 	return nil
 }

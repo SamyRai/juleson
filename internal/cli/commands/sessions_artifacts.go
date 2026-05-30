@@ -178,7 +178,7 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	for i, activity := range activities {
 		if len(activity.Artifacts) > 0 {
 			fmt.Printf("\n📋 Activity %d: %s\n", i+1, activity.ID)
-			err := previewActivityArtifactsContent(activity.Artifacts)
+			err := previewActivityArtifactsContent(cfg, activity.Artifacts)
 			if err != nil {
 				fmt.Printf("⚠️  Failed to preview activity %s: %v\n", activity.ID, err)
 			} else {
@@ -215,7 +215,7 @@ func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID s
 		return nil
 	}
 
-	err = previewActivityArtifactsContent(activity.Artifacts)
+	err = previewActivityArtifactsContent(cfg, activity.Artifacts)
 	if err != nil {
 		return err
 	}

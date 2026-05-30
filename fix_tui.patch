@@ -1,0 +1,10 @@
+--- internal/tui/conflict/wizard.go
++++ internal/tui/conflict/wizard.go
+@@ -28,6 +28,7 @@
+					huh.NewOption("Current state of the local file", "local").Selected(true),
+					huh.NewOption("The failing patch diff", "patch").Selected(true),
+					huh.NewOption("Recent compiler/linter errors", "errors"),
++					huh.NewOption("Additional related files", "related"),
+				).
+				Value(&selectedContexts),
+		),
