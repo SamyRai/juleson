@@ -23,6 +23,9 @@ func NewAIOrchestCommand(cfg *config.Config, initializeRuntime func() (*orchestr
 		constraints []string
 		geminiModel string
 		geminiKey   string
+		ollamaModel string
+		ollamaURL   string
+		aiBackend   string
 		maxIters    int
 		autoApprove bool
 	)
@@ -67,16 +70,26 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			goal := args[0]
 
-			if geminiKey == "" {
-				geminiKey = os.Getenv("GEMINI_API_KEY")
+			cfg.ActiveBackend = aiBackend
+
+			if aiBackend == "gemini" {
+				if geminiKey == "" {
+					geminiKey = os.Getenv("GEMINI_API_KEY")
+				}
+				if geminiKey == "" {
+					return fmt.Errorf("Gemini API key required. Set --gemini-key or GEMINI_API_KEY environment variable")
+				}
+				cfg.Gemini.APIKey = geminiKey
+				cfg.Gemini.Backend = "gemini-api"
+				cfg.Gemini.Model = geminiModel
+				cfg.Gemini.Timeout = 30 * time.Second
+			} else if aiBackend == "ollama" {
+				cfg.Ollama.BaseURL = ollamaURL
+				cfg.Ollama.Model = ollamaModel
+			} else {
+				return fmt.Errorf("invalid AI backend: %s. Must be 'gemini' or 'ollama'", aiBackend)
 			}
-			if geminiKey == "" {
-				return fmt.Errorf("Gemini API key required. Set --gemini-key or GEMINI_API_KEY environment variable")
-			}
-			cfg.Gemini.APIKey = geminiKey
-			cfg.Gemini.Backend = "gemini-api"
-			cfg.Gemini.Model = geminiModel
-			cfg.Gemini.Timeout = 30 * time.Second
+
 			cfg.Jules.Timeout = 30 * time.Second
 			cfg.Jules.RetryAttempts = 3
 
@@ -151,6 +164,9 @@ Examples:
 	cmd.Flags().StringSliceVar(&constraints, "constraint", []string{}, "Constraints for AI to follow (can be specified multiple times)")
 	cmd.Flags().StringVar(&geminiModel, "gemini-model", "gemini-2.0-flash-exp", "Gemini model to use")
 	cmd.Flags().StringVar(&geminiKey, "gemini-key", "", "Gemini API key (or use GEMINI_API_KEY env var)")
+	cmd.Flags().StringVar(&ollamaModel, "ollama-model", "llama3", "Ollama model to use")
+	cmd.Flags().StringVar(&ollamaURL, "ollama-url", "http://localhost:11434", "Ollama API Base URL")
+	cmd.Flags().StringVar(&aiBackend, "ai-backend", "gemini", "AI backend to use (gemini or ollama)")
 	cmd.Flags().IntVar(&maxIters, "max-iterations", 20, "Maximum number of AI decision iterations")
 	cmd.Flags().BoolVar(&autoApprove, "auto-approve", false, "Automatically approve AI plans (use with caution)")
 

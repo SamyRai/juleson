@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/go-jules"
-	"github.com/SamyRai/juleson/internal/gemini"
+	"github.com/SamyRai/juleson/internal/llm"
 )
 
 // AIOrchestrator is a legacy compatibility surface. New CLI and MCP workflows
@@ -21,9 +21,9 @@ import (
 // - How to adapt based on progress and results
 // - When the workflow is complete
 type AIOrchestrator struct {
-	julesClient  *jules.Client
-	geminiClient *gemini.Client
-	sessionID    string
+	julesClient *jules.Client
+	llmProvider llm.Provider
+	sessionID   string
 
 	// Workflow state
 	goal        string
@@ -161,7 +161,7 @@ func DefaultAIOrchestrationConfig() *AIOrchestrationConfig {
 // NewAIOrchestrator creates a new AI-powered orchestrator
 func NewAIOrchestrator(
 	julesClient *jules.Client,
-	geminiClient *gemini.Client,
+	llmProvider llm.Provider,
 	config *AIOrchestrationConfig,
 ) *AIOrchestrator {
 	if config == nil {
@@ -170,7 +170,7 @@ func NewAIOrchestrator(
 
 	orchestrator := &AIOrchestrator{
 		julesClient:     julesClient,
-		geminiClient:    geminiClient,
+		llmProvider:     llmProvider,
 		state:           AIStateAnalyzing,
 		progressChan:    make(chan AIProgress, 100),
 		decisionChan:    make(chan AIDecision, 100),
@@ -261,13 +261,43 @@ Provide a structured JSON response with your analysis.`,
 		strings.Join(ao.constraints, ", "),
 	)
 
-	resp, err := ao.geminiClient.GenerateContent("", analysisPrompt)
+	req := llm.Request{
+		Prompt: analysisPrompt,
+		Tools: []llm.Tool{{
+			Name:        "submit_analysis",
+			Description: "Submit the structural analysis of the project",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"languages":     map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+					"architecture":  map[string]interface{}{"type": "string"},
+					"complexity":    map[string]interface{}{"type": "string"},
+					"current_state": map[string]interface{}{"type": "string"},
+					"issues":        map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+					"opportunities": map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				},
+				"required": []string{"languages", "architecture", "complexity", "current_state", "issues", "opportunities"},
+			},
+		}},
+	}
+
+	resp, err := ao.llmProvider.GenerateContent(ctx, req)
 	if err != nil {
 		return fmt.Errorf("AI analysis failed: %w", err)
 	}
 
 	// Parse AI's analysis
-	analysis := extractAnalysisFromResponse(resp)
+	var analysis *ProjectContext
+	for _, call := range resp.FunctionCalls {
+		if call.Name == "submit_analysis" {
+			analysis = parseAnalysisFromArgs(call.Arguments)
+			break
+		}
+	}
+
+	if analysis == nil {
+		analysis = extractAnalysisFromResponse(resp.Text)
+	}
 
 	ao.mu.Lock()
 	ao.context = analysis
@@ -307,13 +337,50 @@ Provide a structured JSON response with tasks prioritized and sequenced.`,
 		strings.Join(ao.constraints, ", "),
 	)
 
-	resp, err := ao.geminiClient.GenerateContent("", planningPrompt)
+	req := llm.Request{
+		Prompt: planningPrompt,
+		Tools: []llm.Tool{{
+			Name:        "submit_plan",
+			Description: "Submit a generated execution plan consisting of sequential tasks",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"reasoning": map[string]interface{}{"type": "string"},
+					"tasks": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"name":        map[string]interface{}{"type": "string"},
+								"description": map[string]interface{}{"type": "string"},
+								"prompt":      map[string]interface{}{"type": "string"},
+							},
+							"required": []string{"name", "description", "prompt"},
+						},
+					},
+				},
+				"required": []string{"reasoning", "tasks"},
+			},
+		}},
+	}
+
+	resp, err := ao.llmProvider.GenerateContent(ctx, req)
 	if err != nil {
 		return fmt.Errorf("AI planning failed: %w", err)
 	}
 
 	// Parse AI's plan into pending tasks
-	tasks := extractTasksFromResponse(resp)
+	var tasks []PendingTask
+	for _, call := range resp.FunctionCalls {
+		if call.Name == "submit_plan" {
+			tasks = parseTasksFromArgs(call.Arguments)
+			break
+		}
+	}
+
+	if len(tasks) == 0 {
+		tasks = extractTasksFromResponse(resp.Text)
+	}
 
 	ao.mu.Lock()
 	ao.pendingTasks = tasks
@@ -430,13 +497,42 @@ Provide JSON response with:
 		ao.formatPendingTasks(),
 	)
 
-	resp, err := ao.geminiClient.GenerateContent("", decisionPrompt)
+	req := llm.Request{
+		Prompt: decisionPrompt,
+		Tools: []llm.Tool{{
+			Name:        "submit_decision",
+			Description: "Submit the decision for the next action in orchestration",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"decision_type": map[string]interface{}{"type": "string", "enum": []string{"next_task", "review_needed", "adapt_plan", "complete"}},
+					"reasoning":     map[string]interface{}{"type": "string"},
+					"action":        map[string]interface{}{"type": "string"},
+					"confidence":    map[string]interface{}{"type": "number"},
+					"next_steps":    map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				},
+				"required": []string{"decision_type", "reasoning", "action"},
+			},
+		}},
+	}
+
+	resp, err := ao.llmProvider.GenerateContent(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("AI decision generation failed: %w", err)
 	}
 
 	// Parse AI's decision
-	decision := extractDecisionFromResponse(resp)
+	var decision *AIDecision
+	for _, call := range resp.FunctionCalls {
+		if call.Name == "submit_decision" {
+			decision = parseDecisionFromArgs(call.Arguments)
+			break
+		}
+	}
+
+	if decision == nil {
+		decision = extractDecisionFromResponse(resp.Text)
+	}
 	decision.Timestamp = time.Now()
 
 	ao.sendDecision(*decision)
@@ -497,13 +593,39 @@ Provide detailed reasoning and updated task list if needed.`,
 		ao.formatCompletedTasksDetailed(),
 	)
 
-	resp, err := ao.geminiClient.GenerateContent("", reviewPrompt)
+	req := llm.Request{
+		Prompt: reviewPrompt,
+		Tools: []llm.Tool{{
+			Name:        "submit_adaptation",
+			Description: "Submit plan adaptations based on review",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"action":    map[string]interface{}{"type": "string", "enum": []string{"add_tasks", "remove_tasks", "reorder_tasks", "continue"}},
+					"reasoning": map[string]interface{}{"type": "string"},
+				},
+				"required": []string{"action"},
+			},
+		}},
+	}
+
+	resp, err := ao.llmProvider.GenerateContent(ctx, req)
 	if err != nil {
 		return fmt.Errorf("review failed: %w", err)
 	}
 
 	// Parse AI's review and apply changes
-	adaptations := extractAdaptationsFromResponse(resp)
+	var adaptations map[string]interface{}
+	for _, call := range resp.FunctionCalls {
+		if call.Name == "submit_adaptation" {
+			adaptations = parseAdaptationsFromArgs(call.Arguments)
+			break
+		}
+	}
+
+	if len(adaptations) == 0 {
+		adaptations = extractAdaptationsFromResponse(resp.Text)
+	}
 	ao.applyAdaptations(adaptations)
 
 	return nil

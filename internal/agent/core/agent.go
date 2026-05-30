@@ -9,7 +9,7 @@ import (
 	"github.com/SamyRai/juleson/internal/agent/review"
 	"github.com/SamyRai/juleson/internal/agent/tools"
 	"github.com/SamyRai/juleson/internal/analyzer"
-	"github.com/SamyRai/juleson/internal/gemini"
+	"github.com/SamyRai/juleson/internal/llm"
 )
 
 // Default agent configuration constants
@@ -38,7 +38,7 @@ type CoreAgent struct {
 	checkpointMgr *CheckpointManager
 	telemetry     *Metrics
 	validator     *ConstraintValidator
-	geminiClient  *gemini.Client
+	llmProvider   llm.Provider
 	executor      *taskExecutor
 
 	// Current execution context
@@ -58,7 +58,7 @@ type Config struct {
 	DryRun          bool
 	ReviewConfig    *review.Config
 	Logger          *slog.Logger
-	GeminiClient    *gemini.Client
+	LLMProvider     llm.Provider
 	CheckpointDir   string
 	AutoSave        bool
 	SaveInterval    time.Duration
@@ -106,9 +106,9 @@ func NewAgent(toolRegistry tools.ToolRegistry, config *Config) agent.Agent {
 	}
 
 	// Initialize new components
-	if config.GeminiClient != nil {
-		agent.geminiClient = config.GeminiClient
-		agent.planner = NewPlanner(config.GeminiClient, config.Logger)
+	if config.LLMProvider != nil {
+		agent.llmProvider = config.LLMProvider
+		agent.planner = NewPlanner(config.LLMProvider, config.Logger)
 	}
 
 	agent.retryStrategy = config.RetryConfig

@@ -76,6 +76,16 @@ func NewClient(config *Config) (*Client, error) {
 	}, nil
 }
 
+// GenAIClient returns the underlying genai.Client
+func (c *Client) GenAIClient() *genai.Client {
+	return c.client
+}
+
+// Context returns the client's context
+func (c *Client) Context() context.Context {
+	return c.ctx
+}
+
 // GenerateContent generates content using the specified model and prompt
 func (c *Client) GenerateContent(model, prompt string) (*genai.GenerateContentResponse, error) {
 	if model == "" {

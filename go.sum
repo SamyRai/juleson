@@ -8,6 +8,8 @@ github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/SamyRai/go-jules v0.2.0 h1:ebtenzq3zCRkd7sUn3FFCJBO1H6lAYkhYSGIOWNVoEM=
 github.com/SamyRai/go-jules v0.2.0/go.mod h1:B5ZLZUD3JG3xTsgYMGm1hA4i+Nk/B2ZEnOnrgLG6CbA=
+github.com/SamyRai/ollama-go v0.0.0-20250828015522-0d4d5ee57b15 h1:Oa024Dip4208KOs7LkFsCqAXnHxy71Z/huM7ylrebQg=
+github.com/SamyRai/ollama-go v0.0.0-20250828015522-0d4d5ee57b15/go.mod h1:SZ0TEhMm0QCC8g5HkatE9sqs64gDhhrkD2zz8cKAT/k=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
 github.com/alecthomas/assert/v2 v2.11.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
 github.com/alecthomas/chroma/v2 v2.26.1 h1:2X21EdxGZNv5GF9mG5u+uzc02GCFyGxbcBm3Grd9A78=

@@ -4,14 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"google.golang.org/genai"
 )
 
 // Utility functions for parsing AI responses
 
-func extractAnalysisFromResponse(resp *genai.GenerateContentResponse) *ProjectContext {
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+func extractAnalysisFromResponse(text string) *ProjectContext {
+	if text == "" {
 		return &ProjectContext{
 			Languages:    []string{"unknown"},
 			Architecture: "unknown",
@@ -19,8 +17,6 @@ func extractAnalysisFromResponse(resp *genai.GenerateContentResponse) *ProjectCo
 			CurrentState: "unknown",
 		}
 	}
-
-	text := resp.Candidates[0].Content.Parts[0].Text
 
 	// Parse AI's structured analysis response
 	context := &ProjectContext{}
@@ -104,12 +100,10 @@ func extractAnalysisFromResponse(resp *genai.GenerateContentResponse) *ProjectCo
 	return context
 }
 
-func extractTasksFromResponse(resp *genai.GenerateContentResponse) []PendingTask {
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+func extractTasksFromResponse(text string) []PendingTask {
+	if text == "" {
 		return []PendingTask{}
 	}
-
-	text := resp.Candidates[0].Content.Parts[0].Text
 	tasks := []PendingTask{}
 
 	// Try to parse as JSON first
@@ -188,9 +182,9 @@ func extractTasksFromResponse(resp *genai.GenerateContentResponse) []PendingTask
 	return tasks
 }
 
-func extractDecisionFromResponse(resp *genai.GenerateContentResponse) *AIDecision {
-	// Parse Gemini's response into a decision
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+func extractDecisionFromResponse(text string) *AIDecision {
+	// Parse AI response into a decision
+	if text == "" {
 		return &AIDecision{
 			DecisionType: "next_task",
 			Reasoning:    "Continue with planned tasks",
@@ -198,8 +192,6 @@ func extractDecisionFromResponse(resp *genai.GenerateContentResponse) *AIDecisio
 		}
 	}
 
-	// Try to parse JSON from response
-	text := resp.Candidates[0].Content.Parts[0].Text
 	var decision AIDecision
 
 	// Simple parsing - in production would be more robust
@@ -218,15 +210,13 @@ func extractDecisionFromResponse(resp *genai.GenerateContentResponse) *AIDecisio
 	return &decision
 }
 
-func extractAdaptationsFromResponse(resp *genai.GenerateContentResponse) map[string]interface{} {
+func extractAdaptationsFromResponse(text string) map[string]interface{} {
 	// Parse AI's recommended adaptations
 	adaptations := make(map[string]interface{})
 
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+	if text == "" {
 		return adaptations
 	}
-
-	text := resp.Candidates[0].Content.Parts[0].Text
 
 	// Try to parse as JSON first
 	if strings.Contains(text, "{") && strings.Contains(text, "}") {
@@ -311,16 +301,125 @@ type AITask struct {
 }
 
 // ExtractAnalysisFromResponse parses AI analysis response (public for testing)
-func ExtractAnalysisFromResponse(resp *genai.GenerateContentResponse) *ProjectContext {
-	return extractAnalysisFromResponse(resp)
+func ExtractAnalysisFromResponse(text string) *ProjectContext {
+	return extractAnalysisFromResponse(text)
 }
 
 // ExtractTasksFromResponse parses AI planning response (public for testing)
-func ExtractTasksFromResponse(resp *genai.GenerateContentResponse) []PendingTask {
-	return extractTasksFromResponse(resp)
+func ExtractTasksFromResponse(text string) []PendingTask {
+	return extractTasksFromResponse(text)
 }
 
 // ExtractDecisionFromResponse parses AI decision response (public for testing)
-func ExtractDecisionFromResponse(resp *genai.GenerateContentResponse) *AIDecision {
-	return extractDecisionFromResponse(resp)
+func ExtractDecisionFromResponse(text string) *AIDecision {
+	return extractDecisionFromResponse(text)
+}
+
+// Struct-based parsers from Function Calls
+
+func parseStringArray(val interface{}) []string {
+	var result []string
+	if arr, ok := val.([]interface{}); ok {
+		for _, v := range arr {
+			if str, ok := v.(string); ok {
+				result = append(result, str)
+			}
+		}
+	}
+	return result
+}
+
+func parseString(val interface{}) string {
+	if str, ok := val.(string); ok {
+		return str
+	}
+	return ""
+}
+
+func parseAnalysisFromArgs(args map[string]interface{}) *ProjectContext {
+	if args == nil {
+		return extractAnalysisFromResponse("") // return default
+	}
+
+	ctx := &ProjectContext{}
+	ctx.Languages = parseStringArray(args["languages"])
+	ctx.Architecture = parseString(args["architecture"])
+	ctx.Complexity = parseString(args["complexity"])
+	ctx.CurrentState = parseString(args["current_state"])
+	ctx.Issues = parseStringArray(args["issues"])
+	ctx.Opportunities = parseStringArray(args["opportunities"])
+
+	if len(ctx.Languages) == 0 {
+		ctx.Languages = []string{"Go"}
+	}
+	if ctx.Architecture == "" {
+		ctx.Architecture = "Microservices"
+	}
+	if ctx.Complexity == "" {
+		ctx.Complexity = "Medium"
+	}
+	if ctx.CurrentState == "" {
+		ctx.CurrentState = "Functional but needs modernization"
+	}
+	return ctx
+}
+
+func parseTasksFromArgs(args map[string]interface{}) []PendingTask {
+	if args == nil {
+		return extractTasksFromResponse("")
+	}
+
+	var tasks []PendingTask
+	tasksArr, ok := args["tasks"].([]interface{})
+	if !ok {
+		return extractTasksFromResponse("")
+	}
+
+	reasoning := parseString(args["reasoning"])
+	for i, v := range tasksArr {
+		taskMap, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		tasks = append(tasks, PendingTask{
+			Name:        parseString(taskMap["name"]),
+			Description: parseString(taskMap["description"]),
+			Prompt:      parseString(taskMap["prompt"]),
+			Priority:    i + 1,
+			Rationale:   reasoning,
+		})
+	}
+
+	if len(tasks) == 0 {
+		return extractTasksFromResponse("")
+	}
+
+	return tasks
+}
+
+func parseDecisionFromArgs(args map[string]interface{}) *AIDecision {
+	if args == nil {
+		return extractDecisionFromResponse("")
+	}
+
+	decision := &AIDecision{
+		DecisionType: parseString(args["decision_type"]),
+		Reasoning:    parseString(args["reasoning"]),
+		Action:       parseString(args["action"]),
+		Confidence:   0.8,
+	}
+
+	if conf, ok := args["confidence"].(float64); ok {
+		decision.Confidence = conf
+	}
+
+	return decision
+}
+
+func parseAdaptationsFromArgs(args map[string]interface{}) map[string]interface{} {
+	if args == nil {
+		return make(map[string]interface{})
+	}
+	return args
 }

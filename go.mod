@@ -4,6 +4,7 @@ go 1.25.8
 
 require (
 	github.com/SamyRai/go-jules v0.2.0
+	github.com/SamyRai/ollama-go v0.0.0-20250828015522-0d4d5ee57b15
 	github.com/alecthomas/chroma/v2 v2.26.1
 	github.com/bluekeyes/go-gitdiff v0.8.1
 	github.com/charmbracelet/bubbles v1.0.0

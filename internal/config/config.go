@@ -11,14 +11,16 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Jules      JulesConfig      `mapstructure:"jules"`
-	GitHub     GitHubConfig     `mapstructure:"github"`
-	Gemini     GeminiConfig     `mapstructure:"gemini"`
-	MCP        MCPConfig        `mapstructure:"mcp"`
-	Automation AutomationConfig `mapstructure:"automation"`
-	Projects   ProjectsConfig   `mapstructure:"projects"`
-	Templates  TemplatesConfig  `mapstructure:"templates"`
-	Diff       DiffConfig       `mapstructure:"diff"`
+	Jules         JulesConfig      `mapstructure:"jules"`
+	GitHub        GitHubConfig     `mapstructure:"github"`
+	Gemini        GeminiConfig     `mapstructure:"gemini"`
+	Ollama        OllamaConfig     `mapstructure:"ollama"`
+	ActiveBackend string           `mapstructure:"active_backend"` // "gemini" or "ollama"
+	MCP           MCPConfig        `mapstructure:"mcp"`
+	Automation    AutomationConfig `mapstructure:"automation"`
+	Projects      ProjectsConfig   `mapstructure:"projects"`
+	Templates     TemplatesConfig  `mapstructure:"templates"`
+	Diff          DiffConfig       `mapstructure:"diff"`
 }
 
 // JulesConfig contains Jules API configuration
@@ -60,6 +62,12 @@ type GeminiConfig struct {
 	Model     string        `mapstructure:"model"`    // Default model (e.g., "gemini-2.0-flash")
 	Timeout   time.Duration `mapstructure:"timeout"`
 	MaxTokens int           `mapstructure:"max_tokens"`
+}
+
+// OllamaConfig contains Ollama AI configuration
+type OllamaConfig struct {
+	BaseURL string `mapstructure:"base_url"`
+	Model   string `mapstructure:"model"`
 }
 
 // MCPConfig contains MCP server configuration
@@ -224,6 +232,10 @@ func setDefaults() {
 	viper.SetDefault("gemini.timeout", "30s")
 	viper.SetDefault("gemini.max_tokens", 8192)
 
+	viper.SetDefault("ollama.base_url", "http://localhost:11434")
+	viper.SetDefault("ollama.model", "llama3")
+	viper.SetDefault("active_backend", "gemini")
+
 	viper.SetDefault("mcp.server.port", 8080)
 	viper.SetDefault("mcp.server.host", "localhost")
 	viper.SetDefault("mcp.client.timeout", "10s")
@@ -286,6 +298,10 @@ func (c *Config) Save() error {
 	viper.Set("gemini.model", c.Gemini.Model)
 	viper.Set("gemini.timeout", c.Gemini.Timeout.String())
 	viper.Set("gemini.max_tokens", c.Gemini.MaxTokens)
+
+	viper.Set("ollama.base_url", c.Ollama.BaseURL)
+	viper.Set("ollama.model", c.Ollama.Model)
+	viper.Set("active_backend", c.ActiveBackend)
 
 	viper.Set("mcp.server.port", c.MCP.Server.Port)
 	viper.Set("mcp.server.host", c.MCP.Server.Host)

@@ -9,26 +9,26 @@ import (
 
 	"github.com/SamyRai/juleson/internal/agent"
 	"github.com/SamyRai/juleson/internal/analyzer"
-	"github.com/SamyRai/juleson/internal/gemini"
+	"github.com/SamyRai/juleson/internal/llm"
 )
 
 // Planner generates execution plans using AI
 type Planner struct {
-	gemini *gemini.Client
-	logger *slog.Logger
+	llmProvider llm.Provider
+	logger      *slog.Logger
 }
 
 // NewPlanner creates a new AI-powered planner
-func NewPlanner(geminiClient *gemini.Client, logger *slog.Logger) *Planner {
-	if geminiClient == nil {
-		panic("geminiClient cannot be nil")
+func NewPlanner(llmProvider llm.Provider, logger *slog.Logger) *Planner {
+	if llmProvider == nil {
+		panic("llmProvider cannot be nil")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
 	return &Planner{
-		gemini: geminiClient,
-		logger: logger,
+		llmProvider: llmProvider,
+		logger:      logger,
 	}
 }
 
@@ -43,8 +43,42 @@ func (p *Planner) GeneratePlan(ctx context.Context, goal agent.Goal, codebaseCon
 	// Build context-aware prompt
 	prompt := p.buildPlanningPrompt(goal, codebaseContext, projectContext)
 
-	// Use Gemini to generate plan with chain-of-thought
-	response, err := p.gemini.Generate(ctx, prompt)
+	req := llm.Request{
+		Prompt: prompt,
+		Tools: []llm.Tool{{
+			Name:        "submit_plan",
+			Description: "Submit a generated execution plan consisting of sequential tasks",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"reasoning": map[string]interface{}{"type": "string"},
+					"tasks": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"name":        map[string]interface{}{"type": "string"},
+								"description": map[string]interface{}{"type": "string"},
+								"tool":        map[string]interface{}{"type": "string"},
+								"dependencies": map[string]interface{}{
+									"type":  "array",
+									"items": map[string]interface{}{"type": "string"},
+								},
+								"success_criteria":   map[string]interface{}{"type": "string"},
+								"risk":               map[string]interface{}{"type": "string"},
+								"estimated_duration": map[string]interface{}{"type": "string"},
+							},
+							"required": []string{"name", "description", "tool"},
+						},
+					},
+				},
+				"required": []string{"reasoning", "tasks"},
+			},
+		}},
+	}
+
+	// Use LLM to generate plan with chain-of-thought
+	response, err := p.llmProvider.GenerateContent(ctx, req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate plan: %w", err)
 	}
@@ -72,7 +106,41 @@ func (p *Planner) AdaptPlan(ctx context.Context, currentPlan []agent.Task, adapt
 
 	prompt := p.buildAdaptationPrompt(currentPlan, adaptReason, feedback)
 
-	response, err := p.gemini.Generate(ctx, prompt)
+	req := llm.Request{
+		Prompt: prompt,
+		Tools: []llm.Tool{{
+			Name:        "submit_plan",
+			Description: "Submit an adapted execution plan",
+			Parameters: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"reasoning": map[string]interface{}{"type": "string"},
+					"tasks": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type": "object",
+							"properties": map[string]interface{}{
+								"name":        map[string]interface{}{"type": "string"},
+								"description": map[string]interface{}{"type": "string"},
+								"tool":        map[string]interface{}{"type": "string"},
+								"dependencies": map[string]interface{}{
+									"type":  "array",
+									"items": map[string]interface{}{"type": "string"},
+								},
+								"success_criteria":   map[string]interface{}{"type": "string"},
+								"risk":               map[string]interface{}{"type": "string"},
+								"estimated_duration": map[string]interface{}{"type": "string"},
+							},
+							"required": []string{"name", "description", "tool"},
+						},
+					},
+				},
+				"required": []string{"reasoning", "tasks"},
+			},
+		}},
+	}
+
+	response, err := p.llmProvider.GenerateContent(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to adapt plan: %w", err)
 	}
@@ -223,19 +291,89 @@ Generate the adapted plan now.`,
 	)
 }
 
-// parsePlanResponse parses Gemini's response into structured tasks
-func (p *Planner) parsePlanResponse(response string, goal agent.Goal) ([]agent.Task, *agent.Reasoning, error) {
-	// Extract reasoning section
-	reasoning := p.extractReasoning(response)
-
-	// Extract tasks section
-	tasksSection := p.extractSection(response, "TASKS:")
-	if tasksSection == "" {
-		return nil, nil, fmt.Errorf("no TASKS section found in response")
+// parsePlanResponse parses the response into structured tasks
+func (p *Planner) parsePlanResponse(response *llm.Response, goal agent.Goal) ([]agent.Task, *agent.Reasoning, error) {
+	// First check function calls
+	for _, call := range response.FunctionCalls {
+		if call.Name == "submit_plan" {
+			return p.parseTasksFromArgs(call.Arguments, goal)
+		}
 	}
 
-	// Parse individual tasks
+	// Fallback to text parsing
+	text := response.Text
+	reasoning := p.extractReasoning(text)
+	tasksSection := p.extractSection(text, "TASKS:")
+	if tasksSection == "" {
+		return nil, nil, fmt.Errorf("no TASKS section found in response and no tool called")
+	}
+
 	tasks := p.parseTasks(tasksSection, goal)
+	return tasks, reasoning, nil
+}
+
+func (p *Planner) parseTasksFromArgs(args map[string]interface{}, goal agent.Goal) ([]agent.Task, *agent.Reasoning, error) {
+	reasoningText, _ := args["reasoning"].(string)
+	reasoning := &agent.Reasoning{
+		ChainOfThought: []string{reasoningText},
+		Confidence:     0.8,
+		Alternatives:   []string{},
+		SelectedPath:   reasoningText,
+		Timestamp:      time.Now(),
+	}
+
+	var tasks []agent.Task
+	tasksArr, ok := args["tasks"].([]interface{})
+	if !ok {
+		return nil, nil, fmt.Errorf("tasks argument is not an array")
+	}
+
+	for i, v := range tasksArr {
+		taskMap, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		task := agent.Task{
+			ID:           fmt.Sprintf("task-%d", i+1),
+			Name:         taskMap["name"].(string),
+			Priority:     goal.Priority,
+			State:        agent.TaskStatePending,
+			Context:      make(map[string]interface{}),
+			Dependencies: []string{},
+		}
+
+		if desc, ok := taskMap["description"].(string); ok {
+			task.Description = desc
+			task.Prompt = fmt.Sprintf("%s: %s", task.Name, desc)
+		} else {
+			task.Prompt = task.Name
+		}
+
+		if tool, ok := taskMap["tool"].(string); ok {
+			task.Tool = strings.ToLower(tool)
+		}
+
+		if deps, ok := taskMap["dependencies"].([]interface{}); ok {
+			for _, d := range deps {
+				if dStr, ok := d.(string); ok && dStr != "none" {
+					task.Dependencies = append(task.Dependencies, dStr)
+				}
+			}
+		}
+
+		if sc, ok := taskMap["success_criteria"].(string); ok {
+			task.Context["success_criteria"] = sc
+		}
+		if risk, ok := taskMap["risk"].(string); ok {
+			task.Context["risk"] = risk
+		}
+		if ed, ok := taskMap["estimated_duration"].(string); ok {
+			task.Context["estimated_duration"] = ed
+		}
+
+		tasks = append(tasks, task)
+	}
 
 	return tasks, reasoning, nil
 }

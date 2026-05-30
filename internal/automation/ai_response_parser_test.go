@@ -2,24 +2,10 @@ package automation
 
 import (
 	"testing"
-
-	"google.golang.org/genai"
 )
 
-func aiResponse(text string) *genai.GenerateContentResponse {
-	return &genai.GenerateContentResponse{
-		Candidates: []*genai.Candidate{
-			{
-				Content: &genai.Content{
-					Parts: []*genai.Part{{Text: text}},
-				},
-			},
-		},
-	}
-}
-
 func TestExtractAnalysisFromResponseParsesStructuredText(t *testing.T) {
-	context := ExtractAnalysisFromResponse(aiResponse(`Languages: Go, TypeScript
+	context := ExtractAnalysisFromResponse(`Languages: Go, TypeScript
 Architecture: CLI and MCP services
 Complexity: Medium
 Current State: Stable
@@ -28,7 +14,7 @@ Issues:
 - Mixed responsibilities
 Opportunities:
 - Extract presenters
-- Add seams`))
+- Add seams`)
 
 	if got := context.Languages; len(got) != 2 || got[0] != "Go" || got[1] != "TypeScript" {
 		t.Fatalf("unexpected languages: %#v", got)
@@ -51,13 +37,13 @@ Opportunities:
 }
 
 func TestExtractTasksFromResponsePrefersJSONPlan(t *testing.T) {
-	tasks := ExtractTasksFromResponse(aiResponse(`{
+	tasks := ExtractTasksFromResponse(`{
 		"reasoning": "ordered by risk",
 		"tasks": [
 			{"name": "Extract presenter", "description": "Move formatting", "prompt": "Move formatting only"},
 			{"name": "Add seam", "description": "Add interface", "prompt": "Add narrow interface"}
 		]
-	}`))
+	}`)
 
 	if len(tasks) != 2 {
 		t.Fatalf("expected two tasks, got %#v", tasks)
@@ -79,7 +65,7 @@ func TestExtractDecisionFromResponseClassifiesText(t *testing.T) {
 
 	for text, want := range tests {
 		t.Run(want, func(t *testing.T) {
-			decision := ExtractDecisionFromResponse(aiResponse(text))
+			decision := ExtractDecisionFromResponse(text)
 			if decision.DecisionType != want {
 				t.Fatalf("DecisionType = %q, want %q", decision.DecisionType, want)
 			}

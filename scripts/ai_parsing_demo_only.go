@@ -48,7 +48,7 @@ Opportunities:
 	}
 
 	// Parse the AI response (not hardcoded!)
-	context := automation.ExtractAnalysisFromResponse(analysisResponse)
+	context := automation.ExtractAnalysisFromResponse(analysisResponse.Candidates[0].Content.Parts[0].Text)
 
 	fmt.Println("📊 AI Analysis Results:")
 	fmt.Printf("   Languages: %s\n", strings.Join(context.Languages, ", "))
@@ -107,7 +107,7 @@ Opportunities:
 	}
 
 	// Parse the AI planning response (not hardcoded!)
-	tasks := automation.ExtractTasksFromResponse(planningResponse)
+	tasks := automation.ExtractTasksFromResponse(planningResponse.Candidates[0].Content.Parts[0].Text)
 
 	fmt.Println("📋 AI Planning Results:")
 	fmt.Printf("   Tasks Generated: %d\n", len(tasks))
@@ -147,7 +147,7 @@ Next steps:
 	}
 
 	// Parse the AI decision response (not hardcoded!)
-	decision := automation.ExtractDecisionFromResponse(decisionResponse)
+	decision := automation.ExtractDecisionFromResponse(decisionResponse.Candidates[0].Content.Parts[0].Text)
 
 	fmt.Println("🧠 AI Decision Results:")
 	fmt.Printf("   Decision Type: %s\n", decision.DecisionType)

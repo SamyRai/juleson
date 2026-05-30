@@ -9,6 +9,7 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/github"
+	"github.com/SamyRai/juleson/internal/llm"
 	"github.com/SamyRai/juleson/internal/services"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -20,14 +21,14 @@ func planProjectAutomation(ctx context.Context, req *mcp.CallToolRequest, input 
 	PlanProjectAutomationOutput,
 	error,
 ) {
-	geminiClient := container.GeminiClient()
-	if geminiClient == nil {
+	llmProvider := container.LLMProvider()
+	if llmProvider == nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: "Gemini AI client not available. Please configure GEMINI_API_KEY in your configuration."},
+				&mcp.TextContent{Text: "LLM provider not available. Please configure AI settings."},
 			},
-		}, PlanProjectAutomationOutput{}, fmt.Errorf("Gemini client not available")
+		}, PlanProjectAutomationOutput{}, fmt.Errorf("LLM provider not available")
 	}
 
 	// Analyze project structure first
@@ -72,22 +73,19 @@ Based on the project analysis and requirements, create a detailed automation pla
 
 Format the response as a structured automation plan with clear phases and deliverables.`
 
-	// Generate plan with Gemini
-	resp, err := geminiClient.GenerateContent("", prompt)
+	// Generate plan with LLM
+	resp, err := llmProvider.GenerateContent(ctx, llm.Request{Prompt: prompt})
 	if err != nil {
 		return &mcp.CallToolResult{
 			IsError: true,
 			Content: []mcp.Content{
-				&mcp.TextContent{Text: fmt.Sprintf("Failed to generate automation plan with Gemini AI: %v", err)},
+				&mcp.TextContent{Text: fmt.Sprintf("Failed to generate automation plan with LLM: %v", err)},
 			},
 		}, PlanProjectAutomationOutput{}, err
 	}
 
 	// Parse response
-	responseText := ""
-	if len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
-		responseText = resp.Candidates[0].Content.Parts[0].Text
-	}
+	responseText := resp.Text
 
 	// Parse structured response (simplified parsing)
 	steps := []AutomationStep{
@@ -449,9 +447,9 @@ func synthesizeSessionResults(ctx context.Context, req *mcp.CallToolRequest, inp
 	}
 	activities := response.Activities
 
-	// Build analysis prompt for Gemini
-	geminiClient := container.GeminiClient()
-	if geminiClient != nil {
+	// Build analysis prompt for LLM
+	llmProvider := container.LLMProvider()
+	if llmProvider != nil {
 		prompt := fmt.Sprintf(`Analyze this Jules automation session and provide insights:
 
 Session Details:
@@ -488,16 +486,16 @@ Please provide:
 
 Format as a structured analysis.`
 
-		// Generate analysis with Gemini
-		resp, err := geminiClient.GenerateContent("", prompt)
-		if err == nil && len(resp.Candidates) > 0 && len(resp.Candidates[0].Content.Parts) > 0 {
-			// Use Gemini analysis as summary
-			responseText := resp.Candidates[0].Content.Parts[0].Text
+		// Generate analysis with LLM
+		resp, err := llmProvider.GenerateContent(ctx, llm.Request{Prompt: prompt})
+		if err == nil {
+			// Use LLM analysis as summary
+			responseText := resp.Text
 			_ = responseText // Would parse this structured response
 		}
 	}
 
-	// Generate basic analysis (fallback if Gemini fails)
+	// Generate basic analysis (fallback if LLM fails)
 	sessionSummary := fmt.Sprintf("Session %s completed with state: %s", session.ID, session.State)
 
 	keyInsights := []string{

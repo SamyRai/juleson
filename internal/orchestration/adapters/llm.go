@@ -7,23 +7,23 @@ import (
 	"strings"
 	"time"
 
-	"github.com/SamyRai/juleson/internal/gemini"
+	"github.com/SamyRai/juleson/internal/llm"
 	"github.com/SamyRai/juleson/internal/orchestration/domain"
 )
 
-type GeminiPlanner struct {
-	client *gemini.Client
+type LLMPlanner struct {
+	llmProvider llm.Provider
 }
 
-func NewGeminiPlanner(client *gemini.Client) *GeminiPlanner {
-	return &GeminiPlanner{client: client}
+func NewLLMPlanner(provider llm.Provider) *LLMPlanner {
+	return &LLMPlanner{llmProvider: provider}
 }
 
-func (p *GeminiPlanner) Plan(ctx context.Context, goal domain.Goal, project *domain.ProjectContext) (*domain.Plan, error) {
-	if p.client == nil {
+func (p *LLMPlanner) Plan(ctx context.Context, goal domain.Goal, project *domain.ProjectContext) (*domain.Plan, error) {
+	if p.llmProvider == nil {
 		return fallbackPlan(goal), nil
 	}
-	response, err := p.client.Generate(ctx, buildPlanningPrompt(goal, project))
+	response, err := p.llmProvider.GenerateContent(ctx, llm.Request{Prompt: buildPlanningPrompt(goal, project)})
 	if err != nil {
 		return nil, err
 	}
@@ -35,21 +35,21 @@ func (p *GeminiPlanner) Plan(ctx context.Context, goal domain.Goal, project *dom
 		ID:        goal.ID,
 		Goal:      goal,
 		Tasks:     tasks,
-		Reasoning: response,
+		Reasoning: response.Text,
 		CreatedAt: time.Now(),
 	}, nil
 }
 
-func (p *GeminiPlanner) AdaptPlan(ctx context.Context, execution domain.ExecutionContext, reason string) (*domain.Plan, error) {
+func (p *LLMPlanner) AdaptPlan(ctx context.Context, execution domain.ExecutionContext, reason string) (*domain.Plan, error) {
 	if execution.Goal.Description == "" {
 		return nil, fmt.Errorf("goal description cannot be empty")
 	}
 	goal := execution.Goal
-	if p.client == nil {
+	if p.llmProvider == nil {
 		return fallbackPlan(goal), nil
 	}
 	prompt := fmt.Sprintf("Adapt this plan for goal %q because: %s\nCompleted tasks: %d", goal.Description, reason, len(execution.Completed))
-	response, err := p.client.Generate(ctx, prompt)
+	response, err := p.llmProvider.GenerateContent(ctx, llm.Request{Prompt: prompt})
 	if err != nil {
 		return nil, err
 	}
@@ -61,24 +61,24 @@ func (p *GeminiPlanner) AdaptPlan(ctx context.Context, execution domain.Executio
 		ID:        goal.ID,
 		Goal:      goal,
 		Tasks:     tasks,
-		Reasoning: response,
+		Reasoning: response.Text,
 		CreatedAt: time.Now(),
 	}, nil
 }
 
-type GeminiDecisionMaker struct {
-	client *gemini.Client
+type LLMDecisionMaker struct {
+	llmProvider llm.Provider
 }
 
-func NewGeminiDecisionMaker(client *gemini.Client) *GeminiDecisionMaker {
-	return &GeminiDecisionMaker{client: client}
+func NewLLMDecisionMaker(provider llm.Provider) *LLMDecisionMaker {
+	return &LLMDecisionMaker{llmProvider: provider}
 }
 
-func (d *GeminiDecisionMaker) Decide(ctx context.Context, execution domain.ExecutionContext) (*domain.Decision, error) {
-	if d.client == nil {
+func (d *LLMDecisionMaker) Decide(ctx context.Context, execution domain.ExecutionContext) (*domain.Decision, error) {
+	if d.llmProvider == nil {
 		return fallbackDecision(execution), nil
 	}
-	response, err := d.client.Generate(ctx, buildDecisionPrompt(execution))
+	response, err := d.llmProvider.GenerateContent(ctx, llm.Request{Prompt: buildDecisionPrompt(execution)})
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func fallbackDecision(execution domain.ExecutionContext) *domain.Decision {
 	}
 }
 
-func parseTasks(response string) ([]domain.Task, error) {
+func parseTasks(response *llm.Response) ([]domain.Task, error) {
 	var wrapper struct {
 		Tasks []struct {
 			ID           string   `json:"id"`
@@ -172,7 +172,7 @@ func parseTasks(response string) ([]domain.Task, error) {
 			Dependencies []string `json:"dependencies"`
 		} `json:"tasks"`
 	}
-	if err := json.Unmarshal([]byte(extractJSON(response)), &wrapper); err != nil {
+	if err := json.Unmarshal([]byte(extractJSON(response.Text)), &wrapper); err != nil {
 		return nil, err
 	}
 	if len(wrapper.Tasks) == 0 {
@@ -197,7 +197,7 @@ func parseTasks(response string) ([]domain.Task, error) {
 	return tasks, nil
 }
 
-func parseDecision(response string) (*domain.Decision, error) {
+func parseDecision(response *llm.Response) (*domain.Decision, error) {
 	var payload struct {
 		DecisionType string   `json:"decision_type"`
 		TaskID       string   `json:"task_id"`
@@ -206,7 +206,7 @@ func parseDecision(response string) (*domain.Decision, error) {
 		Confidence   float64  `json:"confidence"`
 		NextSteps    []string `json:"next_steps"`
 	}
-	if err := json.Unmarshal([]byte(extractJSON(response)), &payload); err != nil {
+	if err := json.Unmarshal([]byte(extractJSON(response.Text)), &payload); err != nil {
 		return nil, err
 	}
 	decisionType := normalizeDecisionType(payload.DecisionType)

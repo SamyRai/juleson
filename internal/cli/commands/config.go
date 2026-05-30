@@ -58,14 +58,23 @@ func newConfigValidateCommand(cfg *config.Config) *cobra.Command {
 				fmt.Fprintln(cmd.OutOrStdout(), "✅ GitHub token is configured.")
 			}
 
-			if cfg.Gemini.APIKey == "" && cfg.Gemini.Backend == "gemini-api" {
-				fmt.Fprintln(cmd.OutOrStdout(), "⚠️  Gemini API key is missing (using gemini-api backend).")
-				fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Set GEMINI_API_KEY environment variable or configure it in juleson.yaml.")
-			} else if cfg.Gemini.Backend == "vertex-ai" && cfg.Gemini.Project == "" {
-				fmt.Fprintln(cmd.OutOrStdout(), "⚠️  Gemini Vertex AI project is missing.")
-				fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Configure gemini.project in juleson.yaml.")
+			if cfg.ActiveBackend == "ollama" {
+				if cfg.Ollama.BaseURL == "" {
+					fmt.Fprintln(cmd.OutOrStdout(), "⚠️  Ollama Base URL is missing.")
+					fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Configure ollama.base_url in juleson.yaml.")
+				} else {
+					fmt.Fprintln(cmd.OutOrStdout(), "✅ Ollama integration is configured.")
+				}
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), "✅ Gemini integration is configured.")
+				if cfg.Gemini.APIKey == "" && cfg.Gemini.Backend == "gemini-api" {
+					fmt.Fprintln(cmd.OutOrStdout(), "⚠️  Gemini API key is missing (using gemini-api backend).")
+					fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Set GEMINI_API_KEY environment variable or configure it in juleson.yaml.")
+				} else if cfg.Gemini.Backend == "vertex-ai" && cfg.Gemini.Project == "" {
+					fmt.Fprintln(cmd.OutOrStdout(), "⚠️  Gemini Vertex AI project is missing.")
+					fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Configure gemini.project in juleson.yaml.")
+				} else {
+					fmt.Fprintln(cmd.OutOrStdout(), "✅ Gemini integration is configured.")
+				}
 			}
 
 			if hasErrors {

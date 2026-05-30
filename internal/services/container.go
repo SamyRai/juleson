@@ -10,6 +10,7 @@ import (
 	"github.com/SamyRai/juleson/internal/automation"
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/gemini"
+	"github.com/SamyRai/juleson/internal/llm"
 	"github.com/SamyRai/juleson/internal/orchestration"
 	"github.com/SamyRai/juleson/internal/orchestration/adapters"
 	"github.com/SamyRai/juleson/internal/templates"
@@ -20,7 +21,7 @@ import (
 type Container struct {
 	config               *config.Config
 	julesClient          *jules.Client
-	geminiClient         *gemini.Client
+	llmProvider          llm.Provider
 	templateManager      *templates.Manager
 	automationEngine     *automation.Engine
 	orchestrationRuntime *orchestration.Runtime
@@ -49,12 +50,12 @@ func (c *Container) JulesClient() *jules.Client {
 	return c.julesClientLocked()
 }
 
-// GeminiClient returns the Gemini AI client (lazy initialization)
-func (c *Container) GeminiClient() *gemini.Client {
+// LLMProvider returns the abstract LLM provider based on configuration.
+func (c *Container) LLMProvider() llm.Provider {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	return c.geminiClientLocked()
+	return c.llmProviderLocked()
 }
 
 // julesClientLocked returns the Jules API client without locking (internal use)
@@ -71,15 +72,14 @@ func (c *Container) julesClientLocked() *jules.Client {
 	return c.julesClient
 }
 
-// geminiClientLocked returns the Gemini AI client without locking (internal use)
-func (c *Container) geminiClientLocked() *gemini.Client {
-	if c.geminiClient == nil {
-		// Only create client if API key is available
-		if c.config.Gemini.APIKey == "" {
-			return nil // Return nil to indicate client is not available
-		}
+// llmProviderLocked returns the abstract LLM provider
+func (c *Container) llmProviderLocked() llm.Provider {
+	if c.llmProvider == nil {
+		var primary llm.Provider
+		var secondary llm.Provider
 
-		geminiConfig := &gemini.Config{
+		// Always try to initialize Gemini as it can serve as a primary or fallback
+		geminiConfig := gemini.Config{
 			APIKey:    c.config.Gemini.APIKey,
 			Backend:   c.config.Gemini.Backend,
 			Project:   c.config.Gemini.Project,
@@ -89,16 +89,35 @@ func (c *Container) geminiClientLocked() *gemini.Client {
 			MaxTokens: c.config.Gemini.MaxTokens,
 		}
 
-		client, err := gemini.NewClient(geminiConfig)
-		if err != nil {
-			// Log error but don't fail - client will be nil
-			// In production, this should be logged properly
-			return nil
+		var geminiProvider *llm.GeminiProvider
+		client, err := gemini.NewClient(&geminiConfig)
+		if err == nil && c.config.Gemini.APIKey != "" { // verify we actually have credentials
+			geminiProvider = llm.NewGeminiProvider(client, c.config.Gemini.Model)
 		}
-		c.geminiClient = client
-	}
 
-	return c.geminiClient
+		if c.config.ActiveBackend == "ollama" {
+			primary = llm.NewOllamaProvider(c.config.Ollama.BaseURL, c.config.Ollama.Model)
+			if geminiProvider != nil {
+				secondary = geminiProvider
+			}
+		} else {
+			if geminiProvider != nil {
+				primary = geminiProvider
+			}
+		}
+
+		if primary != nil && secondary != nil {
+			c.llmProvider = llm.NewFallbackProvider(primary, secondary, c.logger)
+		} else if primary != nil {
+			c.llmProvider = primary
+		} else if secondary != nil {
+			c.llmProvider = secondary
+		} else {
+			// Fallback placeholder or leave nil
+			c.llmProvider = nil
+		}
+	}
+	return c.llmProvider
 }
 
 // TemplateManager returns the template manager (lazy initialization)
@@ -165,8 +184,8 @@ func (c *Container) OrchestrationRuntime() (*orchestration.Runtime, error) {
 		sourceMatcher := adapters.NewSourceMatcherAdapter()
 		c.orchestrationRuntime = orchestration.NewRuntime(orchestration.RuntimeDeps{
 			ProjectAnalyzer: adapters.NewAnalyzerAdapter(nil),
-			Planner:         adapters.NewGeminiPlanner(c.geminiClientLocked()),
-			DecisionMaker:   adapters.NewGeminiDecisionMaker(c.geminiClientLocked()),
+			Planner:         adapters.NewLLMPlanner(c.llmProviderLocked()),
+			DecisionMaker:   adapters.NewLLMDecisionMaker(c.llmProviderLocked()),
 			TaskExecutor:    adapters.NewJulesTaskExecutor(sessionGateway, sourceMatcher),
 			CheckpointStore: adapters.NewJSONCheckpointStore(c.config.Automation.CheckpointPath),
 			SessionGateway:  sessionGateway,
