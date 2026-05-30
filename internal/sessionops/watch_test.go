@@ -195,3 +195,53 @@ func TestCurrentWatchSnapshotCompletedWithDeliverables(t *testing.T) {
 		t.Fatalf("DefaultWatchWakeReason = %q", got)
 	}
 }
+
+func TestCurrentWatchSnapshotFilteringAndCursors(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	client := jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithRetryAttempts(0))
+	httpmock.RegisterResponder("GET", "https://jules.googleapis.com/v1alpha/sessions/session-1",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.Session{ID: "session-1", State: jules.SessionStateInProgress})
+		})
+
+	cursorTime := time.Date(2026, 5, 25, 10, 0, 0, 0, time.UTC)
+	httpmock.RegisterResponder("GET", "=~^https://jules.googleapis.com/v1alpha/sessions/session-1/activities",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewJsonResponse(200, jules.ActivitiesResponse{
+				Activities: []jules.Activity{
+					{
+						ID:            "activity-1",
+						Name:          "activity-1",
+						CreateTime:    cursorTime.Add(time.Minute),
+						AgentMessaged: &jules.AgentMessaged{AgentMessage: "hello"},
+					},
+					{
+						ID:         "activity-2",
+						CreateTime: cursorTime.Add(-time.Minute),
+					},
+				},
+			})
+		})
+
+	snapshot, err := CurrentWatchSnapshot(context.Background(), client, "session-1", cursorTime, CurrentWatchOptions{FetchActivities: true})
+	if err != nil {
+		t.Fatalf("CurrentWatchSnapshot returned error: %v", err)
+	}
+
+	if !snapshot.HasJulesAgentMessage {
+		t.Fatalf("Expected HasJulesAgentMessage to be true")
+	}
+}
+
+func TestEvaluateWatchDecisionUserAction(t *testing.T) {
+	decision := EvaluateWatchDecision(&jules.Session{State: jules.SessionStateAwaitingUserFeedback}, nil, nil)
+	if decision.Kind != WatchDecisionNeedsUserAction {
+		t.Fatalf("Expected WatchDecisionNeedsUserAction, got %v", decision.Kind)
+	}
+
+	if got := DefaultWatchWakeReason(decision); got != "user_action" {
+		t.Fatalf("Expected wake reason user_action, got %v", got)
+	}
+}
