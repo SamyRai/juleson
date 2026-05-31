@@ -21,6 +21,7 @@ type CreateSessionOptions struct {
 	StartingBranch      string
 	RequirePlanApproval bool
 	AutomationMode      string
+	WithIntel           bool
 }
 
 type BatchSessionOptions struct {

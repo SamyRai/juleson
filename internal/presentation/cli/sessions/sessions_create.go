@@ -3,9 +3,11 @@ package sessions
 import (
 	"context"
 	"fmt"
-	"github.com/SamyRai/juleson/internal/presentation/cli/core"
 	"strings"
 	"time"
+
+	"github.com/SamyRai/juleson/internal/intelligence"
+	"github.com/SamyRai/juleson/internal/presentation/cli/core"
 
 	"github.com/SamyRai/juleson/internal/config"
 	"github.com/SamyRai/juleson/internal/julesops"
@@ -21,6 +23,42 @@ func createSession(cfg *config.Config, sourceID string, prompt string, options C
 			return err
 		}
 		prompt = loadedPrompt
+	}
+
+	if options.WithIntel {
+		fmt.Printf("🧠 Analyzing codebase intelligence...\n")
+
+		// Collect Dependencies
+		if graph, err := intelligence.AnalyzeDependencies(ctx, "."); err == nil {
+			prompt += "\n\n### Project Dependency Graph\n"
+			prompt += intelligence.RenderMermaid(graph)
+		} else {
+			fmt.Printf("⚠️  Could not attach dependency graph: %v\n", err)
+		}
+
+		// Collect Complexity
+		if complexities, err := intelligence.AnalyzeComplexity(ctx, "."); err == nil {
+			prompt += "\n\n### High Complexity Functions\n"
+			prompt += "The following functions have the highest cyclomatic complexity and may require careful handling:\n\n"
+			prompt += "| Function | File | Complexity |\n"
+			prompt += "|----------|------|------------|\n"
+
+			count := 0
+			for _, c := range complexities {
+				if c.Complexity >= 10 { // Only show functions with complexity >= 10
+					prompt += fmt.Sprintf("| `%s` | `%s:%d` | %d |\n", c.FuncName, c.FileName, c.Line, c.Complexity)
+					count++
+				}
+				if count >= 10 { // Top 10 only
+					break
+				}
+			}
+			if count == 0 {
+				prompt += "| (None) | | |\n"
+			}
+		} else {
+			fmt.Printf("⚠️  Could not attach complexity report: %v\n", err)
+		}
 	}
 	sourceName := sessionops.NormalizeSourceID(sourceID)
 	if !options.NoSource && sourceID == "." {

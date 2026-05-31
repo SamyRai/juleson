@@ -66,6 +66,7 @@ func NewSessionsCommand(cfg *config.Config) *cobra.Command {
 	createCmd.Flags().StringVar(&createOptions.StartingBranch, "starting-branch", "", "Starting branch for source-backed sessions")
 	createCmd.Flags().BoolVar(&createOptions.RequirePlanApproval, "require-plan-approval", false, "Require explicit plan approval before Jules starts work")
 	createCmd.Flags().StringVar(&createOptions.AutomationMode, "automation-mode", "", "Automation mode such as AUTO_CREATE_PR")
+	createCmd.Flags().BoolVar(&createOptions.WithIntel, "with-intel", false, "Analyze and attach codebase complexity and dependency graph to the prompt")
 	sessionsCmd.AddCommand(createCmd)
 
 	var (

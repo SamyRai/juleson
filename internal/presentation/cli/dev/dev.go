@@ -31,6 +31,8 @@ func NewDevCommand() *cobra.Command {
 	devCmd.AddCommand(newCheckCommand())
 	devCmd.AddCommand(newInstallCommand())
 	devCmd.AddCommand(newReleaseCommand())
+	devCmd.AddCommand(newCheckComplexityCommand())
+	devCmd.AddCommand(newDepsCommand())
 
 	return devCmd
 }
