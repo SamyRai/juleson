@@ -1,4 +1,4 @@
-package julesops
+package workspace
 
 import "github.com/SamyRai/go-jules"
 

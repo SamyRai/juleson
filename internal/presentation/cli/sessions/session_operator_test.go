@@ -12,7 +12,7 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/sessionops"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 	"github.com/jarcoal/httpmock"
 )
 
@@ -32,13 +32,13 @@ func TestSessionsPlansCommandRegistered(t *testing.T) {
 
 func TestPrintPlanSummariesIncludesFullStepsAndIDs(t *testing.T) {
 	output := captureStdout(t, func() {
-		printPlanSummaries("session-1", []sessionops.PlanSummary{
+		printPlanSummaries("session-1", []julessessions.PlanSummary{
 			{
 				ActivityID:   "activity-plan",
 				ActivityName: "sessions/session-1/activities/activity-plan",
 				PlanID:       "plan-1",
 				Approved:     true,
-				Steps: []sessionops.PlanStepSummary{
+				Steps: []julessessions.PlanStepSummary{
 					{Index: 1, Title: "Inspect", Description: "Read all relevant files"},
 					{Index: 2, Title: "Patch", Description: "Apply the scoped fix"},
 				},
@@ -110,16 +110,16 @@ func TestActivitiesListShowsIDAndName(t *testing.T) {
 }
 
 func TestPrintSessionReviewNextActions(t *testing.T) {
-	review := &sessionops.SessionReview{
+	review := &julessessions.SessionReview{
 		SessionID: "session-1",
 		Session:   jules.Session{ID: "session-1", State: jules.SessionStateCompleted, Title: "Done"},
-		PatchPreview: sessionops.PatchPreviewSummary{
+		PatchPreview: julessessions.PatchPreviewSummary{
 			TotalPatches: 1,
 			CanApply:     true,
 			Summary:      "1 patches affecting 1 files (+1 -0 lines)",
 		},
-		Worktree: sessionops.WorktreeReview{WorkingDir: "/tmp/project", Clean: true},
-		NextActions: []sessionops.ReviewNextAction{
+		Worktree: julessessions.WorktreeReview{WorkingDir: "/tmp/project", Clean: true},
+		NextActions: []julessessions.ReviewNextAction{
 			{Label: "apply patches", Command: "juleson sessions apply session-1 /tmp/project --confirm", Reason: "dry-run passed"},
 		},
 	}

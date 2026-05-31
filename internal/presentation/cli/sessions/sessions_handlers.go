@@ -10,8 +10,8 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 	"github.com/SamyRai/juleson/internal/presentation/views"
-	"github.com/SamyRai/juleson/internal/sessionops"
 )
 
 type CreateSessionOptions struct {
@@ -150,7 +150,7 @@ func showSessionStatus(cfg *config.Config) error {
 		return fmt.Errorf("failed to get session status: %w", err)
 	}
 
-	summary := sessionops.SummarizeSessions(response.Sessions, 5)
+	summary := julessessions.SummarizeSessions(response.Sessions, 5)
 
 	if summary.TotalSessions == 0 {
 		fmt.Println("📭 No sessions found.")
@@ -222,7 +222,7 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 	fmt.Printf("Requires Approval: %t\n", session.RequirePlanApproval)
 
 	// Display outputs if any
-	outputs := sessionops.DocumentedOutputs(session)
+	outputs := julessessions.DocumentedOutputs(session)
 	if len(outputs) > 0 {
 		fmt.Printf("\n📤 Outputs:\n")
 		for i, output := range outputs {

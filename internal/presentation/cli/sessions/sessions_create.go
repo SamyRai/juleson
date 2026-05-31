@@ -10,8 +10,8 @@ import (
 	"github.com/SamyRai/juleson/internal/presentation/cli/core"
 
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/julesops"
-	"github.com/SamyRai/juleson/internal/sessionops"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 )
 
 func createSession(cfg *config.Config, sourceID string, prompt string, options CreateSessionOptions) error {
@@ -60,9 +60,9 @@ func createSession(cfg *config.Config, sourceID string, prompt string, options C
 			fmt.Printf("⚠️  Could not attach complexity report: %v\n", err)
 		}
 	}
-	sourceName := sessionops.NormalizeSourceID(sourceID)
+	sourceName := julessessions.NormalizeSourceID(sourceID)
 	if !options.NoSource && sourceID == "." {
-		source, err := julesops.InferSourceFromGitRemote(ctx, julesClient, ".")
+		source, err := workspace.InferSourceFromGitRemote(ctx, julesClient, ".")
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ func createSession(cfg *config.Config, sourceID string, prompt string, options C
 	}
 	fmt.Printf("Prompt: %s\n\n", prompt)
 
-	req, err := sessionops.BuildCreateSessionRequest(sessionops.CreateSessionRequestOptions{
+	req, err := julessessions.BuildCreateSessionRequest(julessessions.CreateSessionRequestOptions{
 		Prompt:              prompt,
 		Source:              sourceName,
 		NoSource:            options.NoSource,
@@ -86,7 +86,7 @@ func createSession(cfg *config.Config, sourceID string, prompt string, options C
 		RequirePlanApproval: options.RequirePlanApproval,
 		AutomationMode:      options.AutomationMode,
 	})
-	if err == sessionops.ErrStartingBranchRequiresSource {
+	if err == julessessions.ErrStartingBranchRequiresSource {
 		return fmt.Errorf("--starting-branch requires a source-backed session")
 	}
 	if err != nil {
@@ -126,7 +126,7 @@ func batchCreateSessions(cfg *config.Config, sourceID, taskFileOrPrompt string, 
 
 	julesClient := core.NewJulesClient(cfg)
 	ctx := context.Background()
-	sourceName := sessionops.NormalizeSourceID(sourceID)
+	sourceName := julessessions.NormalizeSourceID(sourceID)
 	if options.BatchID == "" {
 		options.BatchID = "batch-" + time.Now().UTC().Format("20060102150405")
 	}
@@ -153,7 +153,7 @@ func batchCreateSessions(cfg *config.Config, sourceID, taskFileOrPrompt string, 
 			batchPrompt += fmt.Sprintf("Group title: %s\n", options.GroupTitle)
 		}
 		batchPrompt += fmt.Sprintf("Parallel run: %d/%d\n\n%s", i, options.Parallel, prompt)
-		req, err := sessionops.BuildCreateSessionRequest(sessionops.CreateSessionRequestOptions{
+		req, err := julessessions.BuildCreateSessionRequest(julessessions.CreateSessionRequestOptions{
 			Prompt:              batchPrompt,
 			Title:               title,
 			RequirePlanApproval: true,

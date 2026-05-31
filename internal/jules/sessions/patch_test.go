@@ -1,4 +1,4 @@
-package sessionops
+package sessions
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 )
 
 func TestPreparePatchApplicationDryRunSkipsDirtyCheck(t *testing.T) {
@@ -72,9 +72,9 @@ func TestPreparePatchApplicationPreservesPatchOptions(t *testing.T) {
 }
 
 func TestSessionChangesSummary(t *testing.T) {
-	summary, added, removed := SessionChangesSummary(&julesops.SessionChanges{
+	summary, added, removed := SessionChangesSummary(&workspace.SessionChanges{
 		TotalPatches: 2,
-		Files: []julesops.FileChange{
+		Files: []workspace.FileChange{
 			{Path: "a.go", LinesAdded: 3, LinesRemoved: 1},
 			{Path: "b.go", LinesAdded: 4, LinesRemoved: 2},
 		},

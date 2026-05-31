@@ -1,10 +1,10 @@
-package sessionops
+package sessions
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 )
 
 type PatchRequest struct {
@@ -22,7 +22,7 @@ type PatchRequest struct {
 
 type PatchPreparation struct {
 	DryRun         bool
-	Options        *julesops.PatchApplicationOptions
+	Options        *workspace.PatchApplicationOptions
 	Blocker        string
 	WorktreeStatus string
 }
@@ -31,7 +31,7 @@ func PreparePatchApplication(ctx context.Context, request PatchRequest) (*PatchP
 	dryRun := request.DryRun || !request.Confirm
 	preparation := &PatchPreparation{
 		DryRun: dryRun,
-		Options: &julesops.PatchApplicationOptions{
+		Options: &workspace.PatchApplicationOptions{
 			WorkingDir:        request.WorkingDir,
 			DryRun:            dryRun,
 			Force:             request.Force,
@@ -47,7 +47,7 @@ func PreparePatchApplication(ctx context.Context, request PatchRequest) (*PatchP
 		return preparation, nil
 	}
 
-	clean, status, err := julesops.IsGitWorkingTreeClean(ctx, request.WorkingDir)
+	clean, status, err := workspace.IsGitWorkingTreeClean(ctx, request.WorkingDir)
 	if err != nil {
 		return preparation, err
 	}
@@ -64,7 +64,7 @@ func PreparePatchApplication(ctx context.Context, request PatchRequest) (*PatchP
 	return preparation, nil
 }
 
-func SessionChangesSummary(changes *julesops.SessionChanges) (string, int, int) {
+func SessionChangesSummary(changes *workspace.SessionChanges) (string, int, int) {
 	totalLinesAdded := 0
 	totalLinesRemoved := 0
 	for _, file := range changes.Files {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ func NewSyncCommand() *cobra.Command {
 				fmt.Printf("📡 Fetching changes from %s...\n", remote)
 			}
 
-			if err := julesops.SyncGitRepository(context.Background(), julesops.GitSyncOptions{
+			if err := workspace.SyncGitRepository(context.Background(), workspace.GitSyncOptions{
 				ProjectPath: projectPath,
 				Remote:      remote,
 				Branch:      branch,

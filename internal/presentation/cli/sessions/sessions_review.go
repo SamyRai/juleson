@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/sessionops"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 )
 
 type ReviewSessionOptions struct {
@@ -26,12 +26,12 @@ func showSessionPlans(cfg *config.Config, sessionID string, latestOnly, jsonOutp
 	if err != nil {
 		return fmt.Errorf("failed to list activities: %w", err)
 	}
-	plans := sessionops.ExtractPlanSummaries(activities)
+	plans := julessessions.ExtractPlanSummaries(activities)
 	if latestOnly {
-		if latest := sessionops.LatestPlanSummary(plans); latest != nil {
-			plans = []sessionops.PlanSummary{*latest}
+		if latest := julessessions.LatestPlanSummary(plans); latest != nil {
+			plans = []julessessions.PlanSummary{*latest}
 		} else {
-			plans = []sessionops.PlanSummary{}
+			plans = []julessessions.PlanSummary{}
 		}
 	}
 	if jsonOutput {
@@ -47,7 +47,7 @@ func showSessionPlans(cfg *config.Config, sessionID string, latestOnly, jsonOutp
 
 func reviewSession(cfg *config.Config, sessionID, projectPath string, options ReviewSessionOptions) error {
 	julesClient := core.NewJulesClient(cfg)
-	review, err := sessionops.BuildSessionReview(context.Background(), julesClient, sessionops.ReviewRequest{
+	review, err := julessessions.BuildSessionReview(context.Background(), julesClient, julessessions.ReviewRequest{
 		SessionID:        sessionID,
 		WorkingDir:       projectPath,
 		ActivityID:       options.ActivityID,
@@ -64,7 +64,7 @@ func reviewSession(cfg *config.Config, sessionID, projectPath string, options Re
 	return nil
 }
 
-func printPlanSummaries(sessionID string, plans []sessionops.PlanSummary) {
+func printPlanSummaries(sessionID string, plans []julessessions.PlanSummary) {
 	fmt.Printf("Plans for session %s\n", sessionID)
 	fmt.Println(strings.Repeat("=", 60))
 	if len(plans) == 0 {
@@ -106,7 +106,7 @@ func printPlanSummaries(sessionID string, plans []sessionops.PlanSummary) {
 	fmt.Printf("  juleson sessions watch %s\n", sessionID)
 }
 
-func printSessionReview(review *sessionops.SessionReview) {
+func printSessionReview(review *julessessions.SessionReview) {
 	fmt.Printf("Session review for %s\n", review.SessionID)
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Printf("State: %s\n", review.Session.State)
@@ -127,7 +127,7 @@ func printSessionReview(review *sessionops.SessionReview) {
 	printReviewNextActions(review)
 }
 
-func printReviewLatestPlan(review *sessionops.SessionReview) {
+func printReviewLatestPlan(review *julessessions.SessionReview) {
 	if review.LatestPlan != nil {
 		fmt.Printf("\nLatest plan: %s (%d step(s), approved: %t)\n", review.LatestPlan.PlanID, len(review.LatestPlan.Steps), review.LatestPlan.Approved)
 		for stepIndex, step := range review.LatestPlan.Steps {
@@ -141,7 +141,7 @@ func printReviewLatestPlan(review *sessionops.SessionReview) {
 	}
 }
 
-func printReviewOutputs(review *sessionops.SessionReview) {
+func printReviewOutputs(review *julessessions.SessionReview) {
 	fmt.Printf("\nOutputs: %d\n", len(review.Outputs))
 	for _, output := range review.Outputs {
 		if output.PullRequest != nil {
@@ -153,7 +153,7 @@ func printReviewOutputs(review *sessionops.SessionReview) {
 	}
 }
 
-func printReviewArtifacts(review *sessionops.SessionReview) {
+func printReviewArtifacts(review *julessessions.SessionReview) {
 	fmt.Printf("\nArtifacts: %d\n", len(review.ArtifactManifests))
 	for i := range review.ArtifactManifests {
 		manifest := &review.ArtifactManifests[i]
@@ -165,7 +165,7 @@ func printReviewArtifacts(review *sessionops.SessionReview) {
 	}
 }
 
-func printReviewPatchPreview(review *sessionops.SessionReview) {
+func printReviewPatchPreview(review *julessessions.SessionReview) {
 	fmt.Printf("\nPatch preview: %s\n", review.PatchPreview.Summary)
 	for _, file := range review.PatchPreview.Files {
 		fmt.Printf("  %s (+%d -%d)\n", file.Path, file.LinesAdded, file.LinesRemoved)
@@ -178,7 +178,7 @@ func printReviewPatchPreview(review *sessionops.SessionReview) {
 	}
 }
 
-func printReviewWorktree(review *sessionops.SessionReview) {
+func printReviewWorktree(review *julessessions.SessionReview) {
 	fmt.Printf("\nWorktree: %s\n", review.Worktree.WorkingDir)
 	switch {
 	case review.Worktree.Error != "":
@@ -191,7 +191,7 @@ func printReviewWorktree(review *sessionops.SessionReview) {
 	}
 }
 
-func printReviewNextActions(review *sessionops.SessionReview) {
+func printReviewNextActions(review *julessessions.SessionReview) {
 	fmt.Println("\nNext actions:")
 	for _, action := range review.NextActions {
 		if action.Command != "" {

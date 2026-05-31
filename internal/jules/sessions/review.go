@@ -1,4 +1,4 @@
-package sessionops
+package sessions
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/SamyRai/go-jules"
-	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 )
 
 type ReviewRequest struct {
@@ -26,14 +26,14 @@ type ReviewNextAction struct {
 
 //nolint:govet // Field order follows the public JSON review contract.
 type PatchPreviewSummary struct {
-	Files                   []julesops.FileChange `json:"files,omitempty"`
-	SuggestedCommitMessages []string              `json:"suggested_commit_messages,omitempty"`
-	Warnings                []string              `json:"warnings,omitempty"`
-	BaseCommitMismatches    []string              `json:"base_commit_mismatches,omitempty"`
-	Error                   string                `json:"error,omitempty"`
-	Summary                 string                `json:"summary"`
-	TotalPatches            int                   `json:"total_patches"`
-	CanApply                bool                  `json:"can_apply"`
+	Files                   []workspace.FileChange `json:"files,omitempty"`
+	SuggestedCommitMessages []string               `json:"suggested_commit_messages,omitempty"`
+	Warnings                []string               `json:"warnings,omitempty"`
+	BaseCommitMismatches    []string               `json:"base_commit_mismatches,omitempty"`
+	Error                   string                 `json:"error,omitempty"`
+	Summary                 string                 `json:"summary"`
+	TotalPatches            int                    `json:"total_patches"`
+	CanApply                bool                   `json:"can_apply"`
 }
 
 type WorktreeReview struct {
@@ -45,18 +45,18 @@ type WorktreeReview struct {
 
 //nolint:govet // Field order follows the operator review flow and JSON contract.
 type SessionReview struct {
-	SessionID               string                      `json:"session_id"`
-	Session                 jules.Session               `json:"session"`
-	Plans                   []PlanSummary               `json:"plans"`
-	LatestPlan              *PlanSummary                `json:"latest_plan,omitempty"`
-	Outputs                 []jules.Output              `json:"outputs"`
-	ArtifactManifests       []julesops.ArtifactManifest `json:"artifact_manifests"`
-	PatchPreview            PatchPreviewSummary         `json:"patch_preview"`
-	Worktree                WorktreeReview              `json:"worktree"`
-	Warnings                []string                    `json:"warnings,omitempty"`
-	Blockers                []string                    `json:"blockers,omitempty"`
-	VerificationSuggestions []string                    `json:"verification_suggestions,omitempty"`
-	NextActions             []ReviewNextAction          `json:"next_actions"`
+	SessionID               string                       `json:"session_id"`
+	Session                 jules.Session                `json:"session"`
+	Plans                   []PlanSummary                `json:"plans"`
+	LatestPlan              *PlanSummary                 `json:"latest_plan,omitempty"`
+	Outputs                 []jules.Output               `json:"outputs"`
+	ArtifactManifests       []workspace.ArtifactManifest `json:"artifact_manifests"`
+	PatchPreview            PatchPreviewSummary          `json:"patch_preview"`
+	Worktree                WorktreeReview               `json:"worktree"`
+	Warnings                []string                     `json:"warnings,omitempty"`
+	Blockers                []string                     `json:"blockers,omitempty"`
+	VerificationSuggestions []string                     `json:"verification_suggestions,omitempty"`
+	NextActions             []ReviewNextAction           `json:"next_actions"`
 }
 
 func BuildSessionReview(ctx context.Context, client *jules.Client, request ReviewRequest) (*SessionReview, error) {
@@ -87,14 +87,14 @@ func BuildSessionReview(ctx context.Context, client *jules.Client, request Revie
 		VerificationSuggestions: verificationSuggestions(request.WorkingDir),
 	}
 
-	patchOptions := &julesops.PatchApplicationOptions{
+	patchOptions := &workspace.PatchApplicationOptions{
 		WorkingDir:        request.WorkingDir,
 		ActivityID:        request.ActivityID,
 		ArtifactIndex:     request.ArtifactIndex,
 		HasArtifactIndex:  request.HasArtifactIndex,
 		AllowBaseMismatch: false,
 	}
-	changes, previewErr := julesops.PreviewSessionPatchesWithOptions(ctx, client, request.SessionID, patchOptions)
+	changes, previewErr := workspace.PreviewSessionPatchesWithOptions(ctx, client, request.SessionID, patchOptions)
 	review.PatchPreview = buildPatchPreview(changes, previewErr)
 	review.Warnings = append(review.Warnings, review.PatchPreview.Warnings...)
 	if len(review.PatchPreview.BaseCommitMismatches) > 0 {
@@ -150,7 +150,7 @@ func ReviewNextActions(review *SessionReview, request ReviewRequest) []ReviewNex
 	return actions
 }
 
-func buildPatchPreview(changes *julesops.SessionChanges, err error) PatchPreviewSummary {
+func buildPatchPreview(changes *workspace.SessionChanges, err error) PatchPreviewSummary {
 	preview := PatchPreviewSummary{
 		CanApply: err == nil,
 	}
@@ -174,19 +174,19 @@ func buildPatchPreview(changes *julesops.SessionChanges, err error) PatchPreview
 	return preview
 }
 
-func buildArtifactManifests(activities []jules.Activity) []julesops.ArtifactManifest {
-	var manifests []julesops.ArtifactManifest
+func buildArtifactManifests(activities []jules.Activity) []workspace.ArtifactManifest {
+	var manifests []workspace.ArtifactManifest
 	for activityIndex := range activities {
 		activity := &activities[activityIndex]
 		for i, artifact := range activity.Artifacts {
-			manifests = append(manifests, julesops.BuildArtifactManifest(*activity, i, artifact))
+			manifests = append(manifests, workspace.BuildArtifactManifest(*activity, i, artifact))
 		}
 	}
 	return manifests
 }
 
 func inspectWorktree(ctx context.Context, workingDir string) WorktreeReview {
-	clean, status, err := julesops.IsGitWorkingTreeClean(ctx, workingDir)
+	clean, status, err := workspace.IsGitWorkingTreeClean(ctx, workingDir)
 	review := WorktreeReview{
 		WorkingDir: workingDir,
 		Clean:      clean,

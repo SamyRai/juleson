@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/SamyRai/go-jules"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 	"github.com/SamyRai/juleson/internal/presentation/views"
-	"github.com/SamyRai/juleson/internal/sessionops"
 )
 
 func TestGetSessionStatusText(t *testing.T) {
@@ -48,12 +48,12 @@ func TestGetSessionStatusIcon(t *testing.T) {
 }
 
 func TestCLIWakePolicyCompatibilityFlag(t *testing.T) {
-	got, err := cliWakePolicy(true, string(sessionops.WakePolicyActionable))
+	got, err := cliWakePolicy(true, string(julessessions.WakePolicyActionable))
 	if err != nil {
 		t.Fatalf("cliWakePolicy returned error: %v", err)
 	}
-	if got != sessionops.WakePolicyAnyStatus {
-		t.Fatalf("cliWakePolicy = %q, want %q", got, sessionops.WakePolicyAnyStatus)
+	if got != julessessions.WakePolicyAnyStatus {
+		t.Fatalf("cliWakePolicy = %q, want %q", got, julessessions.WakePolicyAnyStatus)
 	}
 }
 
@@ -62,7 +62,7 @@ func TestCLIWakePolicyUsesConfiguredDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cliWakePolicy returned error: %v", err)
 	}
-	if got != sessionops.WakePolicyActionable {
-		t.Fatalf("cliWakePolicy = %q, want %q", got, sessionops.WakePolicyActionable)
+	if got != julessessions.WakePolicyActionable {
+		t.Fatalf("cliWakePolicy = %q, want %q", got, julessessions.WakePolicyActionable)
 	}
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/sessionops"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 )
 
 func autocleanSessions(cfg *config.Config) error {
@@ -39,7 +39,7 @@ func autocleanSessions(cfg *config.Config) error {
 	for _, session := range completedSessions {
 		fmt.Printf("▶️  Verifying session %s (%s)...\n", session.ID, session.Title)
 
-		merged, err := sessionops.VerifySessionMerged(ctx, julesClient, session.ID, session.SourceContext)
+		merged, err := julessessions.VerifySessionMerged(ctx, julesClient, session.ID, session.SourceContext)
 		if err != nil {
 			fmt.Printf("   ⚠️  Could not verify session: %v\n\n", err)
 			continue

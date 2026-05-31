@@ -1,4 +1,4 @@
-package sessionops
+package sessions
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/SamyRai/go-jules"
-	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 )
 
 type WatchDecisionKind string
@@ -96,7 +96,7 @@ func CurrentWatchSnapshot(ctx context.Context, client *jules.Client, sessionID s
 	var hasDeliverables *bool
 	var deliverablesErr error
 	if session.State == jules.SessionStateCompleted {
-		value, err := julesops.SessionHasDeliverables(ctx, client, session)
+		value, err := workspace.SessionHasDeliverables(ctx, client, session)
 		if err != nil {
 			deliverablesErr = err
 			snapshot.DeliverablesError = err

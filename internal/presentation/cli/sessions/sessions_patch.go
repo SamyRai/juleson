@@ -9,9 +9,9 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/julesops"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 	"github.com/SamyRai/juleson/internal/presentation/tui/conflict"
-	"github.com/SamyRai/juleson/internal/sessionops"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 )
@@ -20,7 +20,7 @@ func applySessionChanges(cfg *config.Config, sessionID, projectPath string, opti
 	julesClient := core.NewJulesClient(cfg)
 	ctx := context.Background()
 
-	preparation, err := sessionops.PreparePatchApplication(ctx, sessionops.PatchRequest{
+	preparation, err := julessessions.PreparePatchApplication(ctx, julessessions.PatchRequest{
 		WorkingDir:        projectPath,
 		Confirm:           options.Confirm,
 		AllowDirty:        options.AllowDirty,
@@ -36,7 +36,7 @@ func applySessionChanges(cfg *config.Config, sessionID, projectPath string, opti
 		return err
 	}
 	patchOptions := preparation.Options
-	changes, previewErr := julesops.PreviewSessionPatchesWithOptions(ctx, julesClient, sessionID, patchOptions)
+	changes, previewErr := workspace.PreviewSessionPatchesWithOptions(ctx, julesClient, sessionID, patchOptions)
 	if changes != nil {
 		printSessionChangesSummary(changes)
 	}
@@ -51,7 +51,7 @@ func applySessionChanges(cfg *config.Config, sessionID, projectPath string, opti
 		return fmt.Errorf("refusing to apply because preview failed: %w", previewErr)
 	}
 
-	result, err := julesops.ApplySessionPatches(ctx, julesClient, sessionID, patchOptions)
+	result, err := workspace.ApplySessionPatches(ctx, julesClient, sessionID, patchOptions)
 	if err != nil {
 		return fmt.Errorf("failed to apply session patches: %w", err)
 	}
@@ -79,7 +79,7 @@ func applySessionChanges(cfg *config.Config, sessionID, projectPath string, opti
 	return nil
 }
 
-func printSessionChangesSummary(changes *julesops.SessionChanges) {
+func printSessionChangesSummary(changes *workspace.SessionChanges) {
 	totalAdded := 0
 	totalRemoved := 0
 	for _, file := range changes.Files {
@@ -98,9 +98,9 @@ func printSessionChangesSummary(changes *julesops.SessionChanges) {
 	}
 }
 
-func resolveConflictAgentically(ctx context.Context, client *jules.Client, sessionID, projectPath string, patchOptions *julesops.PatchApplicationOptions) error {
+func resolveConflictAgentically(ctx context.Context, client *jules.Client, sessionID, projectPath string, patchOptions *workspace.PatchApplicationOptions) error {
 	// For simplicity, we get the last patch details to send
-	changes, err := julesops.GetSessionChangesWithOptions(ctx, client, sessionID, patchOptions)
+	changes, err := workspace.GetSessionChangesWithOptions(ctx, client, sessionID, patchOptions)
 	if err != nil || changes == nil || len(changes.Files) == 0 {
 		return fmt.Errorf("could not gather patch details for resolution: %v", err)
 	}
@@ -174,7 +174,7 @@ func resolveConflictAgentically(ctx context.Context, client *jules.Client, sessi
 				p.Send(conflict.QuitMsg{})
 				return
 			case <-ticker.C:
-				snapshot, watchErr := sessionops.CurrentWatchSnapshot(ctx, client, sessionID, time.Time{}, sessionops.CurrentWatchOptions{
+				snapshot, watchErr := julessessions.CurrentWatchSnapshot(ctx, client, sessionID, time.Time{}, julessessions.CurrentWatchOptions{
 					FetchActivities: true,
 				})
 				if watchErr != nil {
@@ -182,7 +182,7 @@ func resolveConflictAgentically(ctx context.Context, client *jules.Client, sessi
 				}
 
 				// Very simple wait logic: stop if we see Jules agent replied or state completes
-				if snapshot.HasJulesAgentMessage || snapshot.Decision.Kind == sessionops.WatchDecisionCompletedWithDeliverables || snapshot.Decision.Kind == sessionops.WatchDecisionCompletedNoDeliverables || snapshot.Decision.Kind == sessionops.WatchDecisionFailed {
+				if snapshot.HasJulesAgentMessage || snapshot.Decision.Kind == julessessions.WatchDecisionCompletedWithDeliverables || snapshot.Decision.Kind == julessessions.WatchDecisionCompletedNoDeliverables || snapshot.Decision.Kind == julessessions.WatchDecisionFailed {
 					p.Send(conflict.QuitMsg{})
 					return
 				}

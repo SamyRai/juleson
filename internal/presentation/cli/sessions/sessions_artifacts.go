@@ -9,13 +9,13 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/julesops"
-	"github.com/SamyRai/juleson/internal/sessionops"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 )
 
 func listSessionArtifacts(cfg *config.Config, sessionID string) error {
 	julesClient := core.NewJulesClient(cfg)
-	manifests, err := julesops.ListSessionArtifactManifests(context.Background(), julesClient, sessionID)
+	manifests, err := workspace.ListSessionArtifactManifests(context.Background(), julesClient, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to list session artifacts: %w", err)
 	}
@@ -68,7 +68,7 @@ func showSessionOutputs(cfg *config.Config, sessionID string) error {
 		fmt.Println("No outputs found.")
 		return nil
 	}
-	outputs := sessionops.DocumentedOutputs(session)
+	outputs := julessessions.DocumentedOutputs(session)
 	fmt.Printf("Outputs for session %s\n", sessionID)
 	fmt.Println(strings.Repeat("=", 60))
 	if len(outputs) == 0 {
@@ -96,13 +96,13 @@ func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir st
 	fmt.Printf("📁 Output directory: %s\n", outputDir)
 	fmt.Println(strings.Repeat("=", 60))
 
-	options := &julesops.ArtifactDownloadOptions{
+	options := &workspace.ArtifactDownloadOptions{
 		DestinationDir: outputDir,
 		CreateDir:      true,
 		Overwrite:      false,
 	}
 
-	downloadedFiles, err := julesops.DownloadAllSessionArtifacts(ctx, julesClient, sessionID, options)
+	downloadedFiles, err := workspace.DownloadAllSessionArtifacts(ctx, julesClient, sessionID, options)
 	if err != nil {
 		return fmt.Errorf("failed to download session artifacts: %w", err)
 	}
@@ -131,13 +131,13 @@ func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID 
 	fmt.Printf("📁 Output directory: %s\n", outputDir)
 	fmt.Println(strings.Repeat("=", 60))
 
-	options := &julesops.ArtifactDownloadOptions{
+	options := &workspace.ArtifactDownloadOptions{
 		DestinationDir: outputDir,
 		CreateDir:      true,
 		Overwrite:      false,
 	}
 
-	downloadedFiles, err := julesops.DownloadArtifactFromActivity(ctx, julesClient, sessionID, activityID, options)
+	downloadedFiles, err := workspace.DownloadArtifactFromActivity(ctx, julesClient, sessionID, activityID, options)
 	if err != nil {
 		return fmt.Errorf("failed to download activity artifacts: %w", err)
 	}

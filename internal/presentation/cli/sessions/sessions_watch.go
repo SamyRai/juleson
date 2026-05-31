@@ -11,8 +11,8 @@ import (
 
 	"github.com/SamyRai/go-jules"
 	"github.com/SamyRai/juleson/internal/config"
+	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 	"github.com/SamyRai/juleson/internal/presentation/views"
-	"github.com/SamyRai/juleson/internal/sessionops"
 )
 
 func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue string, followActivities bool, sinceValue, cursorOutput, initialState string, wakeOnStatusChange, wakeOnAgentMessage bool, wakePolicyValue string) error {
@@ -75,12 +75,12 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 		} else if update.State != baselineState {
 			stateChanged = true
 		}
-		wake := sessionops.EvaluateWatchWake(wakePolicy, update.UpdateType, stateChanged)
+		wake := julessessions.EvaluateWatchWake(wakePolicy, update.UpdateType, stateChanged)
 		if wakeOnAgentMessage {
 			if !hasActivityBaseline {
 				hasActivityBaseline = true
 			} else if update.HasJulesAgentMessage {
-				wake = sessionops.EvaluateWatchWake(wakePolicy, sessionops.WatchUpdateAgentMessage, false)
+				wake = julessessions.EvaluateWatchWake(wakePolicy, julessessions.WatchUpdateAgentMessage, false)
 			}
 		}
 		if update.NextCursor.After(cursor) {
@@ -95,7 +95,7 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 			switch wake.WakeReason {
 			case "status_change":
 				fmt.Printf("Wake reason: session state changed from %s to %s.\n", baselineState, update.State)
-			case string(sessionops.WatchUpdateAgentMessage):
+			case string(julessessions.WatchUpdateAgentMessage):
 				fmt.Printf("Wake reason: Jules sent a new message.\n")
 			default:
 				fmt.Printf("Wake reason: %s.\n", wake.WakeReason)
@@ -120,22 +120,22 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 }
 
 type sessionWatchUpdate struct {
-	UpdateType           sessionops.WatchUpdateType
+	UpdateType           julessessions.WatchUpdateType
 	NextAction           string
 	NextCursor           time.Time
 	State                jules.SessionState
 	HasJulesAgentMessage bool
 }
 
-func cliWakePolicy(wakeOnStatusChange bool, wakePolicyValue string) (sessionops.WakePolicy, error) {
+func cliWakePolicy(wakeOnStatusChange bool, wakePolicyValue string) (julessessions.WakePolicy, error) {
 	if wakeOnStatusChange {
-		return sessionops.WakePolicyAnyStatus, nil
+		return julessessions.WakePolicyAnyStatus, nil
 	}
-	return sessionops.ParseWakePolicy(wakePolicyValue)
+	return julessessions.ParseWakePolicy(wakePolicyValue)
 }
 
 func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionID string, followActivities bool, detectAgentMessage bool, seenActivities map[string]bool, cursor time.Time) (sessionWatchUpdate, error) {
-	snapshot, err := sessionops.CurrentWatchSnapshot(ctx, client, sessionID, cursor, sessionops.CurrentWatchOptions{
+	snapshot, err := julessessions.CurrentWatchSnapshot(ctx, client, sessionID, cursor, julessessions.CurrentWatchOptions{
 		FetchActivities: followActivities || detectAgentMessage,
 	})
 	if err != nil {
@@ -145,7 +145,7 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 	statusText := views.SessionStatusText(string(session.State))
 
 	update := sessionWatchUpdate{
-		UpdateType:           sessionops.WatchUpdateTypeForDecision(snapshot.Decision),
+		UpdateType:           julessessions.WatchUpdateTypeForDecision(snapshot.Decision),
 		NextAction:           cliNextAction(snapshot, sessionID, statusText),
 		NextCursor:           snapshot.NextCursor,
 		State:                session.State,
@@ -181,23 +181,23 @@ func printSessionWatchUpdate(ctx context.Context, client *jules.Client, sessionI
 	return update, nil
 }
 
-func cliNextAction(snapshot sessionops.WatchSnapshot, sessionID, statusText string) string {
+func cliNextAction(snapshot julessessions.WatchSnapshot, sessionID, statusText string) string {
 	switch snapshot.Decision.Kind {
-	case sessionops.WatchDecisionNeedsUserAction:
+	case julessessions.WatchDecisionNeedsUserAction:
 		return fmt.Sprintf("Next action: %s. Use 'juleson sessions get %s' to inspect, then approve or send feedback.", statusText, sessionID)
-	case sessionops.WatchDecisionFailed:
+	case julessessions.WatchDecisionFailed:
 		return fmt.Sprintf("Next action: inspect failure details with 'juleson sessions get %s'.", sessionID)
-	case sessionops.WatchDecisionCompletedDeliverableCheckFailed:
+	case julessessions.WatchDecisionCompletedDeliverableCheckFailed:
 		return fmt.Sprintf("⚠️  Could not check deliverables: %v\nNext action: inspect activities with 'juleson sessions artifacts list %s', then preview changes with 'juleson sessions apply %s <project-path>'.", snapshot.DeliverablesError, sessionID, sessionID)
-	case sessionops.WatchDecisionCompletedNoDeliverables:
+	case julessessions.WatchDecisionCompletedNoDeliverables:
 		return fmt.Sprintf("Next action: no retrievable deliverable was produced. Inspect activities with 'juleson sessions artifacts list %s' or create a follow-up session.", sessionID)
-	case sessionops.WatchDecisionCompletedWithDeliverables:
+	case julessessions.WatchDecisionCompletedWithDeliverables:
 		nextAction := fmt.Sprintf("Next action: preview changes with 'juleson sessions apply %s <project-path>'.", sessionID)
 		if snapshot.Session != nil && len(snapshot.Session.Outputs) > 0 {
 			nextAction += fmt.Sprintf("\nNext output action: inspect outputs with 'juleson sessions outputs %s'.", sessionID)
 		}
 		return nextAction
-	case sessionops.WatchDecisionOutputs:
+	case julessessions.WatchDecisionOutputs:
 		return fmt.Sprintf("Next action: inspect outputs with 'juleson sessions outputs %s'.", sessionID)
 	default:
 		return ""

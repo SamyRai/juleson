@@ -1,4 +1,4 @@
-package sessionops
+package sessions
 
 import (
 	"encoding/json"

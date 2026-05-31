@@ -3,7 +3,7 @@ package core
 import (
 	"os"
 
-	"github.com/SamyRai/juleson/internal/julesops"
+	"github.com/SamyRai/juleson/internal/jules/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +41,7 @@ func NewOfficialCommand() *cobra.Command {
 }
 
 func runOfficialJules(args ...string) error {
-	return julesops.RunOfficialJulesCLI(julesops.OfficialCLIStreams{
+	return workspace.RunOfficialJulesCLI(workspace.OfficialCLIStreams{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
