@@ -9,8 +9,6 @@ kept to repository essentials; user, operator, and architecture docs live here.
   source builds, and uninstall steps.
 - [Setup Guide](SETUP_GUIDE.md): first-run setup, environment variables, and config files.
 - [CLI Reference](CLI_REFERENCE.md): current `juleson` commands and flags.
-- [MCP Server Usage](MCP_SERVER_USAGE.md): `jules-mcp` setup, tool availability,
-  and client configuration.
 
 ## User Guides
 
@@ -23,12 +21,10 @@ kept to repository essentials; user, operator, and architecture docs live here.
 
 ## Architecture
 
-- [Agent Architecture](AGENT_ARCHITECTURE.md)
-- [AI Orchestration](AI_ORCHESTRATION.md)
 - [Code Intelligence](CODE_INTELLIGENCE.md)
 - [Event System Architecture](EVENT_SYSTEM_ARCHITECTURE.md)
 - [Event System Quick Start](EVENT_SYSTEM_QUICKSTART.md)
-- [Orchestrator Architecture](ORCHESTRATOR_ARCHITECTURE.md)
+- [Builder Architecture](BUILDER_ARCHITECTURE.md)
 - [Deployment Guide](DEPLOYMENT_GUIDE.md)
 
 ## Planning And Release Notes

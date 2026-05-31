@@ -21,29 +21,24 @@ func TestApplyCredentialFallbacks(t *testing.T) {
 			name:    "empty config with env vars",
 			initial: Config{},
 			envVars: map[string]string{
-				"JULES_API_KEY":  "env-jules",
-				"GITHUB_TOKEN":   "env-gh",
-				"GEMINI_API_KEY": "env-gemini",
+				"JULES_API_KEY": "env-jules",
+				"GITHUB_TOKEN":  "env-gh",
 			},
 			expectedJules: "env-jules",
 			expectedGH:    "env-gh",
-			expectedGem:   "env-gemini",
 		},
 		{
 			name: "config values take precedence over env vars",
 			initial: Config{
 				Jules:  JulesConfig{APIKey: "config-jules"},
 				GitHub: GitHubConfig{Token: "config-gh"},
-				Gemini: GeminiConfig{APIKey: "config-gemini"},
 			},
 			envVars: map[string]string{
-				"JULES_API_KEY":  "env-jules",
-				"GITHUB_TOKEN":   "env-gh",
-				"GEMINI_API_KEY": "env-gemini",
+				"JULES_API_KEY": "env-jules",
+				"GITHUB_TOKEN":  "env-gh",
 			},
 			expectedJules: "config-jules",
 			expectedGH:    "config-gh",
-			expectedGem:   "config-gemini",
 		},
 	}
 
@@ -59,7 +54,6 @@ func TestApplyCredentialFallbacks(t *testing.T) {
 
 			assert.Equal(t, tc.expectedJules, cfg.Jules.APIKey)
 			assert.Equal(t, tc.expectedGH, cfg.GitHub.Token)
-			assert.Equal(t, tc.expectedGem, cfg.Gemini.APIKey)
 		})
 	}
 }
@@ -76,10 +70,6 @@ func TestValidate(t *testing.T) {
 			name: "valid config",
 			config: Config{
 				Jules: JulesConfig{APIKey: "valid-key"},
-				MCP:   MCPConfig{Server: MCPServerConfig{Port: 8080}},
-				Automation: AutomationConfig{
-					MaxConcurrentTasks: 5,
-				},
 			},
 			requireJulesAPIKey: true,
 			expectError:        false,
@@ -88,10 +78,6 @@ func TestValidate(t *testing.T) {
 			name: "missing jules api key when required",
 			config: Config{
 				Jules: JulesConfig{APIKey: ""},
-				MCP:   MCPConfig{Server: MCPServerConfig{Port: 8080}},
-				Automation: AutomationConfig{
-					MaxConcurrentTasks: 5,
-				},
 			},
 			requireJulesAPIKey: true,
 			expectError:        true,
@@ -101,52 +87,9 @@ func TestValidate(t *testing.T) {
 			name: "missing jules api key when not required",
 			config: Config{
 				Jules: JulesConfig{APIKey: ""},
-				MCP:   MCPConfig{Server: MCPServerConfig{Port: 8080}},
-				Automation: AutomationConfig{
-					MaxConcurrentTasks: 5,
-				},
 			},
 			requireJulesAPIKey: false,
 			expectError:        false,
-		},
-		{
-			name: "invalid mcp port zero",
-			config: Config{
-				Jules: JulesConfig{APIKey: "valid-key"},
-				MCP:   MCPConfig{Server: MCPServerConfig{Port: 0}},
-				Automation: AutomationConfig{
-					MaxConcurrentTasks: 5,
-				},
-			},
-			requireJulesAPIKey: true,
-			expectError:        true,
-			errorContains:      "invalid MCP server port",
-		},
-		{
-			name: "invalid mcp port too large",
-			config: Config{
-				Jules: JulesConfig{APIKey: "valid-key"},
-				MCP:   MCPConfig{Server: MCPServerConfig{Port: 70000}},
-				Automation: AutomationConfig{
-					MaxConcurrentTasks: 5,
-				},
-			},
-			requireJulesAPIKey: true,
-			expectError:        true,
-			errorContains:      "invalid MCP server port",
-		},
-		{
-			name: "invalid max concurrent tasks zero",
-			config: Config{
-				Jules: JulesConfig{APIKey: "valid-key"},
-				MCP:   MCPConfig{Server: MCPServerConfig{Port: 8080}},
-				Automation: AutomationConfig{
-					MaxConcurrentTasks: 0,
-				},
-			},
-			requireJulesAPIKey: true,
-			expectError:        true,
-			errorContains:      "max concurrent tasks must be greater than 0",
 		},
 	}
 
@@ -172,7 +115,6 @@ func TestSetDefaults(t *testing.T) {
 	// Create a backup of env var to ensure clean run
 	t.Setenv("JULES_API_KEY", "")
 	t.Setenv("GITHUB_TOKEN", "")
-	t.Setenv("GEMINI_API_KEY", "")
 
 	// Temporarily override HOME to avoid loading actual user configs
 	t.Setenv("HOME", "/tmp/non-existent-home-dir-for-tests")
@@ -191,13 +133,5 @@ func TestSetDefaults(t *testing.T) {
 	assert.Equal(t, "squash", cfg.GitHub.PR.DefaultMergeMethod)
 	assert.True(t, cfg.GitHub.PR.AutoDeleteBranch)
 
-	assert.Equal(t, "gemini-api", cfg.Gemini.Backend)
-	assert.Equal(t, "us-central1", cfg.Gemini.Location)
-	assert.Equal(t, "gemini-2.0-flash", cfg.Gemini.Model)
-	assert.Equal(t, 8192, cfg.Gemini.MaxTokens)
-
-	assert.Equal(t, "gemini", cfg.ActiveBackend)
-	assert.Equal(t, 8080, cfg.MCP.Server.Port)
-	assert.Equal(t, 5, cfg.Automation.MaxConcurrentTasks)
 	assert.Equal(t, "./projects", cfg.Projects.DefaultPath)
 }

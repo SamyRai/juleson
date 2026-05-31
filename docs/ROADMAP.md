@@ -6,8 +6,7 @@ known gaps without committing to release dates.
 ## Near Term
 
 - Keep CLI, setup, installation, and MCP docs aligned with the code.
-- Add HTTP transport as an optional MCP server mode.
-- Improve MCP and CLI error messages with request context.
+- Improve CLI error messages with request context.
 - Add debug logging for Jules API requests and responses, with secret redaction.
 - Expand unit coverage for `internal/github`, `internal/events`, and CLI command behavior.
 
@@ -22,7 +21,7 @@ Window: 2026-05-27 through 2026-06-09
 
 Acceptance criteria:
 
-- Finish the actionable watch policy work across CLI and MCP: progress states
+- Finish the actionable watch policy work across CLI: progress states
   should be reflected without waking by default, while user-action, terminal, and
   output states wake with structured reasons.
 - Preserve compatibility for existing `--wake-on-status-change` callers by
@@ -33,7 +32,7 @@ Acceptance criteria:
 - Make timeout behavior resumable by returning the latest state, next activity
   cursor, update type, and next action.
 - Keep patch application gated by clean worktree and explicit confirmation.
-- Cover CLI, MCP, and `internal/sessionops` behavior with focused tests for
+- Cover CLI and `internal/sessionops` behavior with focused tests for
   progress-only updates, approval wakeups, completion wakeups, failures, outputs,
   agent messages, timeouts, and cursor continuity.
 - Update `docs/CLI_REFERENCE.md`, `docs/MCP_SERVER_USAGE.md`, and this roadmap
@@ -46,7 +45,7 @@ Acceptance criteria:
 - Harden long-running Jules session tracking: status-change wakeups, Jules agent
   message wakeups, resumable activity cursors, and clear next-action reasons.
 - Finish agent-loop production readiness: dry-run parity, checkpoint resume
-  behavior, and consistent plan approval gates across CLI, MCP, and orchestration.
+  behavior, and consistent plan approval gates across CLI and orchestration.
 - Reduce operator risk around patch application: cleaner preview summaries,
   scoped artifact application, and verification guidance before mutation.
 - Keep delivery measurable with focused tests for session watches, activity

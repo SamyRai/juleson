@@ -11,16 +11,11 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Jules         JulesConfig      `mapstructure:"jules"`
-	GitHub        GitHubConfig     `mapstructure:"github"`
-	Gemini        GeminiConfig     `mapstructure:"gemini"`
-	Ollama        OllamaConfig     `mapstructure:"ollama"`
-	ActiveBackend string           `mapstructure:"active_backend"` // "gemini" or "ollama"
-	MCP           MCPConfig        `mapstructure:"mcp"`
-	Automation    AutomationConfig `mapstructure:"automation"`
-	Projects      ProjectsConfig   `mapstructure:"projects"`
-	Templates     TemplatesConfig  `mapstructure:"templates"`
-	Diff          DiffConfig       `mapstructure:"diff"`
+	Jules     JulesConfig     `mapstructure:"jules"`
+	GitHub    GitHubConfig    `mapstructure:"github"`
+	Projects  ProjectsConfig  `mapstructure:"projects"`
+	Templates TemplatesConfig `mapstructure:"templates"`
+	Diff      DiffConfig      `mapstructure:"diff"`
 }
 
 // JulesConfig contains Jules API configuration
@@ -51,48 +46,6 @@ type GitHubDiscoveryConfig struct {
 	Enabled      bool          `mapstructure:"enabled"`
 	UseGitRemote bool          `mapstructure:"use_git_remote"`
 	CacheTTL     time.Duration `mapstructure:"cache_ttl"`
-}
-
-// GeminiConfig contains Google Gemini AI configuration
-type GeminiConfig struct {
-	APIKey    string        `mapstructure:"api_key"`
-	Backend   string        `mapstructure:"backend"`  // "gemini-api" or "vertex-ai"
-	Project   string        `mapstructure:"project"`  // GCP project for Vertex AI
-	Location  string        `mapstructure:"location"` // GCP location for Vertex AI
-	Model     string        `mapstructure:"model"`    // Default model (e.g., "gemini-2.0-flash")
-	Timeout   time.Duration `mapstructure:"timeout"`
-	MaxTokens int           `mapstructure:"max_tokens"`
-}
-
-// OllamaConfig contains Ollama AI configuration
-type OllamaConfig struct {
-	BaseURL string `mapstructure:"base_url"`
-	Model   string `mapstructure:"model"`
-}
-
-// MCPConfig contains MCP server configuration
-type MCPConfig struct {
-	Server MCPServerConfig `mapstructure:"server"`
-	Client MCPClientConfig `mapstructure:"client"`
-}
-
-// MCPServerConfig contains MCP server settings
-type MCPServerConfig struct {
-	Port int    `mapstructure:"port"`
-	Host string `mapstructure:"host"`
-}
-
-// MCPClientConfig contains MCP client settings
-type MCPClientConfig struct {
-	Timeout time.Duration `mapstructure:"timeout"`
-}
-
-// AutomationConfig contains automation settings
-type AutomationConfig struct {
-	Strategies         []string      `mapstructure:"strategies"`
-	MaxConcurrentTasks int           `mapstructure:"max_concurrent_tasks"`
-	TaskTimeout        time.Duration `mapstructure:"task_timeout"`
-	CheckpointPath     string        `mapstructure:"checkpoint_path"`
 }
 
 // ProjectsConfig contains project management settings
@@ -165,7 +118,6 @@ func load(requireJulesAPIKey bool, validateConfig bool) (*Config, error) {
 	// Expand environment variables in paths
 	config.Templates.CustomPath = os.ExpandEnv(config.Templates.CustomPath)
 	config.Templates.BuiltinPath = os.ExpandEnv(config.Templates.BuiltinPath)
-	config.Automation.CheckpointPath = os.ExpandEnv(config.Automation.CheckpointPath)
 	applyCredentialFallbacks(&config)
 
 	// Validate configuration
@@ -184,9 +136,6 @@ func applyCredentialFallbacks(config *Config) {
 	}
 	if config.GitHub.Token == "" {
 		config.GitHub.Token = os.Getenv("GITHUB_TOKEN")
-	}
-	if config.Gemini.APIKey == "" {
-		config.Gemini.APIKey = os.Getenv("GEMINI_API_KEY")
 	}
 }
 
@@ -224,27 +173,6 @@ func setDefaults() {
 	viper.SetDefault("github.discovery.use_git_remote", true)
 	viper.SetDefault("github.discovery.cache_ttl", "5m")
 
-	viper.SetDefault("gemini.api_key", "")
-	viper.SetDefault("gemini.backend", "gemini-api")
-	viper.SetDefault("gemini.project", "")
-	viper.SetDefault("gemini.location", "us-central1")
-	viper.SetDefault("gemini.model", "gemini-2.0-flash")
-	viper.SetDefault("gemini.timeout", "30s")
-	viper.SetDefault("gemini.max_tokens", 8192)
-
-	viper.SetDefault("ollama.base_url", "http://localhost:11434")
-	viper.SetDefault("ollama.model", "llama3")
-	viper.SetDefault("active_backend", "gemini")
-
-	viper.SetDefault("mcp.server.port", 8080)
-	viper.SetDefault("mcp.server.host", "localhost")
-	viper.SetDefault("mcp.client.timeout", "10s")
-
-	viper.SetDefault("automation.strategies", []string{"modular", "layered", "microservices"})
-	viper.SetDefault("automation.max_concurrent_tasks", 5)
-	viper.SetDefault("automation.task_timeout", "300s")
-	viper.SetDefault("automation.checkpoint_path", "./data/checkpoints")
-
 	viper.SetDefault("projects.default_path", "./projects")
 	viper.SetDefault("projects.backup_enabled", true)
 	viper.SetDefault("projects.git_integration", true)
@@ -261,14 +189,6 @@ func setDefaults() {
 func validate(config *Config, requireJulesAPIKey bool) error {
 	if config.Jules.APIKey == "" && requireJulesAPIKey {
 		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
-	}
-
-	if config.MCP.Server.Port <= 0 || config.MCP.Server.Port > 65535 {
-		return fmt.Errorf("invalid MCP server port: %d", config.MCP.Server.Port)
-	}
-
-	if config.Automation.MaxConcurrentTasks <= 0 {
-		return fmt.Errorf("max concurrent tasks must be greater than 0")
 	}
 
 	return nil
@@ -290,27 +210,6 @@ func (c *Config) Save() error {
 	viper.Set("github.discovery.enabled", c.GitHub.Discovery.Enabled)
 	viper.Set("github.discovery.use_git_remote", c.GitHub.Discovery.UseGitRemote)
 	viper.Set("github.discovery.cache_ttl", c.GitHub.Discovery.CacheTTL.String())
-
-	viper.Set("gemini.api_key", c.Gemini.APIKey)
-	viper.Set("gemini.backend", c.Gemini.Backend)
-	viper.Set("gemini.project", c.Gemini.Project)
-	viper.Set("gemini.location", c.Gemini.Location)
-	viper.Set("gemini.model", c.Gemini.Model)
-	viper.Set("gemini.timeout", c.Gemini.Timeout.String())
-	viper.Set("gemini.max_tokens", c.Gemini.MaxTokens)
-
-	viper.Set("ollama.base_url", c.Ollama.BaseURL)
-	viper.Set("ollama.model", c.Ollama.Model)
-	viper.Set("active_backend", c.ActiveBackend)
-
-	viper.Set("mcp.server.port", c.MCP.Server.Port)
-	viper.Set("mcp.server.host", c.MCP.Server.Host)
-	viper.Set("mcp.client.timeout", c.MCP.Client.Timeout.String())
-
-	viper.Set("automation.strategies", c.Automation.Strategies)
-	viper.Set("automation.max_concurrent_tasks", c.Automation.MaxConcurrentTasks)
-	viper.Set("automation.task_timeout", c.Automation.TaskTimeout.String())
-	viper.Set("automation.checkpoint_path", c.Automation.CheckpointPath)
 
 	viper.Set("projects.default_path", c.Projects.DefaultPath)
 	viper.Set("projects.backup_enabled", c.Projects.BackupEnabled)

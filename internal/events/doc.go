@@ -65,7 +65,6 @@
 // - TopicActivity - Jules activity events
 // - TopicTool - Tool invocation events
 // - TopicReview - Code review events
-// - TopicOrchestration - Workflow orchestration events
 // - TopicGitHub - GitHub integration events
 // - TopicAll - Subscribe to all events
 //
@@ -134,7 +133,7 @@
 //	// In agent
 //	a.eventCoordinator.EmitAgentEvent(ctx, events.EventAgentStateChanged, data)
 //
-//	// In session orchestrator
+//	// In session manager
 //	o.eventCoordinator.EmitSessionEvent(ctx, events.EventSessionCreated, data)
 //
 //	// In Jules client
