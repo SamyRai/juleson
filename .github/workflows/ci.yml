@@ -221,9 +221,7 @@ jobs:
           cache: true
 
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.26.1
-        with:
-          args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.27.1 -no-fail -fmt sarif -out gosec-results.sarif ./...
 
       - name: Upload SARIF file
         if: always()
