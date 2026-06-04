@@ -7,7 +7,7 @@ Requirements:
 - Go 1.25 or newer
 - Git
 - Jules API access for integration flows that call Jules
-- GitHub token for GitHub command testing
+- GitHub token for Jules-created pull request command testing
 
 Clone and prepare:
 
@@ -21,8 +21,8 @@ Build:
 
 ```bash
 go build -o bin/juleson ./cmd/juleson
-go build -o bin/jules-mcp ./cmd/jules-mcp
-go build -o bin/orchestrator ./cmd/orchestrator
+go build -o bin/jsn ./cmd/juleson
+go build -o bin/builder ./cmd/builder
 ```
 
 Run tests:

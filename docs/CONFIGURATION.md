@@ -41,28 +41,6 @@ github:
     use_git_remote: true
     cache_ttl: "5m"
 
-gemini:
-  api_key: ""
-  backend: "gemini-api"
-  project: ""
-  location: "us-central1"
-  model: "gemini-2.0-flash"
-  timeout: "30s"
-  max_tokens: 8192
-
-mcp:
-  server:
-    host: "localhost"
-    port: 8080
-  client:
-    timeout: "10s"
-
-automation:
-  strategies: ["modular", "layered", "microservices"]
-  max_concurrent_tasks: 5
-  task_timeout: "300s"
-  checkpoint_path: "./data/checkpoints"
-
 projects:
   default_path: "./projects"
   backup_enabled: true
@@ -72,43 +50,36 @@ templates:
   builtin_path: "./templates/builtin"
   custom_path: "./templates/custom"
   enable_custom: true
+
+diff:
+  tool: ""
+  force_native: false
 ```
 
 ## Environment Variables
 
-Common direct environment variables:
-
 - `JULES_API_KEY`: used as a fallback for `jules.api_key`.
 - `GITHUB_TOKEN`: read by `juleson setup --non-interactive` and saved into config.
-- `GEMINI_API_KEY`: read by `juleson ai-orchestrate` when `--gemini-key` is omitted.
 
-For GitHub CLI commands, GitHub MCP tools, and Gemini MCP tools, store the token
-or API key in `juleson.yaml` through `juleson setup`, `juleson github login`, or
-manual config editing. Other nested settings such as `jules.base_url` should be
-set in `juleson.yaml`.
+GitHub configuration is used only for Jules-connected source discovery and
+Jules-created pull request context. Use `gh`, GitHub's CLI, or the official
+GitHub MCP server for general GitHub operations.
 
 ## Validation
 
 `juleson` uses optional config loading for local commands. Commands that call the
-Jules API still require `JULES_API_KEY` or `jules.api_key`. You can validate
-the current configuration state safely using `juleson config validate`, which
-reports missing credentials as warnings and validates configuration fields like
-MCP ports and automation concurrency constraints without exposing secret values.
+Jules API still require `JULES_API_KEY` or `jules.api_key`. You can validate the
+current configuration state safely using:
 
-`jules-mcp` starts with minimal config when the Jules API key is missing. Tools
-that require Jules, GitHub, or Gemini configuration are skipped or fail with a
-credential error. GitHub and Gemini MCP tool registration is based on values in
-the loaded config object.
+```bash
+juleson config validate
+```
 
-Agent and AI orchestration checkpoints are written as local JSON files under
-`automation.checkpoint_path`. The default is `./data/checkpoints`; set this to a
-project-specific or user-specific directory if multiple workspaces share the
-same working directory.
+The MCP server starts with minimal config. Tools that require Jules credentials
+return credential errors when the API key is missing; they do not prompt for or
+print secrets.
 
 The Go SDK at `github.com/SamyRai/go-jules` does not load this configuration
 directly. Applications pass credentials and options explicitly with
 `jules.NewClient` and client options such as `jules.WithBaseURL`,
-`jules.WithTimeout`, and `jules.WithRetryAttempts`. SDK-only options also
-include retry backoff, custom `http.Client`, user agent, debug logging via
-`jules.WithDebugLog`, and sleep injection for deterministic tests. Debug logging
-requires the logging level to be set to debug, for example `slog.LevelDebug`.
+`jules.WithTimeout`, and `jules.WithRetryAttempts`.

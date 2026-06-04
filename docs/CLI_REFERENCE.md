@@ -1,35 +1,31 @@
 # CLI Reference
 
 This reference reflects the current Cobra command tree from `cmd/juleson`.
-Core Jules commands (`setup`, `sessions`, `sources`, `activities`,
-`completion`, and `version`) are composed through the internal Jules CLI package;
-Juleson-specific extensions such as GitHub, templates, agent, and dev commands
-are registered by the application layer.
+Juleson focuses on Jules sources, sessions, session artifacts, Jules-created pull
+request context, templates, local project sync, developer workflows, and the
+integrated MCP server.
 
 ## Global Usage
 
 ```bash
 juleson [command]
+jsn [command]
 ```
+
+`jsn` is the short installed alias for the same CLI.
 
 Available commands:
 
 | Command | Purpose |
 | --- | --- |
-| `actions` | Manage GitHub Actions workflows and runs |
 | `activities` | Manage Jules session activities |
-| `agent` | Run agent-based development tasks |
-| `ai-orchestrate` | Let Gemini plan and run a multi-step workflow |
-| `analyze` | Analyze project structure and context |
 | `completion` | Generate shell completion scripts |
 | `config` | Manage Juleson configuration |
 | `dev` | Build, test, lint, format, and release helpers |
-| `execute` | Execute templates and automation tasks |
-| `github` | Manage GitHub integration |
 | `init` | Initialize a project for Jules automation |
-| `orchestrate` | Run predefined multi-task Jules workflows |
+| `mcp` | Run the Juleson MCP server |
 | `official` | Bridge to the official Jules CLI when installed |
-| `pr` | Manage PRs created by Jules sessions |
+| `pr` | Manage pull requests created by Jules sessions |
 | `sessions` | Manage Jules sessions |
 | `setup` | Run first-time setup |
 | `sources` | Manage Jules sources |
@@ -44,16 +40,15 @@ juleson config validate
 juleson setup [flags]
 ```
 
-`config validate` validates the effective configuration and checks for hard errors
-(e.g., invalid port or concurrency limits) and reports missing credentials as warnings.
-It never prints API keys or other secrets to output.
+`config validate` validates the effective configuration and reports missing
+credentials as warnings. It never prints API keys or other secrets.
 
 Flags:
 
 ```text
 --non-interactive   Run setup without prompts
 --skip-completion   Skip shell completion installation
---skip-github       Skip GitHub configuration
+--skip-github       Skip GitHub token configuration for Jules-created PR context
 --skip-jules        Skip Jules API configuration
 ```
 
@@ -94,87 +89,53 @@ juleson sessions download-activity SESSION_ID ACTIVITY_ID OUTPUT_DIR
 juleson activities list SESSION_ID
 juleson activities list SESSION_ID --since 2026-05-25T10:00:00Z --cursor-output .juleson.cursor
 juleson activities get SESSION_ID ACTIVITY_ID
-juleson official remote new --parallel 3
-juleson official remote pull SESSION_ID
 ```
 
 `sessions create` accepts either `github/owner/repo` or
-`sources/github/owner/repo`. `--no-source` creates a repoless Jules session by
-omitting `sourceContext`. Source-backed sessions also accept `--title`,
-`--starting-branch`, `--require-plan-approval`, `--automation-mode`, and
-`--prompt-file`. If `--starting-branch` is omitted for a GitHub source, Juleson
-reads the connected source metadata and uses the default branch. Passing `.` as
-the source asks Juleson to infer the connected Jules source from the local git
-`origin` remote; ambiguous matches fail with the candidate source names.
+`sources/github/owner/repo`. Passing `.` asks Juleson to infer the connected
+Jules source from the local git `origin` remote. `--no-source` creates a
+repoless Jules session by omitting `sourceContext`.
 
-`sessions batch` creates 1-5 parallel sessions for one source and prompt or task
-file. Batch sessions require plan approval by default and include a `batch_id`,
-optional `group_title`, and run index in each prompt because the REST API has no
-documented bulk-create endpoint.
+`sessions watch` prints observed session status with an update type. By default,
+`--wake-policy actionable` returns only when a session needs user action,
+completes, fails, or surfaces session outputs. `--wake-on-status-change` remains
+a compatibility alias for `--wake-policy any-status`.
 
-`sessions watch` prints every observed session status with an update type. By
-default, `--wake-policy actionable` returns only when a session needs user
-action, completes, fails, or surfaces session outputs; queued, planning,
-in-progress, and paused statuses are reflected as progress without waking the
-caller. With `--follow-activities`, it uses the activity
-`createTime` cursor for client-side filtering and prints the next cursor for
-resumable watches. Use `--wake-policy any-status` to stop on the next state
-transition, `--wake-policy terminal` to return only on completed or failed
-sessions, or `--wake-policy none` to keep polling until timeout unless an
-explicit agent-message wake is enabled. `--wake-on-status-change` is retained as
-a compatibility alias for `--wake-policy any-status`. Use
-`--wake-on-agent-message` to stop when Jules posts a new agent message after
-`--since`; without `--since`, the first poll establishes the activity baseline.
-When a completed session has no pull request output and only empty changeset
-artifacts, watch reports that no retrievable deliverable was produced instead
-of directing operators to apply an empty patch.
-
-`sessions get` keeps a concise activity and plan preview for compatibility and
-prints a hint to use `sessions plans SESSION_ID` for full plan inspection.
-`sessions plans` lists every generated plan activity with activity ID/name, plan
-ID, created time, approval state, and every step title and description. Pass
-`--latest` to show only the newest generated plan or `--json` for structured
-output. Human output ends with explicit next commands for approval, feedback,
-review, and watching.
-
-`sessions review SESSION_ID PROJECT_PATH` is a read-only operator snapshot. It
-combines session state, the latest plan, documented outputs, artifact manifests,
-patch dry-run summary, base commit mismatch warnings, dirty-worktree blockers,
-verification suggestions, and safe next actions. It never applies patches. When
-the patch dry-run passes and the target worktree is clean, it recommends the
-exact `sessions apply ... --confirm` command. Use `--activity-id` and
-`--artifact-index` to review one changeset and `--json` for MCP-like structured
-output.
+`sessions review` is a read-only operator snapshot. It combines session state,
+latest plan, documented outputs, artifact manifests, patch dry-run summary,
+base-commit warnings, dirty-worktree blockers, verification suggestions, and
+safe next actions.
 
 `sessions apply` dry-runs by default. Use `--confirm` to apply patches; dirty
-worktrees are blocked unless `--allow-dirty` is passed. `--activity-id` and
-`--artifact-index` apply one changeset at a time. If an artifact includes
-`baseCommitId`, dry-runs warn on mismatch and real apply blocks unless
-`--allow-base-mismatch` is passed.
+worktrees are blocked unless `--allow-dirty` is passed. If an artifact includes
+`baseCommitId`, real apply blocks on mismatch unless `--allow-base-mismatch` is
+passed.
 
-`sessions artifacts list` prints an artifact manifest with activity ID, artifact
-index, type, changed files, base commit, suggested commit message, media MIME
-type, and bash exit code. `sessions outputs` prints documented session outputs
-such as Jules-created pull requests. Completed sessions can validly expose no
-retrievable deliverables; in that case artifact manifests show empty changesets
-and outputs report that no supported documented payloads were found.
+## Jules-Created Pull Requests
 
-`sessions delete` calls the Jules API delete endpoint. Without `--force`, it
-asks for the exact session ID before deleting. Session cancel is not exposed by
-the Jules API v1alpha reference used by this project.
+Juleson keeps pull request support only where the PR is connected to a Jules
+session output.
 
-`official remote ...` and `official tui ...` hand off to the official `jules`
-binary when it is installed. They are optional parity bridges for exact
-`remote new --parallel`, `remote pull`, and TUI diff-review behavior; REST
-commands remain the default Juleson path.
+```bash
+juleson pr list --limit 10
+juleson pr get SESSION_ID
+juleson pr diff SESSION_ID
+juleson pr merge SESSION_ID --method squash
+```
 
-`sessions preview` and `sessions download` use documented activity artifacts:
-git patches from `changeSet`, command output from `bashOutput`, and decoded
-base64 media from `media`.
+Use `gh`, GitHub's own CLI, or the official GitHub MCP server for general
+repository, Actions, and pull request operations.
 
-`activities list` prints each activity ID and resource name so the value can be
-copied directly into `activities get SESSION_ID ACTIVITY_ID`, `sessions review
---activity-id`, or `sessions apply --activity-id`.
+## MCP
+
+```bash
+juleson mcp serve
+juleson mcp serve --version
+jsn mcp serve
+```
+
+The MCP server runs over stdio and exposes Jules session, artifact, review, and
+developer workflow tools. See [MCP Server Usage](MCP_SERVER_USAGE.md).
 
 ## Templates
 
@@ -183,125 +144,23 @@ juleson template list [category]
 juleson template show TEMPLATE_NAME
 juleson template search QUERY
 juleson template create TEMPLATE_NAME CATEGORY DESCRIPTION
-
-juleson execute template TEMPLATE_NAME PROJECT_PATH
-juleson execute template-with-params TEMPLATE_NAME PROJECT_PATH key=value
 ```
-
-## GitHub And Pull Requests
-
-```bash
-juleson github login
-juleson github status
-juleson github repos --limit 20
-juleson github current
-juleson github search QUERY --limit 30 --sort stars --order desc
-
-juleson pr list --limit 10
-juleson pr get SESSION_ID
-juleson pr diff SESSION_ID
-juleson pr merge SESSION_ID --method squash
-```
-
-Pull request flags:
-
-```text
-pr list:
-  -l, --limit int
-
-pr merge:
-  -m, --method string           merge, squash, or rebase
-  -c, --commit-message string   custom merge or squash message
-```
-
-## GitHub Actions
-
-```bash
-juleson actions workflows list [owner/repo]
-juleson actions workflows get WORKFLOW_ID_OR_FILE [owner/repo]
-juleson actions workflows trigger WORKFLOW_ID_OR_FILE [owner/repo]
-
-juleson actions runs list [owner/repo]
-juleson actions runs get RUN_ID [owner/repo]
-juleson actions runs rerun RUN_ID [owner/repo]
-juleson actions runs cancel RUN_ID [owner/repo]
-juleson actions runs logs RUN_ID [owner/repo]
-
-juleson actions jobs list RUN_ID [owner/repo]
-juleson actions jobs get JOB_ID [owner/repo]
-juleson actions jobs rerun JOB_ID [owner/repo]
-juleson actions jobs logs JOB_ID [owner/repo]
-
-juleson actions artifacts list [owner/repo]
-juleson actions artifacts download ARTIFACT_ID [owner/repo]
-juleson actions artifacts delete ARTIFACT_ID [owner/repo]
-
-juleson actions cache list [owner/repo]
-juleson actions cache delete [owner/repo]
-```
-
-Most Actions subcommands accept `--repo owner/repo`. Listing commands also expose
-filters such as workflow, status, branch, run ID, cache key, cache ID, and Git ref.
-
-## Agent And Orchestration
-
-```bash
-juleson agent execute "Goal" --source SOURCE_ID
-juleson agent status
-
-juleson ai-orchestrate "Goal" --source SOURCE_ID --path .
-juleson orchestrate api-modernization --source SOURCE_ID
-juleson orchestrate microservices-migration --source SOURCE_ID
-juleson orchestrate custom workflow.yaml --source SOURCE_ID
-```
-
-`agent execute` flags:
-
-```text
---source string
---priority string
---constraint strings
---dry-run
---strictness string
---max-iterations int
-```
-
-`--dry-run` analyzes and plans the requested goal, prints the planned tasks, and
-does not create, reuse, or mutate Jules sessions. Real `agent execute` runs
-create Jules sessions with plan approval required by default. `--strictness`
-accepts `low`, `medium`, or `high`; invalid values fail before orchestration
-starts. `agent status` reports configured runtime capabilities, including Jules,
-Gemini, review, memory, checkpointing, and dry-run planning availability.
-
-`ai-orchestrate` flags:
-
-```text
---source string
---path string
---constraint strings
---gemini-model string
---gemini-key string
---max-iterations int
---auto-approve
-```
-
-`--max-iterations` controls the AI decision loop limit. AI-created Jules
-sessions require plan approval unless `--auto-approve` is set, in which case the
-created session is allowed to proceed without the plan approval gate.
 
 ## Project And Git Sync
 
 ```bash
-juleson analyze [project-path]
 juleson init [project-path]
 juleson sync [project-path] [remote] --branch main --pull
 juleson sync [project-path] [remote] --branch main --push
+juleson official remote new --parallel 3
+juleson official remote pull SESSION_ID
+juleson official tui
 ```
 
 ## Development Commands
 
 ```bash
-juleson dev build [--all|--cli|--mcp] [--race] [--version dev]
+juleson dev build [--all|--cli|--alias] [--race] [--version dev]
 juleson dev test [--race] [--cover] [--short] [--run PATTERN]
 juleson dev lint [--fix] [--fast] [--timeout 5m]
 juleson dev fmt [--gofumpt]
@@ -312,25 +171,16 @@ juleson dev mod verify
 juleson dev mod vendor
 juleson dev mod graph
 juleson dev mod why PACKAGE
+juleson dev deps [path]
+juleson dev check-complexity [path]
 juleson dev check
 juleson dev install [--path DIR] [--skip-checks]
 juleson dev release --version VERSION
 ```
 
-## Completion
-
-```bash
-juleson completion bash
-juleson completion zsh
-juleson completion fish
-juleson completion powershell
-```
-
 ## Environment Variables
 
 - `JULES_API_KEY`: accepted directly by config loading and required for Jules API calls.
-- `GITHUB_TOKEN`: read by `juleson setup --non-interactive`, then saved to config.
-- `GEMINI_API_KEY`: read by `juleson ai-orchestrate --gemini-key` fallback. For
-  MCP Gemini tools, save `gemini.api_key` in `juleson.yaml`.
+- `GITHUB_TOKEN`: read by setup and used only for Jules-created PR context.
 
 Other settings should be configured in `juleson.yaml`.

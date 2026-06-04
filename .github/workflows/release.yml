@@ -19,7 +19,7 @@ permissions:
   artifact-metadata: write # For artifact metadata storage records
 
 env:
-  GO_VERSION: "1.25"
+  GO_VERSION: "1.26.4"
 
 jobs:
   # Pre-release validation
@@ -148,7 +148,7 @@ jobs:
             -o dist/juleson-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
             ./cmd/juleson
 
-      - name: Build jules-mcp
+      - name: Build jsn alias
         run: |
           EXT=""
           if [ "${{ matrix.goos }}" = "windows" ]; then
@@ -157,8 +157,8 @@ jobs:
           build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
             -ldflags="-s -w -X main.version=${{ needs.validate.outputs.version }} -X main.buildTime=${build_time} -X main.gitCommit=${{ github.sha }}" \
-            -o dist/jules-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
-            ./cmd/jules-mcp
+            -o dist/jsn-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} \
+            ./cmd/juleson
 
       - name: Package release assets
         run: |
@@ -168,13 +168,13 @@ jobs:
 
           if [ "$OS" = "windows" ]; then
               (cd dist && zip -q "juleson-${OS}-${ARCH}.zip" "juleson-${OS}-${ARCH}.exe")
-              (cd dist && zip -q "jules-mcp-${OS}-${ARCH}.zip" "jules-mcp-${OS}-${ARCH}.exe")
+              (cd dist && zip -q "jsn-${OS}-${ARCH}.zip" "jsn-${OS}-${ARCH}.exe")
           else
-              mkdir -p package/juleson package/jules-mcp
+              mkdir -p package/juleson package/jsn
               cp "dist/juleson-${OS}-${ARCH}" package/juleson/juleson
-              cp "dist/jules-mcp-${OS}-${ARCH}" package/jules-mcp/jules-mcp
+              cp "dist/jsn-${OS}-${ARCH}" package/jsn/jsn
               tar -C package/juleson -czf "dist/juleson-${OS}-${ARCH}.tar.gz" juleson
-              tar -C package/jules-mcp -czf "dist/jules-mcp-${OS}-${ARCH}.tar.gz" jules-mcp
+              tar -C package/jsn -czf "dist/jsn-${OS}-${ARCH}.tar.gz" jsn
           fi
 
       - name: Upload build artifacts
@@ -309,4 +309,4 @@ jobs:
       - name: Attest build provenance
         uses: actions/attest@v4
         with:
-          subject-path: "dist/juleson-linux-amd64,dist/jules-mcp-linux-amd64"
+          subject-path: "dist/juleson-linux-amd64,dist/jsn-linux-amd64"

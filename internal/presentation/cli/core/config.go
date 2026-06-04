@@ -42,7 +42,7 @@ func newConfigValidateCommand(cfg *config.Config) *cobra.Command {
 
 			if cfg.GitHub.Token == "" {
 				fmt.Fprintln(cmd.OutOrStdout(), "⚠️  GitHub token is missing.")
-				fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Run 'juleson github login' or set GITHUB_TOKEN environment variable.")
+				fmt.Fprintln(cmd.OutOrStdout(), "   Next step: Set GITHUB_TOKEN or github.token if you use Jules-created PR commands.")
 			} else {
 				fmt.Fprintln(cmd.OutOrStdout(), "✅ GitHub token is configured.")
 			}

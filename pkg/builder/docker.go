@@ -72,28 +72,6 @@ func (s *Service) DockerRunCLI(ctx context.Context, args []string) error {
 	return nil
 }
 
-// DockerRunMCP runs the MCP server in a Docker container
-func (s *Service) DockerRunMCP(ctx context.Context) error {
-	// Build first
-	if err := s.DockerBuild(ctx); err != nil {
-		return err
-	}
-
-	dockerArgs := []string{
-		"run", "--rm", "-it",
-		"-e", "JULES_API_KEY=" + os.Getenv("JULES_API_KEY"),
-		"-p", "8080:8080",
-		s.config.DockerImage,
-		"./" + s.config.BinaryMCP,
-	}
-
-	if err := s.runCommand(ctx, "docker", dockerArgs...); err != nil {
-		return fmt.Errorf("docker run MCP failed: %w", err)
-	}
-
-	return nil
-}
-
 // DockerPush pushes the Docker image to the registry
 func (s *Service) DockerPush(ctx context.Context) error {
 	// Build first

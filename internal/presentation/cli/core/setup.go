@@ -89,14 +89,14 @@ func runSetup(cmd *cobra.Command, args []string) error {
 	slog.Info("Validating configuration...")
 	if err := validateSetup(cfg); err != nil {
 		slog.Warn(fmt.Sprintf("Configuration validation found issues: %v", err))
-		slog.Debug("You can fix these later by running:\n  • juleson setup  (to rerun setup)\n  • juleson github login  (for GitHub issues)")
+		slog.Debug("You can fix these later by running:\n  • juleson setup  (to rerun setup)\n  • set GITHUB_TOKEN for Jules-created PR context")
 	} else {
 		logger.Success(slog.Default(), "Configuration is valid!")
 	}
 
 	// Success message
 	slog.Info("Setup Complete!")
-	slog.Debug("Next steps:\n  • Run 'juleson analyze' to analyze your current project\n  • Run 'juleson github repos' to list your repositories\n  • Run 'juleson sessions create \"your prompt\"' to start automation\n  • Run 'juleson help' to see all available commands")
+	slog.Debug("Next steps:\n  • Run 'juleson sources list' to inspect connected sources\n  • Run 'juleson sessions create \"your prompt\"' to start a session\n  • Run 'juleson mcp serve --version' to smoke-test MCP\n  • Run 'juleson help' to see all available commands")
 
 	return nil
 }
@@ -204,20 +204,20 @@ func setupGitHub(cfg *config.Config) error {
 			logger.Success(slog.Default(), "Using GITHUB_TOKEN from environment")
 			return nil
 		}
-		slog.Info("GitHub token not found. Skipping GitHub integration.\nYou can configure it later with: juleson github login")
+		slog.Info("GitHub token not found. Skipping Jules-created PR integration.\nYou can configure it later by setting GITHUB_TOKEN or github.token.")
 		return nil
 	}
 
 	// Interactive prompt
-	slog.Info("GitHub integration is optional but recommended for:\n  • Managing pull requests\n  • Connecting repositories")
+	slog.Info("GitHub integration is optional and used for Jules-created pull request context.")
 
 	install, _ := theme.Confirm("Configure GitHub integration now?", true)
 	if !install {
-		slog.Debug("Skipped GitHub integration\nTo configure later, run: juleson github login")
+		slog.Debug("Skipped GitHub integration. To configure later, set GITHUB_TOKEN or github.token.")
 		return nil
 	}
 
-	slog.Info("To integrate with GitHub, you need a Personal Access Token.\nCreate one at: https://github.com/settings/tokens\n\nRequired scopes:\n  • repo\n  • workflow\n  • read:org (optional)")
+	slog.Info("To inspect or merge Jules-created pull requests, you need a Personal Access Token.\nCreate one at: https://github.com/settings/tokens\n\nRequired scopes:\n  • repo")
 	token, _ := theme.InputSecret("Enter your GitHub Personal Access Token")
 	token = strings.TrimSpace(token)
 

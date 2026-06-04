@@ -4,8 +4,8 @@ This directory contains release installer scripts and script-level tests.
 
 ## Installers
 
-- `install.sh`: Linux and macOS installer for `juleson` and `jules-mcp`.
-- `install.ps1`: Windows installer for `juleson` and `jules-mcp`.
+- `install.sh`: Linux and macOS installer for `juleson` and the short `jsn` alias.
+- `install.ps1`: Windows installer for `juleson` and the short `jsn` alias.
 
 Linux and macOS:
 

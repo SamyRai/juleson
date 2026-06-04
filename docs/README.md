@@ -15,8 +15,8 @@ kept to repository essentials; user, operator, and architecture docs live here.
 - [Configuration](CONFIGURATION.md): config search paths, defaults, and environment variables.
 - [Jules API Notes](JULES_API.md): API resources used by this project and current lifecycle limits.
 - [Templates](TEMPLATES.md): built-in automation templates and custom template shape.
-- [GitHub Integration](GITHUB_INTEGRATION.md): GitHub CLI commands, token
-  requirements, and service layout.
+- [GitHub Boundary](GITHUB_INTEGRATION.md): Jules-created PR context and GitHub scope.
+- [MCP Server Usage](MCP_SERVER_USAGE.md): stdio server setup and tool scope.
 - [Testing Guide](TESTING_GUIDE.md): local and CI test commands.
 
 ## Architecture

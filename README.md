@@ -2,21 +2,23 @@
 
 Juleson is a Go command-line tool and MCP server for working with Google's Jules
 coding agent. It provides local commands for session management, source discovery,
-GitHub integration, template execution, project analysis, and development tasks.
+Jules-created pull request review, template management, and development tasks.
 The reusable Jules REST API client is available as `github.com/SamyRai/go-jules`.
 
-The repository contains two binaries:
+Release assets install two executable names:
 
 - `juleson`: user-facing CLI.
-- `builder`: internal build/test/release helper used by development workflows.
+- `jsn`: short alias for the same CLI.
 
-> **Note:** AI-driven orchestration, automation, and the Model Context Protocol (MCP) server have been moved to the [go-agent](../go-agent) repository.
+The repository also contains `builder`, an internal build/test/release helper.
+AI-driven orchestration and Gemini-backed planning live in
+[go-agent](../go-agent); Juleson keeps the Jules API/operator workflow.
 
 ## Requirements
 
-- Go 1.25 or newer for source builds.
+- Go 1.25.11 or newer for source builds. Release builds use Go 1.26.4.
 - A Jules API key for commands that call the Jules API.
-- A GitHub token for GitHub and Actions commands.
+- A GitHub token only when inspecting or merging Jules-created pull requests.
 
 ## Install
 
@@ -67,8 +69,8 @@ juleson setup --non-interactive
 Juleson looks for `juleson.yaml` in `./configs`, the current directory, `$HOME`,
 and `/etc/juleson`. It also loads `.env`, `$HOME/.env`, `$HOME/.juleson.env`,
 and `/etc/juleson/.env`. `JULES_API_KEY` is accepted directly from the
-environment. GitHub commands read their saved config values, except
-where a command documents a flag or setup-specific environment fallback.
+environment. GitHub configuration is used only for Jules-created pull request
+context.
 
 See [Configuration](docs/CONFIGURATION.md) and [Setup](docs/SETUP_GUIDE.md).
 
@@ -98,11 +100,12 @@ juleson official remote pull SESSION_ID
 juleson template list
 juleson template show test-generation
 
-# GitHub integration
-juleson github status
-juleson github current
-juleson github repos
+# Jules-created pull request context
 juleson pr list
+
+# MCP server
+juleson mcp serve --version
+juleson mcp serve
 
 # Development workflow for this repository
 juleson dev build --all
@@ -112,9 +115,16 @@ juleson dev check
 
 See [CLI Reference](docs/CLI_REFERENCE.md) for the command map and flags.
 
-## AI Agent & MCP Server
+## MCP Server
 
-The automation, AI orchestration, and Model Context Protocol (MCP) server are available in the dedicated **[go-agent](https://github.com/SamyRai/go-agent)** repository. `go-agent` builds upon `juleson`'s foundation to provide Gemini-backed planning, file patching, and advanced project analysis.
+Juleson serves MCP over stdio:
+
+```bash
+juleson mcp serve
+```
+
+Use `gh`, GitHub's CLI, or the official GitHub MCP server for general GitHub and
+Actions operations.
 
 ## Documentation
 

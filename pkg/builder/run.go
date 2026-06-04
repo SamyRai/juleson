@@ -29,20 +29,6 @@ func (s *Service) RunCLI(ctx context.Context, args []string) error {
 	return nil
 }
 
-// RunMCP runs the MCP server binary
-func (s *Service) RunMCP(ctx context.Context) error {
-	if err := s.BuildMCP(ctx); err != nil {
-		return fmt.Errorf("failed to build MCP: %w", err)
-	}
-
-	binaryPath := filepath.Join(s.config.BinDir, s.config.BinaryMCP)
-	if err := s.runCommand(ctx, binaryPath); err != nil {
-		return fmt.Errorf("failed to run MCP: %w", err)
-	}
-
-	return nil
-}
-
 // StartDev starts development mode with live reload (requires air)
 func (s *Service) StartDev(ctx context.Context) error {
 	// Check if air is installed

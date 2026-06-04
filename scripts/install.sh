@@ -125,7 +125,7 @@ download_and_extract() {
 }
 
 download_and_extract "juleson"
-download_and_extract "jules-mcp"
+download_and_extract "jsn"
 
 mkdir -p "$install_dir" 2>/dev/null || true
 
@@ -146,9 +146,9 @@ install_binary() {
 }
 
 install_binary "juleson"
-install_binary "jules-mcp"
+install_binary "jsn"
 
-echo "Installed juleson and jules-mcp to ${install_dir}"
+echo "Installed juleson and jsn to ${install_dir}"
 case ":$PATH:" in
 	*":${install_dir}:"*) ;;
 	*) echo "Add ${install_dir} to PATH before running juleson." ;;

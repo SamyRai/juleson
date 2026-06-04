@@ -37,18 +37,3 @@ var buildCLICmd = &cobra.Command{
 		fmt.Println("CLI binary built successfully")
 	},
 }
-
-var buildMCPCmd = &cobra.Command{
-	Use:   "build-mcp",
-	Short: "Build MCP server binary",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Building MCP server binary...")
-		ctx := context.Background()
-
-		if err := svc.BuildMCP(ctx); err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Println("MCP server binary built successfully")
-	},
-}

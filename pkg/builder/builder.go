@@ -7,13 +7,12 @@ import (
 	"os/exec"
 )
 
-// Config holds orchestrator configuration
+// Config holds builder configuration.
 type Config struct {
 	BinaryCLI    string
-	BinaryMCP    string
+	BinaryAlias  string
 	BinDir       string
 	CmdCLIDir    string
-	CmdMCPDir    string
 	CoverageFile string
 	CoverageHTML string
 	DockerImage  string
@@ -26,10 +25,9 @@ type Config struct {
 func DefaultConfig(version, buildDate, gitCommit string) *Config {
 	return &Config{
 		BinaryCLI:    "juleson",
-		BinaryMCP:    "jules-mcp",
+		BinaryAlias:  "jsn",
 		BinDir:       "bin",
 		CmdCLIDir:    "cmd/juleson",
-		CmdMCPDir:    "cmd/jules-mcp",
 		CoverageFile: "coverage.out",
 		CoverageHTML: "coverage.html",
 		DockerImage:  "juleson:latest",
@@ -62,7 +60,7 @@ type Service struct {
 	stderr io.Writer
 }
 
-// NewService creates a new orchestrator service
+// NewService creates a new builder service.
 func NewService(config *Config) *Service {
 	return &Service{
 		config: config,

@@ -26,7 +26,6 @@ func TestNewClient(t *testing.T) {
 
 		// Check that all services are initialized
 		assert.NotNil(t, client.Repositories)
-		assert.NotNil(t, client.Actions)
 		assert.NotNil(t, client.PullRequests)
 		assert.NotNil(t, client.Sessions)
 		assert.NotNil(t, client.Issues)

@@ -51,19 +51,6 @@ var dockerRunCLICmd = &cobra.Command{
 	},
 }
 
-var dockerRunMCPCmd = &cobra.Command{
-	Use:   "docker-run-mcp",
-	Short: "Run MCP server in Docker container",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Running MCP server in Docker container...")
-		ctx := context.Background()
-
-		if err := svc.DockerRunMCP(ctx); err != nil {
-			log.Fatal(err)
-		}
-	},
-}
-
 var dockerPushCmd = &cobra.Command{
 	Use:   "docker-push",
 	Short: "Push Docker image to registry",

@@ -7,7 +7,7 @@ https://jules.googleapis.com/v1alpha
 ```
 
 The public Go SDK is published as `github.com/SamyRai/go-jules`. Local
-filesystem and `git apply` operations live in Juleson's `internal/julesops` so
+filesystem and `git apply` operations live in Juleson's internal workspace code so
 the SDK remains reusable without app side effects.
 
 Official references:
@@ -62,7 +62,7 @@ The SDK exposes documented Jules API resources plus pure helpers for embedded
 artifact payloads. It does not call undocumented artifact `/content`,
 `/download`, `/analyze`, or activity `/search` endpoints. Juleson CLI and MCP
 commands layer local download, preview, backup, and patch application behavior on
-top of the SDK through `internal/julesops`.
+top of the SDK through `internal/jules/workspace`.
 
 ## Authentication
 
@@ -150,8 +150,8 @@ juleson sessions apply SESSION_ID ./repo --confirm
 juleson sessions download SESSION_ID ./artifacts
 ```
 
-MCP tools also expose `review_session`, `preview_session_changes`,
-`list_session_artifacts`, and `apply_session_patches`.
+MCP tools also expose `review_session`, `list_session_artifacts`, and
+`get_session_outputs`.
 
 `sessions review` and MCP `review_session` are read-only operator snapshots.
 They combine session state, latest plan, documented outputs, artifact manifests,
@@ -172,11 +172,11 @@ sets `--allow-base-mismatch` or `allow_base_mismatch=true`.
 `verify_session_changes` detects Go (`go test`), Node/Yarn (`yarn test`),
 Python/uv (`uv run pytest`), and Rust (`cargo test`) from project files. The
 explicit command escape hatch is opt-in and only runs when supplied by the user
-or MCP caller.
+or caller.
 
 `sessions outputs` and `get_session_outputs` surface documented pull request
-outputs. Juleson reports PR URLs and leaves CI remediation to the existing
-GitHub/Actions integration instead of duplicating Jules CI auto-fix logic.
+outputs. Juleson reports PR URLs and leaves general GitHub and Actions handling
+to `gh`, GitHub's CLI, or the official GitHub MCP server.
 
 ## Unsupported Or Deferred Jules Features
 

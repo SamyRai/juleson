@@ -2,10 +2,10 @@ package cli
 
 import (
 	"github.com/SamyRai/juleson/internal/config"
-	"github.com/SamyRai/juleson/internal/presentation/cli/actions"
 	"github.com/SamyRai/juleson/internal/presentation/cli/core"
 	"github.com/SamyRai/juleson/internal/presentation/cli/dev"
 	"github.com/SamyRai/juleson/internal/presentation/cli/github"
+	mcpcli "github.com/SamyRai/juleson/internal/presentation/cli/mcp"
 	"github.com/SamyRai/juleson/internal/presentation/cli/sessions"
 	"github.com/SamyRai/juleson/internal/presentation/views"
 	"github.com/SamyRai/juleson/internal/services"
@@ -52,7 +52,7 @@ func (a *App) setupCommands() {
 	a.rootCmd = &cobra.Command{
 		Use:     "juleson",
 		Short:   "Jules automation CLI tool",
-		Long:    "A comprehensive CLI tool for automating project tasks using Google's Jules AI coding agent",
+		Long:    "A CLI and MCP server for operating Google's Jules coding-agent sessions",
 		Version: core.Version,
 	}
 	a.rootCmd.SetVersionTemplate(core.VersionText())
@@ -99,7 +99,6 @@ Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
 	// Vertical Slices
 	a.rootCmd.AddCommand(sessions.NewSessionsCommand(a.container.Config()))
 	a.rootCmd.AddCommand(github.NewPRCommand(a.container.Config()))
-	a.rootCmd.AddCommand(github.NewGitHubCommand(a.container.Config()))
-	a.rootCmd.AddCommand(actions.NewActionsCommand(a.container.Config()))
 	a.rootCmd.AddCommand(dev.NewDevCommand())
+	a.rootCmd.AddCommand(mcpcli.NewCommand(a.container.Config()))
 }

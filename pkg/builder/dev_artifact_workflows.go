@@ -78,7 +78,7 @@ func (s *Service) InstallWithResult(ctx context.Context, options InstallOptions)
 		}
 	}
 
-	installer := build.NewInstaller(s.config.BinDir, []string{s.config.BinaryCLI, s.config.BinaryMCP})
+	installer := build.NewInstaller(s.config.BinDir, []string{s.config.BinaryCLI, s.config.BinaryAlias})
 	if options.Path != "" {
 		return installer.InstallTo(ctx, options.Path)
 	}

@@ -11,7 +11,7 @@ var (
 
 // AddCommands adds all commands to the root command
 func AddCommands(rootCmd *cobra.Command, ver, build, commit string) {
-	// Initialize the orchestrator service
+	// Initialize the builder service.
 	config := builder.DefaultConfig(ver, build, commit)
 	svc = builder.NewService(config)
 
@@ -21,7 +21,6 @@ func AddCommands(rootCmd *cobra.Command, ver, build, commit string) {
 	// Build commands
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(buildCLICmd)
-	rootCmd.AddCommand(buildMCPCmd)
 
 	// Clean command
 	rootCmd.AddCommand(cleanCmd)
@@ -44,7 +43,6 @@ func AddCommands(rootCmd *cobra.Command, ver, build, commit string) {
 
 	// Run commands
 	rootCmd.AddCommand(runCLICmd)
-	rootCmd.AddCommand(runMCPCmd)
 
 	// Development command
 	rootCmd.AddCommand(devCmd)
@@ -56,7 +54,6 @@ func AddCommands(rootCmd *cobra.Command, ver, build, commit string) {
 	rootCmd.AddCommand(dockerBuildCmd)
 	rootCmd.AddCommand(dockerRunCmd)
 	rootCmd.AddCommand(dockerRunCLICmd)
-	rootCmd.AddCommand(dockerRunMCPCmd)
 	rootCmd.AddCommand(dockerPushCmd)
 	rootCmd.AddCommand(dockerComposeUpCmd)
 	rootCmd.AddCommand(dockerComposeDownCmd)

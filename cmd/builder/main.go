@@ -16,9 +16,9 @@ var (
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "orchestrator",
-		Short: "Internal CLI tool for project orchestration",
-		Long:  `A CLI tool that provides orchestration commands previously handled by Makefile`,
+		Use:   "builder",
+		Short: "Internal CLI tool for project build workflows",
+		Long:  `A CLI tool that provides build, test, install, and release workflows.`,
 	}
 
 	// Add all commands

@@ -4,7 +4,21 @@ The project is pre-1.0. Changes are tracked here between tagged releases.
 
 ## Unreleased
 
-No unreleased changes.
+### Added in v0.2.0
+
+- MCP server support is restored through the official Go MCP SDK and served by
+  `juleson mcp serve`.
+- Release builds now include `jsn`, a short alias for the same CLI.
+- MCP tools cover Jules source/session/activity operations, read-only review
+  helpers, and repository developer build/test/check commands.
+
+### Changed in v0.2.0
+
+- General GitHub and Actions operations are no longer owned by Juleson. Use
+  `gh`, GitHub's CLI, or the official GitHub MCP server for that scope.
+- Juleson keeps only Jules-created pull request context through `juleson pr`.
+- Release, install, Docker, CI, and docs flows now use `juleson` plus `jsn`
+  instead of a separate `jules-mcp` binary.
 
 ## v0.1.1 - 2026-05-27
 

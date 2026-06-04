@@ -71,15 +71,6 @@ func (s *Service) BuildCLI(ctx context.Context) error {
 	return err
 }
 
-// BuildMCP builds the MCP server binary.
-func (s *Service) BuildMCP(ctx context.Context) error {
-	_, err := s.BuildWithResults(ctx, BuildOptions{
-		Target:  "mcp",
-		Version: s.config.Version,
-	})
-	return err
-}
-
 func (s *Service) ReleaseWithResults(ctx context.Context, version string) (*BuildSummary, error) {
 	platforms := []struct {
 		goos   string
@@ -127,12 +118,12 @@ func (s *Service) selectedBinaries(target string) []binaryTarget {
 	switch target {
 	case "cli":
 		return []binaryTarget{{name: s.config.BinaryCLI, path: "./" + s.config.CmdCLIDir}}
-	case "mcp":
-		return []binaryTarget{{name: s.config.BinaryMCP, path: "./" + s.config.CmdMCPDir}}
+	case "alias":
+		return []binaryTarget{{name: s.config.BinaryAlias, path: "./" + s.config.CmdCLIDir}}
 	default:
 		return []binaryTarget{
 			{name: s.config.BinaryCLI, path: "./" + s.config.CmdCLIDir},
-			{name: s.config.BinaryMCP, path: "./" + s.config.CmdMCPDir},
+			{name: s.config.BinaryAlias, path: "./" + s.config.CmdCLIDir},
 		}
 	}
 }

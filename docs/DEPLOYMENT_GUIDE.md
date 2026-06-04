@@ -7,21 +7,21 @@ configuration.
 
 ```bash
 go mod download
-go build -o bin/orchestrator ./cmd/orchestrator
-./bin/orchestrator build
+go build -o bin/builder ./cmd/builder
+./bin/builder build
 ```
 
-Individual binaries:
+Individual executable names:
 
 ```bash
 go build -o bin/juleson ./cmd/juleson
-go build -o bin/jules-mcp ./cmd/jules-mcp
+go build -o bin/jsn ./cmd/juleson
 ```
 
 ## Install Locally
 
 ```bash
-./bin/orchestrator install
+./bin/builder install
 ```
 
 Or:
@@ -32,15 +32,9 @@ juleson dev install --path "$HOME/.local/bin"
 
 ## Release Assets
 
-The release workflow builds:
+The release workflow builds matching `juleson` and `jsn` assets for Linux,
+macOS, and Windows, plus:
 
-- `juleson-linux-amd64.tar.gz`
-- `juleson-linux-arm64.tar.gz`
-- `juleson-darwin-amd64.tar.gz`
-- `juleson-darwin-arm64.tar.gz`
-- `juleson-windows-amd64.zip`
-- `juleson-windows-arm64.zip`
-- matching `jules-mcp` assets for each target
 - `install.sh`
 - `install.ps1`
 - `checksums.txt`
@@ -63,22 +57,20 @@ Use the repository `Dockerfile` for container builds:
 docker build -t juleson:local .
 ```
 
-Provide credentials through environment variables for `JULES_API_KEY` or through
-mounted config files for full GitHub and Gemini settings. Do not bake API keys
-into images.
+Provide credentials through environment variables such as `JULES_API_KEY` or
+through mounted config files. Do not bake API keys into images.
 
 ## MCP Client Deployment
 
-Install `jules-mcp` on the machine running the MCP client. Configure the client
-with an absolute binary path. `JULES_API_KEY` can be supplied in the client
-environment; GitHub and Gemini MCP tools require `github.token` and
-`gemini.api_key` in `juleson.yaml`:
+Install `juleson` on the machine running the MCP client. Configure the client
+with an absolute binary path and `mcp serve` arguments:
 
 ```json
 {
   "mcpServers": {
     "juleson": {
-      "command": "/usr/local/bin/jules-mcp",
+      "command": "/usr/local/bin/juleson",
+      "args": ["mcp", "serve"],
       "env": {
         "JULES_API_KEY": "..."
       }
@@ -92,6 +84,7 @@ environment; GitHub and Gemini MCP tools require `github.token` and
 - `go mod tidy && git diff --exit-code go.mod go.sum`
 - `go test ./...`
 - `juleson dev build --all`
+- `juleson mcp serve --version`
 - `markdownlint '**/*.md'`
 - [Changelog](CHANGELOG.md) updated
 - Release tag uses semantic version format

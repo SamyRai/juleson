@@ -21,7 +21,6 @@ type Client struct {
 
 	// Specialized services - each responsible for a specific domain
 	Repositories *RepositoryService
-	Actions      *ActionsService
 	PullRequests *PullRequestService
 	Sessions     *SessionService
 	Issues       *IssuesService
@@ -46,7 +45,6 @@ func NewClient(token string, julesClient *jules.Client) *Client {
 
 	// Initialize specialized services with proper dependency injection
 	client.Repositories = NewRepositoryService(client, julesClient)
-	client.Actions = NewActionsService(client)
 	client.PullRequests = NewPullRequestService(client, julesClient)
 	client.Sessions = NewSessionService(client, julesClient, client.Repositories)
 	client.Issues = NewIssuesService(client)

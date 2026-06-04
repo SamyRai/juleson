@@ -20,26 +20,25 @@ func TestRunModuleMaintenanceRejectsUnknownOperation(t *testing.T) {
 
 func TestSelectedBinariesUsesConfiguredTargets(t *testing.T) {
 	service := NewService(&Config{
-		BinaryCLI: "cli-bin",
-		BinaryMCP: "mcp-bin",
-		CmdCLIDir: "cmd/cli",
-		CmdMCPDir: "cmd/mcp",
+		BinaryCLI:   "cli-bin",
+		BinaryAlias: "short-bin",
+		CmdCLIDir:   "cmd/cli",
 	})
 
 	tests := map[string][]binaryTarget{
 		"cli": {
 			{name: "cli-bin", path: "./cmd/cli"},
 		},
-		"mcp": {
-			{name: "mcp-bin", path: "./cmd/mcp"},
+		"alias": {
+			{name: "short-bin", path: "./cmd/cli"},
 		},
 		"all": {
 			{name: "cli-bin", path: "./cmd/cli"},
-			{name: "mcp-bin", path: "./cmd/mcp"},
+			{name: "short-bin", path: "./cmd/cli"},
 		},
 		"": {
 			{name: "cli-bin", path: "./cmd/cli"},
-			{name: "mcp-bin", path: "./cmd/mcp"},
+			{name: "short-bin", path: "./cmd/cli"},
 		},
 	}
 

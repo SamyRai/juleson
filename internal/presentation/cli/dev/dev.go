@@ -65,7 +65,7 @@ func newBuildCommand() *cobra.Command {
 	var (
 		all     bool
 		cli     bool
-		mcp     bool
+		alias   bool
 		race    bool
 		version string
 		goos    string
@@ -83,8 +83,8 @@ func newBuildCommand() *cobra.Command {
 			if cli {
 				target = "cli"
 			}
-			if mcp {
-				target = "mcp"
+			if alias {
+				target = "alias"
 			}
 			if all {
 				target = "all"
@@ -106,8 +106,8 @@ func newBuildCommand() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&all, "all", false, "Build all binaries")
-	cmd.Flags().BoolVar(&cli, "cli", false, "Build CLI only")
-	cmd.Flags().BoolVar(&mcp, "mcp", false, "Build MCP server only")
+	cmd.Flags().BoolVar(&cli, "cli", false, "Build juleson only")
+	cmd.Flags().BoolVar(&alias, "alias", false, "Build jsn alias only")
 	cmd.Flags().BoolVar(&race, "race", false, "Enable race detection")
 	cmd.Flags().StringVar(&version, "version", "dev", "Version to embed in binaries")
 	cmd.Flags().StringVar(&goos, "goos", runtime.GOOS, "Target operating system")

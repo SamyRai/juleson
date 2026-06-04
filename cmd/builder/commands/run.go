@@ -21,16 +21,3 @@ var runCLICmd = &cobra.Command{
 		}
 	},
 }
-
-var runMCPCmd = &cobra.Command{
-	Use:   "run-mcp",
-	Short: "Run MCP server binary",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Running MCP server...")
-		ctx := context.Background()
-
-		if err := svc.RunMCP(ctx); err != nil {
-			log.Fatal(err)
-		}
-	},
-}

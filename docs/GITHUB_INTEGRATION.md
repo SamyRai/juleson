@@ -1,68 +1,44 @@
-# GitHub Integration
+# GitHub Boundary
 
-Juleson uses `github.com/google/go-github/v76` for repository, pull request,
-Actions, and session-related GitHub operations.
+Juleson is not a general GitHub or Actions client. Use `gh`, GitHub's CLI, or
+the official GitHub MCP server for repository search, workflow runs, jobs, logs,
+artifacts, caches, and general pull request management.
+
+Juleson keeps GitHub support only where it directly belongs to a Jules workflow:
+
+- inferring a connected Jules source from the local git `origin` remote
+- listing or inspecting pull requests created by Jules sessions
+- merging a Jules-created pull request when the session output identifies one
+- showing GitHub links embedded in Jules session outputs
 
 ## Configure
 
-Set a GitHub token through the setup command or by writing `github.token` in
+Set a GitHub token through setup or by writing `github.token` in
 `juleson.yaml`:
 
 ```bash
 export GITHUB_TOKEN="..."
 juleson setup --non-interactive
-juleson github status
 ```
 
-`juleson github login` can also validate a token interactively and save it to the
-config file. GitHub CLI commands and MCP GitHub tools read the saved config
-value. Required scopes depend on the operation:
-
-- repository read access for repository discovery
-- pull request write access for merge operations
-- workflow access for Actions commands
+Pull request commands require repository access to the target Jules-created PR.
 
 ## CLI Commands
 
 ```bash
-juleson github login
-juleson github status
-juleson github repos
-juleson github current
-juleson github search "org:example language:go"
-
 juleson pr list
 juleson pr get SESSION_ID
 juleson pr diff SESSION_ID
 juleson pr merge SESSION_ID --method squash
-
-juleson actions workflows list owner/repo
-juleson actions runs list owner/repo
-juleson actions jobs list RUN_ID owner/repo
-juleson actions artifacts list owner/repo
-juleson actions cache list owner/repo
 ```
 
 ## Package Layout
 
-`internal/github` is split by responsibility:
+`internal/github` is scoped to Jules workflow context:
 
 - `client.go`: client facade and shared dependencies.
-- `repositories.go`: repository listing, search, and current-repo detection.
-- `pullrequests.go`: PR lookup, diff, and merge operations.
-- `actions.go`: workflows, runs, jobs, artifacts, and caches.
+- `repositories.go`: repository metadata used by source/session helpers.
+- `pullrequests.go`: Jules-created PR lookup, diff, and merge operations.
 - `sessions.go`: Jules session helpers with GitHub context.
 - `git.go`: remote URL parsing.
 - `types.go`: domain types.
-
-## MCP Tools
-
-GitHub MCP tools are registered only when a Jules client is available and
-`github.token` is set in config:
-
-- `github_create_session_from_repo`
-- `github_merge_session_pr`
-- `github_list_repos`
-- `github_current_repo`
-- `github_list_connected_repos`
-- `github_search_repos`

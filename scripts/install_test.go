@@ -38,7 +38,7 @@ func TestInstallShellHelpAndSyntax(t *testing.T) {
 	}
 }
 
-func TestInstallShellInstallsBothBinariesFromLocalRelease(t *testing.T) {
+func TestInstallShellInstallsJulesonAndAliasFromLocalRelease(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping installer E2E test in short mode")
 	}
@@ -52,7 +52,7 @@ func TestInstallShellInstallsBothBinariesFromLocalRelease(t *testing.T) {
 	}
 
 	releaseDir := t.TempDir()
-	for _, binary := range []string{"juleson", "jules-mcp"} {
+	for _, binary := range []string{"juleson", "jsn"} {
 		asset := fmt.Sprintf("%s-%s-%s.tar.gz", binary, goos, goarch)
 		if err := writeTarGz(filepath.Join(releaseDir, asset), binary, []byte("#!/bin/sh\necho "+binary+"\n")); err != nil {
 			t.Fatal(err)
@@ -70,7 +70,7 @@ func TestInstallShellInstallsBothBinariesFromLocalRelease(t *testing.T) {
 		t.Fatalf("install.sh failed: %v\n%s", err, output)
 	}
 
-	for _, binary := range []string{"juleson", "jules-mcp"} {
+	for _, binary := range []string{"juleson", "jsn"} {
 		path := filepath.Join(installDir, binary)
 		info, err := os.Stat(path)
 		if err != nil {
@@ -118,9 +118,9 @@ func TestReleaseWorkflowPublishesInstallAssets(t *testing.T) {
 		"cp scripts/install.sh dist/install.sh",
 		"cp scripts/install.ps1 dist/install.ps1",
 		"juleson-${OS}-${ARCH}.tar.gz",
-		"jules-mcp-${OS}-${ARCH}.tar.gz",
+		"jsn-${OS}-${ARCH}.tar.gz",
 		"juleson-${OS}-${ARCH}.zip",
-		"jules-mcp-${OS}-${ARCH}.zip",
+		"jsn-${OS}-${ARCH}.zip",
 		"- goos: windows\n            goarch: arm64",
 		"github.com/SamyRai/juleson@${{ needs.validate.outputs.version }}",
 		"-X main.buildTime=${build_time}",
