@@ -127,7 +127,7 @@ func (r *toolRegistry) register(server *mcp.Server) {
 
 func (r *toolRegistry) client() (*jules.Client, error) {
 	if r.cfg.Jules.APIKey == "" {
-		return nil, fmt.Errorf("Jules API key is not configured; set jules.api_key or JULES_API_KEY")
+		return nil, fmt.Errorf("jules API key is not configured; set jules.api_key or JULES_API_KEY")
 	}
 	return core.NewJulesClient(r.cfg), nil
 }
@@ -158,8 +158,8 @@ func (r *toolRegistry) version(context.Context, *mcp.CallToolRequest, emptyInput
 }
 
 type configStatusOutput struct {
-	JulesAPIKeyConfigured bool   `json:"jules_api_key_configured"`
 	JulesBaseURL          string `json:"jules_base_url"`
+	JulesAPIKeyConfigured bool   `json:"jules_api_key_configured"`
 	GitHubTokenConfigured bool   `json:"github_token_configured"`
 }
 
@@ -204,8 +204,8 @@ func (r *toolRegistry) getSource(ctx context.Context, _ *mcp.CallToolRequest, in
 
 type listSessionsInput struct {
 	Filter    string `json:"filter,omitempty"`
-	PageSize  int    `json:"page_size,omitempty"`
 	PageToken string `json:"page_token,omitempty"`
+	PageSize  int    `json:"page_size,omitempty"`
 }
 
 func (r *toolRegistry) listSessions(ctx context.Context, _ *mcp.CallToolRequest, in listSessionsInput) (*mcp.CallToolResult, *jules.SessionsResponse, error) {
@@ -239,13 +239,13 @@ func (r *toolRegistry) getSession(ctx context.Context, _ *mcp.CallToolRequest, i
 }
 
 type createSessionInput struct {
-	Prompt              string `json:"prompt"`
-	SourceID            string `json:"source_id,omitempty"`
-	NoSource            bool   `json:"no_source,omitempty"`
-	Title               string `json:"title,omitempty"`
-	StartingBranch      string `json:"starting_branch,omitempty"`
-	RequirePlanApproval bool   `json:"require_plan_approval,omitempty"`
-	AutomationMode      string `json:"automation_mode,omitempty"`
+	Prompt              string  `json:"prompt"`
+	SourceID            *string `json:"source_id,omitempty"`
+	Title               *string `json:"title,omitempty"`
+	StartingBranch      *string `json:"starting_branch,omitempty"`
+	AutomationMode      *string `json:"automation_mode,omitempty"`
+	NoSource            bool    `json:"no_source,omitempty"`
+	RequirePlanApproval bool    `json:"require_plan_approval,omitempty"`
 }
 
 func (r *toolRegistry) createSession(ctx context.Context, _ *mcp.CallToolRequest, in createSessionInput) (*mcp.CallToolResult, *jules.Session, error) {
@@ -255,19 +255,20 @@ func (r *toolRegistry) createSession(ctx context.Context, _ *mcp.CallToolRequest
 	}
 	req := &jules.CreateSessionRequest{
 		Prompt:              in.Prompt,
-		Title:               in.Title,
+		Title:               optionalString(in.Title),
 		RequirePlanApproval: in.RequirePlanApproval,
-		AutomationMode:      jules.AutomationMode(in.AutomationMode),
+		AutomationMode:      jules.AutomationMode(optionalString(in.AutomationMode)),
 	}
 	if !in.NoSource {
-		if in.SourceID == "" {
+		sourceID := optionalString(in.SourceID)
+		if sourceID == "" {
 			return nil, nil, fmt.Errorf("source_id is required unless no_source=true")
 		}
 		req.SourceContext = &jules.SourceContext{
-			Source: in.SourceID,
+			Source: sourceID,
 		}
-		if in.StartingBranch != "" {
-			req.SourceContext.GithubRepoContext = &jules.GithubRepoContext{StartingBranch: in.StartingBranch}
+		if startingBranch := optionalString(in.StartingBranch); startingBranch != "" {
+			req.SourceContext.GithubRepoContext = &jules.GithubRepoContext{StartingBranch: startingBranch}
 		}
 	}
 	session, err := client.Sessions().Create(ctx, req)
@@ -280,8 +281,8 @@ type confirmSessionInput struct {
 }
 
 type actionOutput struct {
-	OK      bool   `json:"ok"`
 	Message string `json:"message"`
+	OK      bool   `json:"ok"`
 }
 
 func (r *toolRegistry) approvePlan(ctx context.Context, _ *mcp.CallToolRequest, in confirmSessionInput) (*mcp.CallToolResult, actionOutput, error) {
@@ -477,33 +478,33 @@ func (r *toolRegistry) devBuild(ctx context.Context, _ *mcp.CallToolRequest, in 
 }
 
 type devTestInput struct {
+	RunPattern     *string  `json:"run_pattern,omitempty"`
+	SkipPattern    *string  `json:"skip_pattern,omitempty"`
+	Shuffle        *string  `json:"shuffle,omitempty"`
+	Packages       []string `json:"packages,omitempty"`
+	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
 	Verbose        bool     `json:"verbose,omitempty"`
 	Race           bool     `json:"race,omitempty"`
 	Cover          bool     `json:"cover,omitempty"`
 	Short          bool     `json:"short,omitempty"`
-	RunPattern     string   `json:"run_pattern,omitempty"`
-	SkipPattern    string   `json:"skip_pattern,omitempty"`
 	FailFast       bool     `json:"fail_fast,omitempty"`
-	Shuffle        string   `json:"shuffle,omitempty"`
-	Packages       []string `json:"packages,omitempty"`
-	TimeoutSeconds int      `json:"timeout_seconds,omitempty"`
 }
 
 func (r *toolRegistry) devTest(ctx context.Context, _ *mcp.CallToolRequest, in devTestInput) (*mcp.CallToolResult, *build.TestResult, error) {
-	config := builder.DefaultTestConfig()
-	config.Verbose = in.Verbose
-	config.Race = in.Race
-	config.Cover = in.Cover
-	config.Short = in.Short
-	config.RunPattern = in.RunPattern
-	config.SkipPattern = in.SkipPattern
-	config.FailFast = in.FailFast
-	config.Shuffle = in.Shuffle
-	config.Packages = in.Packages
+	testConfig := builder.DefaultTestConfig()
+	testConfig.Verbose = in.Verbose
+	testConfig.Race = in.Race
+	testConfig.Cover = in.Cover
+	testConfig.Short = in.Short
+	testConfig.RunPattern = optionalString(in.RunPattern)
+	testConfig.SkipPattern = optionalString(in.SkipPattern)
+	testConfig.FailFast = in.FailFast
+	testConfig.Shuffle = optionalString(in.Shuffle)
+	testConfig.Packages = in.Packages
 	if in.TimeoutSeconds > 0 {
-		config.Timeout = time.Duration(in.TimeoutSeconds) * time.Second
+		testConfig.Timeout = time.Duration(in.TimeoutSeconds) * time.Second
 	}
-	result := builder.NewService(builder.DefaultConfig("dev", "", "")).RunTestsWithResult(ctx, config)
+	result := builder.NewService(builder.DefaultConfig("dev", "", "")).RunTestsWithResult(ctx, testConfig)
 	return nil, result, result.Error
 }
 
@@ -515,15 +516,22 @@ func (r *toolRegistry) devCheck(ctx context.Context, _ *mcp.CallToolRequest, in 
 	if err := requireConfirm(in.Confirm, "dev_check"); err != nil {
 		return nil, nil, err
 	}
-	config := builder.DefaultTestConfig()
-	config.Cover = true
-	config.CoverProfile = "coverage.out"
+	testConfig := builder.DefaultTestConfig()
+	testConfig.Cover = true
+	testConfig.CoverProfile = "coverage.out"
 	summary, err := builder.NewService(builder.DefaultConfig("dev", "", "")).RunQualityChecks(ctx, builder.QualityOptions{
 		Format:     true,
 		Lint:       true,
 		Test:       true,
-		TestConfig: config,
+		TestConfig: testConfig,
 		Build:      true,
 	})
 	return nil, summary, err
+}
+
+func optionalString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
