@@ -12,6 +12,7 @@ the SDK remains reusable without app side effects.
 
 Official references:
 
+- [Jules API overview](https://jules.google/docs/api/)
 - [Sessions](https://jules.google/docs/api/reference/sessions/)
 - [Activities](https://jules.google/docs/api/reference/activities/)
 - [Sources](https://jules.google/docs/api/reference/sources/)
@@ -118,10 +119,10 @@ endpoint. Use the Jules web UI to cancel a running session.
 
 ## Activity Filtering
 
-The activity list endpoint supports pagination. Although some Jules docs show a
-`createTime` query parameter, live API responses can reject it as an unknown
-field. Juleson therefore performs `createTime`, type, status, plan, and artifact
-filtering client-side after fetching activities.
+The activity list endpoint supports pagination. Current Jules docs show a
+`createTime` query parameter, but live API responses have rejected it as an
+unknown field. Juleson therefore performs `createTime`, type, status, plan, and
+artifact filtering client-side after fetching activities.
 
 For immutable activity streams, SDK callers can use `ListActivitiesSince` with a
 stored `createTime` cursor and `ActivityCursor` to compute the next cursor from a

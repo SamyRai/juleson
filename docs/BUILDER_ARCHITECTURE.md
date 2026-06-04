@@ -62,6 +62,6 @@ juleson dev release
 
 ## Orchestration Boundary
 
-Gemini-backed planning, autonomous file patching, and broader agent loops live
-in `go-agent`. Juleson stays focused on Jules API operator workflows, session
-artifacts, patch review, and local development helpers.
+Broader AI orchestration and autonomous agent loops live outside this module.
+Juleson stays focused on Jules API operator workflows, session artifacts, patch
+review, MCP, and local development helpers.

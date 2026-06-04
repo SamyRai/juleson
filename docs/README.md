@@ -2,6 +2,8 @@
 
 This directory is the main documentation set for Juleson. Root-level Markdown is
 kept to repository essentials; user, operator, and architecture docs live here.
+These files are also synchronized to the GitHub Wiki for navigation, but this
+directory remains the source of truth.
 
 ## Start Here
 
@@ -32,8 +34,13 @@ kept to repository essentials; user, operator, and architecture docs live here.
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 
+## Wiki Publishing
+
+The GitHub Wiki is a flat-page mirror of this directory. Update docs here first,
+then sync the wiki pages and sidebar from the committed Markdown.
+
 ## External References
 
-- [Jules API](https://developers.google.com/jules/api)
+- [Jules API](https://jules.google/docs/api/)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk)

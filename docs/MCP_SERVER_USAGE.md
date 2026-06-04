@@ -1,6 +1,7 @@
 # MCP Server Usage
 
-Juleson serves MCP over stdio with the official Go MCP SDK.
+Juleson serves MCP over stdio with the official Go MCP SDK and the current
+Model Context Protocol server shape used by command-line MCP clients.
 
 ## Start The Server
 

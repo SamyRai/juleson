@@ -4,6 +4,10 @@ The project is pre-1.0. Changes are tracked here between tagged releases.
 
 ## Unreleased
 
+- Documentation and metadata updates for the `v0.2.0` release.
+
+## v0.2.0 - 2026-06-04
+
 ### Added in v0.2.0
 
 - MCP server support is restored through the official Go MCP SDK and served by

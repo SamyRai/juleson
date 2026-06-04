@@ -1,6 +1,7 @@
 # Scripts
 
-This directory contains release installer scripts and script-level tests.
+This directory contains release installer scripts and script-level tests. It is a
+script-local note; the canonical install documentation lives under `docs/`.
 
 ## Installers
 

@@ -1,9 +1,10 @@
 # Juleson
 
-Juleson is a Go command-line tool and MCP server for working with Google's Jules
-coding agent. It provides local commands for session management, source discovery,
-Jules-created pull request review, template management, and development tasks.
-The reusable Jules REST API client is available as `github.com/SamyRai/go-jules`.
+Juleson is a Go command-line tool and MCP server for operating Google's Jules
+coding-agent sessions. It provides local commands for source discovery, session
+management, Jules-created pull request review, template management, and
+development tasks. The reusable Jules REST API client is available as
+`github.com/SamyRai/go-jules`.
 
 Release assets install two executable names:
 
@@ -11,8 +12,8 @@ Release assets install two executable names:
 - `jsn`: short alias for the same CLI.
 
 The repository also contains `builder`, an internal build/test/release helper.
-AI-driven orchestration and Gemini-backed planning live in
-[go-agent](../go-agent); Juleson keeps the Jules API/operator workflow.
+Juleson keeps the Jules API, operator workflow, and MCP server in this module;
+general AI orchestration belongs outside this repository.
 
 ## Requirements
 
@@ -141,6 +142,9 @@ Actions operations.
 - [Roadmap](docs/ROADMAP.md)
 - [Changelog](docs/CHANGELOG.md)
 
+The same documentation set is published to the project Wiki for GitHub-native
+navigation. The repository `docs/` directory remains the source of truth.
+
 ## Development
 
 ```bash
@@ -167,7 +171,8 @@ application in internal app code.
 
 The CI workflow runs formatting, module consistency, tests, linting, security
 scans, and builds on Linux, macOS, and Windows. Markdown-only changes are ignored
-by CI.
+by CI, so documentation-only changes should be checked locally with
+`markdownlint '**/*.md'`.
 
 ## License
 
