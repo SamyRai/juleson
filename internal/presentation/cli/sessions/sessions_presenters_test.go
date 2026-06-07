@@ -1,9 +1,14 @@
 package sessions
 
 import (
+	"bytes"
+	"io"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/SamyRai/go-jules"
+	"github.com/SamyRai/juleson/internal/config"
 	julessessions "github.com/SamyRai/juleson/internal/jules/sessions"
 	"github.com/SamyRai/juleson/internal/presentation/views"
 )
@@ -64,5 +69,39 @@ func TestCLIWakePolicyUsesConfiguredDefault(t *testing.T) {
 	}
 	if got != julessessions.WakePolicyActionable {
 		t.Fatalf("cliWakePolicy = %q, want %q", got, julessessions.WakePolicyActionable)
+	}
+}
+
+func TestPreviewGitPatch_Fallback(t *testing.T) {
+	cfg := &config.Config{
+		Diff: config.DiffConfig{
+			ForceNative: true, // Bypass external pagers
+		},
+	}
+	patch := &jules.GitPatch{
+		UnidiffPatch: "--- a/test.txt\n+++ b/test.txt\n@@ -1 +1 @@\n-old\n+new\n",
+	}
+
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	err := previewGitPatch(cfg, patch)
+
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	if err != nil {
+		t.Fatalf("previewGitPatch failed: %v", err)
+	}
+	output := buf.String()
+	if !strings.Contains(output, "Git Patch") {
+		t.Errorf("Expected 'Git Patch' in output, got: %s", output)
+	}
+	if !strings.Contains(output, "+new") {
+		t.Errorf("Expected diff content '+new' in output")
 	}
 }
