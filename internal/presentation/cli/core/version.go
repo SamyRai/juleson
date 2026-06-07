@@ -27,22 +27,47 @@ var versionCmd = &cobra.Command{
 	RunE:  runVersion,
 }
 
+// VersionInfo contains all version details
+type VersionInfo struct {
+	Version         string `json:"version"`
+	BuildDate       string `json:"build_date"`
+	GitCommit       string `json:"git_commit"`
+	JulesAPIVersion string `json:"jules_api_version"`
+	GoVersion       string `json:"go_version"`
+	OS              string `json:"os"`
+	Arch            string `json:"arch"`
+}
+
+// GetVersionInfo returns structured version information
+func GetVersionInfo() VersionInfo {
+	return VersionInfo{
+		Version:         Version,
+		BuildDate:       BuildDate,
+		GitCommit:       GitCommit,
+		JulesAPIVersion: JulesAPIVersion,
+		GoVersion:       runtime.Version(),
+		OS:              runtime.GOOS,
+		Arch:            runtime.GOARCH,
+	}
+}
+
 // runVersion displays version information
 func runVersion(cmd *cobra.Command, args []string) error {
-	fmt.Print(VersionText())
+	info := GetVersionInfo()
+	fmt.Print(FormatVersion(info))
 	return nil
 }
 
-// VersionText returns the complete CLI version output.
-func VersionText() string {
+// FormatVersion returns the complete CLI version output.
+func FormatVersion(info VersionInfo) string {
 	return fmt.Sprintf("Juleson CLI %s\nJules API Version: %s\nBuild Date: %s\nGit Commit: %s\nGo Version: %s\nOS/Arch: %s/%s\n",
-		Version,
-		JulesAPIVersion,
-		BuildDate,
-		GitCommit,
-		runtime.Version(),
-		runtime.GOOS,
-		runtime.GOARCH,
+		info.Version,
+		info.JulesAPIVersion,
+		info.BuildDate,
+		info.GitCommit,
+		info.GoVersion,
+		info.OS,
+		info.Arch,
 	)
 }
 

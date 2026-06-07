@@ -132,6 +132,4 @@ func TestSetDefaults(t *testing.T) {
 
 	assert.Equal(t, "squash", cfg.GitHub.PR.DefaultMergeMethod)
 	assert.True(t, cfg.GitHub.PR.AutoDeleteBranch)
-
-	assert.Equal(t, "./projects", cfg.Projects.DefaultPath)
 }

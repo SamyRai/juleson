@@ -42,11 +42,6 @@ func minimalTestConfig() *config.Config {
 			RetryAttempts: 3,
 		},
 
-		Projects: config.ProjectsConfig{
-			DefaultPath:    "./projects",
-			BackupEnabled:  true,
-			GitIntegration: true,
-		},
 		Templates: config.TemplatesConfig{
 			BuiltinPath:  "../../templates/builtin",
 			CustomPath:   "../../templates/custom",

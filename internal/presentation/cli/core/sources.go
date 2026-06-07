@@ -71,20 +71,27 @@ func listSources(cfg *config.Config, filter string) error {
 		return fmt.Errorf("failed to list sources: %w", err)
 	}
 
+	fmt.Print(FormatSourcesList(response))
+	return nil
+}
+
+// FormatSourcesList formats the SourcesResponse into a human-readable string.
+func FormatSourcesList(response *jules.SourcesResponse) string {
 	sources := response.Sources
 	if sources == nil {
 		sources = []jules.Source{}
 	}
 
-	fmt.Printf("📚 Connected Sources (%d total)\n\n", len(sources))
+	var output string
+	output += fmt.Sprintf("📚 Connected Sources (%d total)\n\n", len(sources))
 
 	if len(sources) == 0 {
-		fmt.Println("No sources connected. Connect repositories via the Jules web UI at https://jules.google.com")
-		return nil
+		output += "No sources connected. Connect repositories via the Jules web UI at https://jules.google.com\n"
+		return output
 	}
 
 	for i, source := range sources {
-		fmt.Printf("%d. %s\n", i+1, source.Name)
+		output += fmt.Sprintf("%d. %s\n", i+1, source.Name)
 
 		if source.GithubRepo != nil {
 			owner := source.GithubRepo.Owner
@@ -95,14 +102,13 @@ func listSources(cfg *config.Config, filter string) error {
 			if repo == "" {
 				repo = "unknown"
 			}
-			fmt.Printf("   📁 Repository: %s/%s\n", owner, repo)
+			output += fmt.Sprintf("   📁 Repository: %s/%s\n", owner, repo)
 
 			if source.GithubRepo.DefaultBranch != nil {
-				fmt.Printf("   🌿 Default Branch: %s\n", source.GithubRepo.DefaultBranch.DisplayName)
+				output += fmt.Sprintf("   🌿 Default Branch: %s\n", source.GithubRepo.DefaultBranch.DisplayName)
 			}
 
 			if len(source.GithubRepo.Branches) > 0 {
-				// Collect non-empty branch names
 				var branchNames []string
 				for _, branch := range source.GithubRepo.Branches {
 					if branch.DisplayName != "" {
@@ -111,22 +117,22 @@ func listSources(cfg *config.Config, filter string) error {
 				}
 
 				if len(branchNames) > 0 {
-					fmt.Printf("   🌳 Branches: %s", branchNames[0])
+					output += fmt.Sprintf("   🌳 Branches: %s", branchNames[0])
 					for j := 1; j < len(branchNames); j++ {
-						fmt.Printf(", %s", branchNames[j])
+						output += fmt.Sprintf(", %s", branchNames[j])
 					}
-					fmt.Println()
+					output += "\n"
 				}
 			}
 		}
-		fmt.Println()
+		output += "\n"
 	}
 
 	if response.NextPageToken != "" {
-		fmt.Printf("💡 More sources available. Use pagination for full list.\n")
+		output += "💡 More sources available. Use pagination for full list.\n"
 	}
 
-	return nil
+	return output
 }
 
 // getSource gets details for a specific source
@@ -140,28 +146,35 @@ func getSource(cfg *config.Config, sourceID string) error {
 		return fmt.Errorf("failed to get source: %w", err)
 	}
 
-	fmt.Printf("📚 Source Details\n")
-	fmt.Printf("Name: %s\n", source.Name)
-	fmt.Printf("ID: %s\n", source.ID)
+	fmt.Print(FormatSourceDetails(source))
+	return nil
+}
+
+// FormatSourceDetails formats a single Source into a human-readable string.
+func FormatSourceDetails(source *jules.Source) string {
+	var output string
+	output += "📚 Source Details\n"
+	output += fmt.Sprintf("Name: %s\n", source.Name)
+	output += fmt.Sprintf("ID: %s\n", source.ID)
 
 	if source.GithubRepo != nil {
-		fmt.Printf("\n📁 GitHub Repository:\n")
-		fmt.Printf("  Owner: %s\n", source.GithubRepo.Owner)
-		fmt.Printf("  Repository: %s\n", source.GithubRepo.Repo)
+		output += "\n📁 GitHub Repository:\n"
+		output += fmt.Sprintf("  Owner: %s\n", source.GithubRepo.Owner)
+		output += fmt.Sprintf("  Repository: %s\n", source.GithubRepo.Repo)
 
 		if source.GithubRepo.DefaultBranch != nil {
-			fmt.Printf("  Default Branch: %s\n", source.GithubRepo.DefaultBranch.DisplayName)
+			output += fmt.Sprintf("  Default Branch: %s\n", source.GithubRepo.DefaultBranch.DisplayName)
 		}
 
 		if len(source.GithubRepo.Branches) > 0 {
-			fmt.Printf("  Available Branches:\n")
+			output += "  Available Branches:\n"
 			for _, branch := range source.GithubRepo.Branches {
 				if branch.DisplayName != "" {
-					fmt.Printf("    • %s\n", branch.DisplayName)
+					output += fmt.Sprintf("    • %s\n", branch.DisplayName)
 				}
 			}
 		}
 	}
 
-	return nil
+	return output
 }

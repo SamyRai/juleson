@@ -13,7 +13,6 @@ import (
 type Config struct {
 	Jules     JulesConfig     `mapstructure:"jules"`
 	GitHub    GitHubConfig    `mapstructure:"github"`
-	Projects  ProjectsConfig  `mapstructure:"projects"`
 	Templates TemplatesConfig `mapstructure:"templates"`
 	Diff      DiffConfig      `mapstructure:"diff"`
 }
@@ -46,13 +45,6 @@ type GitHubDiscoveryConfig struct {
 	Enabled      bool          `mapstructure:"enabled"`
 	UseGitRemote bool          `mapstructure:"use_git_remote"`
 	CacheTTL     time.Duration `mapstructure:"cache_ttl"`
-}
-
-// ProjectsConfig contains project management settings
-type ProjectsConfig struct {
-	DefaultPath    string `mapstructure:"default_path"`
-	BackupEnabled  bool   `mapstructure:"backup_enabled"`
-	GitIntegration bool   `mapstructure:"git_integration"`
 }
 
 // TemplatesConfig contains template settings
@@ -173,10 +165,6 @@ func setDefaults() {
 	viper.SetDefault("github.discovery.use_git_remote", true)
 	viper.SetDefault("github.discovery.cache_ttl", "5m")
 
-	viper.SetDefault("projects.default_path", "./projects")
-	viper.SetDefault("projects.backup_enabled", true)
-	viper.SetDefault("projects.git_integration", true)
-
 	viper.SetDefault("templates.builtin_path", "./templates/builtin")
 	viper.SetDefault("templates.custom_path", "${JULES_TEMPLATES_CUSTOM_PATH:-./templates/custom}")
 	viper.SetDefault("templates.enable_custom", true)
@@ -210,10 +198,6 @@ func (c *Config) Save() error {
 	viper.Set("github.discovery.enabled", c.GitHub.Discovery.Enabled)
 	viper.Set("github.discovery.use_git_remote", c.GitHub.Discovery.UseGitRemote)
 	viper.Set("github.discovery.cache_ttl", c.GitHub.Discovery.CacheTTL.String())
-
-	viper.Set("projects.default_path", c.Projects.DefaultPath)
-	viper.Set("projects.backup_enabled", c.Projects.BackupEnabled)
-	viper.Set("projects.git_integration", c.Projects.GitIntegration)
 
 	viper.Set("templates.builtin_path", c.Templates.BuiltinPath)
 	viper.Set("templates.custom_path", c.Templates.CustomPath)

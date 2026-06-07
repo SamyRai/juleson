@@ -55,7 +55,7 @@ func (a *App) setupCommands() {
 		Long:    "A CLI and MCP server for operating Google's Jules coding-agent sessions",
 		Version: core.Version,
 	}
-	a.rootCmd.SetVersionTemplate(core.VersionText())
+	a.rootCmd.SetVersionTemplate(core.FormatVersion(core.GetVersionInfo()))
 
 	a.rootCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
