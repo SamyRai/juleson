@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
+	"regexp"
+	"strings"
 )
 
 // LevelSuccess is a custom log level for success messages (higher than Info, lower than Warn)
@@ -33,7 +35,8 @@ func New(cfg Config) *slog.Logger {
 	}
 
 	opts := &slog.HandlerOptions{
-		Level: level,
+		Level:       level,
+		ReplaceAttr: redactSecrets,
 	}
 
 	// Determine if we should use TTY theme
@@ -66,4 +69,33 @@ func SetupGlobal(debug bool) {
 		Output:     os.Stdout,
 	})
 	slog.SetDefault(l)
+}
+
+var secretPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(gh[pousr]_[a-zA-Z0-9]{36})`),
+	regexp.MustCompile(`(?i)(jules_[a-zA-Z0-9]+)`),
+}
+
+func redactSecrets(groups []string, a slog.Attr) slog.Attr {
+	// Redact specific keys
+	lowerKey := strings.ToLower(a.Key)
+	if strings.Contains(lowerKey, "token") || strings.Contains(lowerKey, "api_key") || strings.Contains(lowerKey, "secret") || strings.Contains(lowerKey, "authorization") {
+		if a.Value.Kind() == slog.KindString && a.Value.String() != "" {
+			return slog.String(a.Key, "[REDACTED]")
+		}
+	}
+
+	// Redact known patterns in any string value
+	if a.Value.Kind() == slog.KindString {
+		val := a.Value.String()
+		for _, pattern := range secretPatterns {
+			if pattern.MatchString(val) {
+				val = pattern.ReplaceAllString(val, "[REDACTED]")
+			}
+		}
+		if val != a.Value.String() {
+			return slog.String(a.Key, val)
+		}
+	}
+	return a
 }
