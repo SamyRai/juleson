@@ -67,3 +67,15 @@ func TestParseGitHubURL(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCurrentRepo(t *testing.T) {
+	parser := NewGitRemoteParser()
+	repo, err := parser.GetRepoFromGitRemote()
+	require.NoError(t, err)
+	assert.NotNil(t, repo)
+
+	// Since we're running this inside github.com/SamyRai/juleson (or a fork),
+	// we just assert it successfully parsed a github repository.
+	assert.NotEmpty(t, repo.Owner)
+	assert.NotEmpty(t, repo.Name)
+}

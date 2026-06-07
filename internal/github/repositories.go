@@ -179,7 +179,7 @@ func (s *RepositoryService) mapGitHubRepo(ghRepo *github.Repository) *Repository
 		Description:   ghRepo.GetDescription(),
 		Stars:         ghRepo.GetStargazersCount(),
 		Forks:         ghRepo.GetForksCount(),
-		OpenIssues:    ghRepo.GetOpenIssuesCount(),
+		HasIssues:     ghRepo.GetHasIssues(),
 		DefaultBranch: ghRepo.GetDefaultBranch(),
 		Private:       ghRepo.GetPrivate(),
 		URL:           ghRepo.GetHTMLURL(),

@@ -18,7 +18,6 @@ func TestMapGitHubRepo(t *testing.T) {
 	desc := "A great project"
 	stars := 10
 	forks := 2
-	issues := 5
 	branch := "main"
 	private := false
 	url := "https://github.com/SamyRai/juleson"
@@ -34,7 +33,6 @@ func TestMapGitHubRepo(t *testing.T) {
 		Description:     &desc,
 		StargazersCount: &stars,
 		ForksCount:      &forks,
-		OpenIssuesCount: &issues,
 		DefaultBranch:   &branch,
 		Private:         &private,
 		HTMLURL:         &url,
@@ -50,7 +48,6 @@ func TestMapGitHubRepo(t *testing.T) {
 	assert.Equal(t, desc, repo.Description)
 	assert.Equal(t, stars, repo.Stars)
 	assert.Equal(t, forks, repo.Forks)
-	assert.Equal(t, issues, repo.OpenIssues)
 	assert.Equal(t, branch, repo.DefaultBranch)
 	assert.Equal(t, private, repo.Private)
 	assert.Equal(t, url, repo.URL)

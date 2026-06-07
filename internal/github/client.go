@@ -23,9 +23,6 @@ type Client struct {
 	Repositories *RepositoryService
 	PullRequests *PullRequestService
 	Sessions     *SessionService
-	Issues       *IssuesService
-	Milestones   *MilestonesService
-	Projects     *ProjectsService
 }
 
 // NewClient creates a new GitHub client with authentication and initializes all services
@@ -47,9 +44,6 @@ func NewClient(token string, julesClient *jules.Client) *Client {
 	client.Repositories = NewRepositoryService(client, julesClient)
 	client.PullRequests = NewPullRequestService(client, julesClient)
 	client.Sessions = NewSessionService(client, julesClient, client.Repositories)
-	client.Issues = NewIssuesService(client)
-	client.Milestones = NewMilestonesService(client)
-	client.Projects = NewProjectsService(client)
 
 	return client
 }

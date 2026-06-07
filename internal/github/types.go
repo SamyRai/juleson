@@ -8,7 +8,7 @@ type Repository struct {
 	Description   string `json:"description,omitempty"`
 	Stars         int    `json:"stars"`
 	Forks         int    `json:"forks"`
-	OpenIssues    int    `json:"open_issues"`
+	HasIssues     bool   `json:"has_issues"`
 	DefaultBranch string `json:"default_branch"`
 	Private       bool   `json:"private"`
 	URL           string `json:"url"`

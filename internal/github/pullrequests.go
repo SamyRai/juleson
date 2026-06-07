@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/SamyRai/go-jules"
@@ -118,7 +119,11 @@ func (s *PullRequestService) parsePRURL(prURL string) (owner, repo string, prNum
 
 	owner = parts[3]
 	repo = parts[4]
-	prNumber = parseInt(parts[6])
+
+	prNumber, err = strconv.Atoi(parts[6])
+	if err != nil {
+		return "", "", 0, fmt.Errorf("invalid PR number: %s", parts[6])
+	}
 
 	return owner, repo, prNumber, nil
 }

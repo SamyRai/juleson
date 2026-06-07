@@ -28,8 +28,5 @@ func TestNewClient(t *testing.T) {
 		assert.NotNil(t, client.Repositories)
 		assert.NotNil(t, client.PullRequests)
 		assert.NotNil(t, client.Sessions)
-		assert.NotNil(t, client.Issues)
-		assert.NotNil(t, client.Milestones)
-		assert.NotNil(t, client.Projects)
 	})
 }
