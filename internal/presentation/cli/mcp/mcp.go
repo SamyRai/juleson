@@ -24,7 +24,8 @@ func NewCommand(cfg *config.Config) *cobra.Command {
 		Long:  "Serve the Juleson MCP server over stdin/stdout. Diagnostics are written to stderr.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if version {
-				fmt.Print(core.VersionText())
+				info := core.GetVersionInfo()
+				fmt.Print(core.FormatVersion(info))
 				return nil
 			}
 			return jmcp.RunStdio(context.Background(), cfg)

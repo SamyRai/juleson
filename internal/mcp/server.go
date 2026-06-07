@@ -139,22 +139,17 @@ func requireConfirm(confirm bool, action string) error {
 	return nil
 }
 
-type emptyInput struct{}
-
-type versionOutput struct {
-	Version         string `json:"version"`
-	BuildDate       string `json:"build_date"`
-	GitCommit       string `json:"git_commit"`
-	JulesAPIVersion string `json:"jules_api_version"`
+func wrapAPIError(action string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("Jules API error during %s: %w", action, err)
 }
 
-func (r *toolRegistry) version(context.Context, *mcp.CallToolRequest, emptyInput) (*mcp.CallToolResult, versionOutput, error) {
-	return nil, versionOutput{
-		Version:         core.Version,
-		BuildDate:       core.BuildDate,
-		GitCommit:       core.GitCommit,
-		JulesAPIVersion: core.JulesAPIVersion,
-	}, nil
+type emptyInput struct{}
+
+func (r *toolRegistry) version(context.Context, *mcp.CallToolRequest, emptyInput) (*mcp.CallToolResult, core.VersionInfo, error) {
+	return nil, core.GetVersionInfo(), nil
 }
 
 type configStatusOutput struct {
@@ -186,7 +181,7 @@ func (r *toolRegistry) listSources(ctx context.Context, _ *mcp.CallToolRequest, 
 		pageSize = 100
 	}
 	response, err := client.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: pageSize, Filter: in.Filter})
-	return nil, response, err
+	return nil, response, wrapAPIError("list sources", err)
 }
 
 type getSourceInput struct {
@@ -199,7 +194,7 @@ func (r *toolRegistry) getSource(ctx context.Context, _ *mcp.CallToolRequest, in
 		return nil, nil, err
 	}
 	source, err := client.Sources().Get(ctx, in.SourceID)
-	return nil, source, err
+	return nil, source, wrapAPIError("get source", err)
 }
 
 type listSessionsInput struct {
@@ -222,7 +217,7 @@ func (r *toolRegistry) listSessions(ctx context.Context, _ *mcp.CallToolRequest,
 		PageToken: in.PageToken,
 		Filter:    in.Filter,
 	})
-	return nil, response, err
+	return nil, response, wrapAPIError("list sessions", err)
 }
 
 type sessionIDInput struct {
@@ -235,7 +230,7 @@ func (r *toolRegistry) getSession(ctx context.Context, _ *mcp.CallToolRequest, i
 		return nil, nil, err
 	}
 	session, err := client.Sessions().Get(ctx, in.SessionID)
-	return nil, session, err
+	return nil, session, wrapAPIError("get session", err)
 }
 
 type createSessionInput struct {
@@ -272,7 +267,7 @@ func (r *toolRegistry) createSession(ctx context.Context, _ *mcp.CallToolRequest
 		}
 	}
 	session, err := client.Sessions().Create(ctx, req)
-	return nil, session, err
+	return nil, session, wrapAPIError("create session", err)
 }
 
 type confirmSessionInput struct {
@@ -294,7 +289,7 @@ func (r *toolRegistry) approvePlan(ctx context.Context, _ *mcp.CallToolRequest, 
 		return nil, actionOutput{}, err
 	}
 	if err := client.Sessions().ApprovePlan(ctx, in.SessionID); err != nil {
-		return nil, actionOutput{}, err
+		return nil, actionOutput{}, wrapAPIError("approve session plan", err)
 	}
 	return nil, actionOutput{OK: true, Message: "plan approved"}, nil
 }
@@ -310,7 +305,7 @@ func (r *toolRegistry) sendMessage(ctx context.Context, _ *mcp.CallToolRequest, 
 		return nil, actionOutput{}, err
 	}
 	if err := client.Sessions().SendMessage(ctx, in.SessionID, &jules.SendMessageRequest{Prompt: in.Message}); err != nil {
-		return nil, actionOutput{}, err
+		return nil, actionOutput{}, wrapAPIError("send session message", err)
 	}
 	return nil, actionOutput{OK: true, Message: "message sent"}, nil
 }
@@ -324,7 +319,7 @@ func (r *toolRegistry) deleteSession(ctx context.Context, _ *mcp.CallToolRequest
 		return nil, actionOutput{}, err
 	}
 	if err := client.Sessions().Delete(ctx, in.SessionID); err != nil {
-		return nil, actionOutput{}, err
+		return nil, actionOutput{}, wrapAPIError("delete session", err)
 	}
 	return nil, actionOutput{OK: true, Message: "session deleted"}, nil
 }
@@ -344,7 +339,7 @@ func (r *toolRegistry) listActivities(ctx context.Context, _ *mcp.CallToolReques
 		pageSize = 100
 	}
 	response, err := client.Activities().List(ctx, in.SessionID, &jules.ListActivitiesOptions{PageSize: pageSize})
-	return nil, response, err
+	return nil, response, wrapAPIError("list activities", err)
 }
 
 type getActivityInput struct {
@@ -358,7 +353,7 @@ func (r *toolRegistry) getActivity(ctx context.Context, _ *mcp.CallToolRequest, 
 		return nil, nil, err
 	}
 	activity, err := client.Activities().Get(ctx, in.SessionID, in.ActivityID)
-	return nil, activity, err
+	return nil, activity, wrapAPIError("get activity", err)
 }
 
 type getPlansInput struct {
@@ -379,7 +374,7 @@ func (r *toolRegistry) getPlans(ctx context.Context, _ *mcp.CallToolRequest, in 
 	}
 	activities, err := client.Activities().ListAll(ctx, in.SessionID, 100)
 	if err != nil {
-		return nil, plansOutput{}, err
+		return nil, plansOutput{}, wrapAPIError("get session plans", err)
 	}
 	plans := julessessions.ExtractPlanSummaries(activities)
 	if in.LatestOnly {
@@ -412,7 +407,7 @@ func (r *toolRegistry) reviewSession(ctx context.Context, _ *mcp.CallToolRequest
 		ArtifactIndex:    in.ArtifactIndex,
 		HasArtifactIndex: in.HasArtifactIndex,
 	})
-	return nil, review, err
+	return nil, review, wrapAPIError("review session", err)
 }
 
 type artifactsOutput struct {
@@ -426,7 +421,7 @@ func (r *toolRegistry) listArtifacts(ctx context.Context, _ *mcp.CallToolRequest
 		return nil, artifactsOutput{}, err
 	}
 	manifests, err := workspace.ListSessionArtifactManifests(ctx, client, in.SessionID)
-	return nil, artifactsOutput{SessionID: in.SessionID, Artifacts: manifests}, err
+	return nil, artifactsOutput{SessionID: in.SessionID, Artifacts: manifests}, wrapAPIError("list session artifacts", err)
 }
 
 type outputsOutput struct {
@@ -441,7 +436,7 @@ func (r *toolRegistry) getOutputs(ctx context.Context, _ *mcp.CallToolRequest, i
 	}
 	session, err := client.Sessions().Get(ctx, in.SessionID)
 	if err != nil {
-		return nil, outputsOutput{}, err
+		return nil, outputsOutput{}, wrapAPIError("get session outputs", err)
 	}
 	return nil, outputsOutput{SessionID: in.SessionID, Outputs: julessessions.DocumentedOutputs(session)}, nil
 }

@@ -57,7 +57,7 @@ func TestServerRegistersCoreToolsAndVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal structured content: %v", err)
 	}
-	var output versionOutput
+	var output core.VersionInfo
 	if err := json.Unmarshal(raw, &output); err != nil {
 		t.Fatalf("decode version output: %v", err)
 	}
