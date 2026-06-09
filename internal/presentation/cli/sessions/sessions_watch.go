@@ -86,7 +86,7 @@ func watchSession(cfg *config.Config, sessionID, intervalValue, timeoutValue str
 		if update.NextCursor.After(cursor) {
 			cursor = update.NextCursor
 			if cursorOutput != "" {
-				if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0644); err != nil {
+				if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0600); err != nil {
 					return fmt.Errorf("failed to write cursor output: %w", err)
 				}
 			}

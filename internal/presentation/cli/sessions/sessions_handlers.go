@@ -15,29 +15,29 @@ import (
 )
 
 type CreateSessionOptions struct {
-	NoSource            bool
 	PromptFile          string
 	Title               string
 	StartingBranch      string
-	RequirePlanApproval bool
 	AutomationMode      string
+	NoSource            bool
+	RequirePlanApproval bool
 	WithIntel           bool
 }
 
 type BatchSessionOptions struct {
-	Parallel       int
 	Title          string
 	BatchID        string
 	GroupTitle     string
 	StartingBranch string
 	AutomationMode string
+	Parallel       int
 }
 
 type ApplySessionOptions struct {
-	Confirm           bool
-	AllowDirty        bool
 	ActivityID        string
 	ArtifactIndex     int
+	Confirm           bool
+	AllowDirty        bool
 	HasArtifactIndex  bool
 	AllowBaseMismatch bool
 }
@@ -75,10 +75,10 @@ func deleteSession(cfg *config.Config, sessionID string, force bool) error {
 			if err := scanner.Err(); err != nil {
 				return fmt.Errorf("failed to read confirmation: %w", err)
 			}
-			return fmt.Errorf("session deletion cancelled")
+			return fmt.Errorf("session deletion canceled")
 		}
 		if strings.TrimSpace(scanner.Text()) != sessionID {
-			return fmt.Errorf("session deletion cancelled")
+			return fmt.Errorf("session deletion canceled")
 		}
 	}
 
@@ -253,9 +253,10 @@ func getSessionDetails(cfg *config.Config, sessionID string) error {
 
 	for i, activity := range activities {
 		originator := "❓"
-		if activity.Originator == "agent" {
+		switch activity.Originator {
+		case "agent":
 			originator = "🤖"
-		} else if activity.Originator == "user" {
+		case "user":
 			originator = "👤"
 		}
 

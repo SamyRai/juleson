@@ -87,7 +87,7 @@ func showSessionOutputs(cfg *config.Config, sessionID string) error {
 	return nil
 }
 
-// downloadSessionArtifacts downloads all artifacts from all activities in a session
+// downloadSessionArtifacts downloads all artifacts from all activities in a session.
 func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir string) error {
 	julesClient := core.NewJulesClient(cfg)
 	ctx := context.Background()
@@ -121,7 +121,7 @@ func downloadSessionArtifacts(cfg *config.Config, sessionID string, outputDir st
 	return nil
 }
 
-// downloadActivityArtifacts downloads all artifacts from a specific activity
+// downloadActivityArtifacts downloads all artifacts from a specific activity.
 func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID string, outputDir string) error {
 	julesClient := core.NewJulesClient(cfg)
 	ctx := context.Background()
@@ -156,7 +156,7 @@ func downloadActivityArtifacts(cfg *config.Config, sessionID string, activityID 
 	return nil
 }
 
-// previewSessionArtifacts previews all artifacts from all activities in a session
+// previewSessionArtifacts previews all artifacts from all activities in a session.
 func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	julesClient := core.NewJulesClient(cfg)
 	ctx := context.Background()
@@ -197,7 +197,7 @@ func previewSessionArtifacts(cfg *config.Config, sessionID string) error {
 	return nil
 }
 
-// previewActivityArtifacts previews all artifacts from a specific activity
+// previewActivityArtifacts previews all artifacts from a specific activity.
 func previewActivityArtifacts(cfg *config.Config, sessionID string, activityID string) error {
 	julesClient := core.NewJulesClient(cfg)
 	ctx := context.Background()

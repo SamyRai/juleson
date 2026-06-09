@@ -109,7 +109,7 @@ func resolveConflictAgentically(ctx context.Context, client *jules.Client, sessi
 	filename := changes.Files[0].Path
 	opts, err := conflict.RunWizard(filename)
 	if err != nil {
-		return fmt.Errorf("conflict resolution cancelled: %w", err)
+		return fmt.Errorf("conflict resolution canceled: %w", err)
 	}
 
 	fmt.Println("Gathering context...")

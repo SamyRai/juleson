@@ -13,7 +13,7 @@ import (
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
 )
 
-// previewActivityArtifactsContent displays artifact content based on type
+// previewActivityArtifactsContent displays artifact content based on type.
 func previewActivityArtifactsContent(cfg *config.Config, artifacts []jules.Artifact) error {
 	for i, artifact := range artifacts {
 		fmt.Printf("\n  📄 Artifact %d:\n", i+1)
@@ -35,7 +35,7 @@ func previewActivityArtifactsContent(cfg *config.Config, artifacts []jules.Artif
 	return nil
 }
 
-// previewBashOutput displays bash command output
+// previewBashOutput displays bash command output.
 func previewBashOutput(output *jules.BashOutput) error {
 	fmt.Printf("    🖥️  Bash Output:\n")
 	fmt.Printf("    Command: %s\n", output.Command)
@@ -56,7 +56,7 @@ func previewBashOutput(output *jules.BashOutput) error {
 	return nil
 }
 
-// previewGitPatch displays git diff content
+// previewGitPatch displays git diff content.
 func previewGitPatch(cfg *config.Config, patch *jules.GitPatch) error {
 	fmt.Printf("    🔀 Git Patch:\n")
 
@@ -103,7 +103,7 @@ func previewGitPatch(cfg *config.Config, patch *jules.GitPatch) error {
 	if err == nil && len(files) > 0 {
 		var b strings.Builder
 		for _, file := range files {
-			b.WriteString(fmt.Sprintf("diff --git a/%s b/%s\n", file.OldName, file.NewName))
+			fmt.Fprintf(&b, "diff --git a/%s b/%s\n", file.OldName, file.NewName)
 			for _, fragment := range file.TextFragments {
 				b.WriteString(fragment.Header())
 				for _, line := range fragment.Lines {
@@ -143,7 +143,7 @@ func previewGitPatch(cfg *config.Config, patch *jules.GitPatch) error {
 	return nil
 }
 
-// previewMedia displays media artifact information
+// previewMedia displays media artifact information.
 func previewMedia(media *jules.Media) error {
 	fmt.Printf("    🖼️  Media:\n")
 	fmt.Printf("    Type: %s\n", media.MimeType)
