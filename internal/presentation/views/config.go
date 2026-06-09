@@ -5,15 +5,15 @@ import (
 	"path/filepath"
 )
 
-// ConfigGenerator generates project configuration files
+// ConfigGenerator generates project configuration files.
 type ConfigGenerator struct{}
 
-// NewConfigGenerator creates a new config generator
+// NewConfigGenerator creates a new config generator.
 func NewConfigGenerator() *ConfigGenerator {
 	return &ConfigGenerator{}
 }
 
-// GenerateProjectConfig generates a YAML configuration for a new project
+// GenerateProjectConfig generates a YAML configuration for a new project.
 func (g *ConfigGenerator) GenerateProjectConfig(projectPath string) string {
 	return fmt.Sprintf(`# Juleson Project Configuration
 

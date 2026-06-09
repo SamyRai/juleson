@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// BuildContextPayload gathers the requested context and formats it as a Markdown payload
+// BuildContextPayload gathers the requested context and formats it as a Markdown payload.
 func BuildContextPayload(ctx context.Context, workingDir, filePath, patchContent string, opts *ResolutionOptions) (string, error) {
 	var b strings.Builder
 
@@ -23,14 +23,14 @@ func BuildContextPayload(ctx context.Context, workingDir, filePath, patchContent
 	}
 
 	if opts.IncludeLocalFile {
-		b.WriteString(fmt.Sprintf("## Current State of `%s`\n\n", filePath))
+		fmt.Fprintf(&b, "## Current State of `%s`\n\n", filePath)
 		fullPath := filepath.Join(workingDir, filePath)
 		content, err := os.ReadFile(fullPath)
 		if err != nil {
 			if os.IsNotExist(err) {
 				b.WriteString("*(File does not exist locally)*\n\n")
 			} else {
-				b.WriteString(fmt.Sprintf("*(Error reading file: %v)*\n\n", err))
+				fmt.Fprintf(&b, "*(Error reading file: %v)*\n\n", err)
 			}
 		} else {
 			b.WriteString("```\n")
@@ -56,7 +56,7 @@ func BuildContextPayload(ctx context.Context, workingDir, filePath, patchContent
 		b.WriteString("## Compiler / Linter Errors\n\n")
 		out, err := getCompilerOutput(ctx, workingDir)
 		if err != nil {
-			b.WriteString(fmt.Sprintf("*(Error running compiler: %v)*\n\n", err))
+			fmt.Fprintf(&b, "*(Error running compiler: %v)*\n\n", err)
 		}
 
 		if out != "" {

@@ -17,7 +17,7 @@ func TestBuildContextPayload(t *testing.T) {
 
 	filePath := "test.txt"
 	fullPath := filepath.Join(tmpDir, filePath)
-	err = os.WriteFile(fullPath, []byte("local file content"), 0644)
+	err = os.WriteFile(fullPath, []byte("local file content"), 0600)
 	require.NoError(t, err)
 
 	ctx := context.Background()

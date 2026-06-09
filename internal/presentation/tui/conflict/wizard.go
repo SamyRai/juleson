@@ -6,13 +6,13 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-// ResolutionOptions contains the user's choices for conflict resolution
+// ResolutionOptions contains the user's choices for conflict resolution.
 type ResolutionOptions struct {
+	Guidance            string
 	IncludeLocalFile    bool
 	IncludePatchDiff    bool
 	IncludeCompilerOut  bool
 	IncludeRelatedFiles bool
-	Guidance            string
 }
 
 // RunWizard launches the TUI wizard to ask the user what context to gather

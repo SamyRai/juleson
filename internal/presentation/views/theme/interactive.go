@@ -4,7 +4,7 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-// Confirm prompts the user for a yes/no response
+// Confirm prompts the user for a yes/no response.
 func Confirm(title string, defaultVal bool) (bool, error) {
 	var result bool
 	err := huh.NewConfirm().
@@ -14,7 +14,7 @@ func Confirm(title string, defaultVal bool) (bool, error) {
 	return result, err
 }
 
-// InputString prompts the user for a string input
+// InputString prompts the user for a string input.
 func InputString(title string, placeholder string) (string, error) {
 	var result string
 	err := huh.NewInput().
@@ -25,7 +25,7 @@ func InputString(title string, placeholder string) (string, error) {
 	return result, err
 }
 
-// InputSecret prompts the user for a sensitive string
+// InputSecret prompts the user for a sensitive string.
 func InputSecret(title string) (string, error) {
 	var result string
 	err := huh.NewInput().

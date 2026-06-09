@@ -10,15 +10,15 @@ import (
 )
 
 type SessionView struct {
+	CreateTime          time.Time
+	UpdateTime          time.Time
 	ID                  string
 	Title               string
 	State               string
-	CreateTime          time.Time
-	UpdateTime          time.Time
 	Source              string
-	RequirePlanApproval bool
 	AutomationMode      string
 	OutputCount         int
+	RequirePlanApproval bool
 }
 
 type SessionFormatter struct{}

@@ -9,15 +9,15 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// TemplateFormatter formats template information
+// TemplateFormatter formats template information.
 type TemplateFormatter struct{}
 
-// NewTemplateFormatter creates a new template formatter
+// NewTemplateFormatter creates a new template formatter.
 func NewTemplateFormatter() *TemplateFormatter {
 	return &TemplateFormatter{}
 }
 
-// FormatList displays a list of templates
+// FormatList displays a list of templates.
 func (f *TemplateFormatter) FormatList(templates []templates.RegistryTemplate) string {
 	var sb strings.Builder
 
@@ -38,9 +38,10 @@ func (f *TemplateFormatter) FormatList(templates []templates.RegistryTemplate) s
 		}
 
 		complexityColor := theme.SuccessColor
-		if template.Complexity == "High" {
+		switch template.Complexity {
+		case "High":
 			complexityColor = theme.ErrorColor
-		} else if template.Complexity == "Medium" {
+		case "Medium":
 			complexityColor = theme.WarnColor
 		}
 		complexityStyle := lipgloss.NewStyle().Foreground(complexityColor)
@@ -56,7 +57,7 @@ func (f *TemplateFormatter) FormatList(templates []templates.RegistryTemplate) s
 	return sb.String()
 }
 
-// FormatDetails displays detailed template information
+// FormatDetails displays detailed template information.
 func (f *TemplateFormatter) FormatDetails(template *templates.Template) string {
 	var sb strings.Builder
 

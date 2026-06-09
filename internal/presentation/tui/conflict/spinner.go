@@ -9,9 +9,9 @@ import (
 )
 
 type SpinnerModel struct {
+	message  string
 	spinner  spinner.Model
 	quitting bool
-	message  string
 }
 
 func InitialSpinnerModel(msg string) SpinnerModel {
