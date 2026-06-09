@@ -1,21 +1,24 @@
 # MCP Server Usage
 
-Juleson serves MCP over stdio with the official Go MCP SDK and the current
-Model Context Protocol server shape used by command-line MCP clients.
+Juleson implements the Model Context Protocol (MCP) using the official Go MCP SDK. The server communicates exclusively over standard input/output (`stdio`).
+
+Because it operates via `stdio`, Juleson does not bind to a network socket or listen on a TCP port. It is designed to run as a subprocess spawned by an MCP client (such as an IDE or an AI agent).
 
 ## Start The Server
+
+Launch the server using the main binary:
 
 ```bash
 juleson mcp serve
 ```
 
-The short alias works the same way:
+Or the short alias:
 
 ```bash
 jsn mcp serve
 ```
 
-Use `--version` for a smoke check that does not start the stdio loop:
+For a fast smoke check that confirms execution without entering the `stdio` blocking loop:
 
 ```bash
 juleson mcp serve --version
@@ -23,7 +26,9 @@ juleson mcp serve --version
 
 ## Client Configuration
 
-Use an absolute path to the installed `juleson` binary:
+Clients must execute Juleson as a subprocess. Configure your client using the absolute path to the installed binary. Pass required credentials through the environment.
+
+Example configuration for Claude Desktop or similar MCP clients:
 
 ```json
 {
@@ -41,17 +46,15 @@ Use an absolute path to the installed `juleson` binary:
 
 ## Tool Scope
 
-The MCP server exposes Jules-focused tools:
+Juleson exposes tools focused strictly on Jules operations and local automation:
 
-- version and config status
-- source list/get
-- session list/get/create/delete
-- plan approval and session messaging
-- activity list/get
-- session plans, review, artifacts, and outputs
-- developer build/test/check helpers
+- **Diagnostics**: Version and configuration status.
+- **Sources**: List and retrieve configured sources.
+- **Sessions**: Lifecycle management (list, get, create, delete).
+- **Execution**: Plan approval and session messaging.
+- **Inspection**: Activity lists, plan details, reviews, artifacts, and outputs.
+- **Development**: Local build, test, and check orchestration.
 
-Mutating tools require explicit confirmation fields such as `confirm=true`.
+Mutating tools require explicit confirmation arguments (e.g., `confirm=true`) to prevent accidental execution.
 
-Juleson does not expose general GitHub or Actions MCP tools. Use the official
-GitHub MCP server or `gh` for that surface.
+Juleson does not duplicate generic source control tooling. For general GitHub or Actions workflows, use the official GitHub MCP server.

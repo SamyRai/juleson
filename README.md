@@ -55,7 +55,7 @@ See [Installation](docs/INSTALLATION_GUIDE.md) for platform-specific options.
 Run the setup wizard:
 
 ```bash
-juleson setup
+jsn setup
 ```
 
 For non-interactive setup, set environment variables first. The setup command
@@ -64,7 +64,7 @@ reads them and writes the resulting values to `configs/juleson.yaml`:
 ```bash
 export JULES_API_KEY="..."
 export GITHUB_TOKEN="..."
-juleson setup --non-interactive
+jsn setup --non-interactive
 ```
 
 Juleson looks for `juleson.yaml` in `./configs`, the current directory, `$HOME`,
@@ -77,41 +77,43 @@ See [Configuration](docs/CONFIGURATION.md) and [Setup](docs/SETUP_GUIDE.md).
 
 ## Common Commands
 
+The examples below use `jsn` for brevity, but `juleson` works identically.
+
 ```bash
 # Inspect available commands
-juleson --help
+jsn --help
 
 # Work with Jules sources and sessions
-juleson sources list
-juleson sessions list
-juleson sessions create sources/github/owner/repo "Fix failing tests"
-juleson sessions create . --prompt-file task.md
-juleson sessions create --no-source "Draft a migration plan"
-juleson sessions batch sources/github/owner/repo task.md --parallel 3 --group-title "Fix CI"
-juleson sessions watch SESSION_ID --follow-activities --cursor-output .juleson.cursor
-juleson sessions approve SESSION_ID
-juleson sessions artifacts list SESSION_ID
-juleson sessions outputs SESSION_ID
-juleson sessions preview SESSION_ID
-juleson sessions apply SESSION_ID ./path/to/project --activity-id ACTIVITY_ID --artifact-index 0
-juleson sessions apply SESSION_ID ./path/to/project --confirm
-juleson official remote pull SESSION_ID
+jsn sources list
+jsn sessions list
+jsn sessions create sources/github/owner/repo "Fix failing tests"
+jsn sessions create . --prompt-file task.md
+jsn sessions create --no-source "Draft a migration plan"
+jsn sessions batch sources/github/owner/repo task.md --parallel 3 --group-title "Fix CI"
+jsn sessions watch SESSION_ID --follow-activities --cursor-output .juleson.cursor
+jsn sessions approve SESSION_ID
+jsn sessions artifacts list SESSION_ID
+jsn sessions outputs SESSION_ID
+jsn sessions preview SESSION_ID
+jsn sessions apply SESSION_ID ./path/to/project --activity-id ACTIVITY_ID --artifact-index 0
+jsn sessions apply SESSION_ID ./path/to/project --confirm
+jsn official remote pull SESSION_ID
 
 # Manage templates
-juleson template list
-juleson template show test-generation
+jsn template list
+jsn template show test-generation
 
 # Jules-created pull request context
-juleson pr list
+jsn pr list
 
 # MCP server
-juleson mcp serve --version
-juleson mcp serve
+jsn mcp serve --version
+jsn mcp serve
 
 # Development workflow for this repository
-juleson dev build --all
-juleson dev test --short
-juleson dev check
+jsn dev build --all
+jsn dev test --short
+jsn dev check
 ```
 
 See [CLI Reference](docs/CLI_REFERENCE.md) for the command map and flags.
@@ -121,7 +123,7 @@ See [CLI Reference](docs/CLI_REFERENCE.md) for the command map and flags.
 Juleson serves MCP over stdio:
 
 ```bash
-juleson mcp serve
+jsn mcp serve
 ```
 
 Use `gh`, GitHub's CLI, or the official GitHub MCP server for general GitHub and
