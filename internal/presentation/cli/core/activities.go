@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewActivitiesCommand creates the activities command
+// NewActivitiesCommand creates the activities command.
 func NewActivitiesCommand(cfg *config.Config) *cobra.Command {
 	activitiesCmd := &cobra.Command{
 		Use:   "activities",
@@ -51,7 +51,7 @@ func NewActivitiesCommand(cfg *config.Config) *cobra.Command {
 	return activitiesCmd
 }
 
-// listActivities lists all activities in a session
+// listActivities lists all activities in a session.
 func ListActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutput string) error {
 	// Initialize Jules client
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(logger.New(logger.Config{Debug: cfg.Jules.DebugLog})))
@@ -86,7 +86,7 @@ func ListActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutp
 	}
 	cursor := jules.ActivityCursor(activities)
 	if cursorOutput != "" && !cursor.IsZero() {
-		if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0644); err != nil {
+		if err := os.WriteFile(cursorOutput, []byte(cursor.Format(time.RFC3339Nano)+"\n"), 0600); err != nil {
 			return fmt.Errorf("failed to write cursor output: %w", err)
 		}
 	}
@@ -100,9 +100,10 @@ func ListActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutp
 
 	for i, activity := range activities {
 		originator := "❓"
-		if activity.Originator == "agent" {
+		switch activity.Originator {
+		case "agent":
 			originator = "🤖"
-		} else if activity.Originator == "user" {
+		case "user":
 			originator = "👤"
 		}
 
@@ -143,7 +144,7 @@ func ListActivities(cfg *config.Config, sessionID string, sinceValue, cursorOutp
 	return nil
 }
 
-// getActivity gets details for a specific activity
+// getActivity gets details for a specific activity.
 func getActivity(cfg *config.Config, sessionID string, activityID string) error {
 	// Initialize Jules client
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(logger.New(logger.Config{Debug: cfg.Jules.DebugLog})))

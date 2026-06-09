@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// completionCmd represents the completion command
+// completionCmd represents the completion command.
 var completionCmd = &cobra.Command{
 	Use:   "completion [bash|zsh|fish|powershell]",
 	Short: "Generate shell completion scripts",
@@ -57,7 +57,7 @@ func runCompletion(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// NewCompletionCommand creates the completion command
+// NewCompletionCommand creates the completion command.
 func NewCompletionCommand() *cobra.Command {
 	return completionCmd
 }

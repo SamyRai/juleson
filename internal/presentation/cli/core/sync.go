@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewSyncCommand creates the sync command
+// NewSyncCommand creates the sync command.
 func NewSyncCommand() *cobra.Command {
 	var (
 		branch string

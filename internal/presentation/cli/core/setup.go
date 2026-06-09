@@ -22,7 +22,7 @@ var (
 	setupSkipJules      bool
 )
 
-// setupCmd represents the setup command
+// setupCmd represents the setup command.
 var setupCmd = &cobra.Command{
 	Use:   "setup",
 	Short: "Interactive setup wizard for Juleson",
@@ -398,7 +398,7 @@ func installFishCompletion(cmd *cobra.Command) error {
 	return nil
 }
 
-// NewSetupCommand creates the setup command
+// NewSetupCommand creates the setup command.
 func NewSetupCommand() *cobra.Command {
 	return setupCmd
 }

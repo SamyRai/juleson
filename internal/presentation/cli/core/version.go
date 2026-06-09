@@ -7,19 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// These variables are set at build time using -ldflags
+// These variables are set at build time using -ldflags.
 var (
-	// Version is the current version of Juleson
+	// Version is the current version of Juleson.
 	Version = "dev"
-	// BuildDate is the build date (set at build time)
+	// BuildDate is the build date (set at build time).
 	BuildDate = "unknown"
-	// GitCommit is the git commit hash (set at build time)
+	// GitCommit is the git commit hash (set at build time).
 	GitCommit = "unknown"
-	// JulesAPIVersion is the Jules API version
+	// JulesAPIVersion is the Jules API version.
 	JulesAPIVersion = "v1alpha"
 )
 
-// versionCmd represents the version command
+// versionCmd represents the version command.
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show version information",
@@ -27,7 +27,7 @@ var versionCmd = &cobra.Command{
 	RunE:  runVersion,
 }
 
-// VersionInfo contains all version details
+// VersionInfo contains all version details.
 type VersionInfo struct {
 	Version         string `json:"version"`
 	BuildDate       string `json:"build_date"`
@@ -38,7 +38,7 @@ type VersionInfo struct {
 	Arch            string `json:"arch"`
 }
 
-// GetVersionInfo returns structured version information
+// GetVersionInfo returns structured version information.
 func GetVersionInfo() VersionInfo {
 	return VersionInfo{
 		Version:         Version,
@@ -51,7 +51,7 @@ func GetVersionInfo() VersionInfo {
 	}
 }
 
-// runVersion displays version information
+// runVersion displays version information.
 func runVersion(cmd *cobra.Command, args []string) error {
 	info := GetVersionInfo()
 	fmt.Print(FormatVersion(info))
@@ -71,7 +71,7 @@ func FormatVersion(info VersionInfo) string {
 	)
 }
 
-// NewVersionCommand creates the version command
+// NewVersionCommand creates the version command.
 func NewVersionCommand() *cobra.Command {
 	return versionCmd
 }

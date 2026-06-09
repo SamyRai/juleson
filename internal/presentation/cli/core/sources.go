@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewSourcesCommand creates the sources command
+// NewSourcesCommand creates the sources command.
 func NewSourcesCommand(cfg *config.Config) *cobra.Command {
 	sourcesCmd := &cobra.Command{
 		Use:   "sources",
@@ -60,7 +60,7 @@ Examples:
 	return sourcesCmd
 }
 
-// listSources lists all connected sources
+// listSources lists all connected sources.
 func listSources(cfg *config.Config, filter string) error {
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(logger.New(logger.Config{Debug: cfg.Jules.DebugLog})))
 
@@ -135,7 +135,7 @@ func FormatSourcesList(response *jules.SourcesResponse) string {
 	return output
 }
 
-// getSource gets details for a specific source
+// getSource gets details for a specific source.
 func getSource(cfg *config.Config, sourceID string) error {
 	julesClient := jules.NewClient(cfg.Jules.APIKey, jules.WithBaseURL(cfg.Jules.BaseURL), jules.WithTimeout(cfg.Jules.Timeout), jules.WithRetryAttempts(cfg.Jules.RetryAttempts), jules.WithDebugLog(cfg.Jules.DebugLog), jules.WithLogger(logger.New(logger.Config{Debug: cfg.Jules.DebugLog})))
 

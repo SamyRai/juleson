@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewTemplateCommand creates the template command
+// NewTemplateCommand creates the template command.
 func NewTemplateCommand(initializeTemplateManager func() (*templates.Manager, error), displayTemplates func([]templates.RegistryTemplate), displayTemplateDetails func(*templates.Template)) *cobra.Command {
 	templateCmd := &cobra.Command{
 		Use:   "template",

@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// prCmd represents the pr command
+// prCmd represents the pr command.
 var prCmd = &cobra.Command{
 	Use:   "pr",
 	Short: "Manage pull requests created by Jules sessions",
@@ -24,7 +24,7 @@ This command provides functionality to list, view, merge, and review
 pull requests created by Jules sessions.`,
 }
 
-// prListCmd represents the pr list command
+// prListCmd represents the pr list command.
 var prListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List pull requests from Jules sessions",
@@ -33,7 +33,7 @@ Shows PR details including status, repository, and merge status.`,
 	RunE: runPRList,
 }
 
-// prGetCmd represents the pr get command
+// prGetCmd represents the pr get command.
 var prGetCmd = &cobra.Command{
 	Use:   "get <session-id>",
 	Short: "Get details of a pull request from a Jules session",
@@ -43,7 +43,7 @@ Shows PR title, description, status, reviewers, and CI checks.`,
 	RunE: runPRGet,
 }
 
-// prMergeCmd represents the pr merge command
+// prMergeCmd represents the pr merge command.
 var prMergeCmd = &cobra.Command{
 	Use:   "merge <session-id>",
 	Short: "Merge a pull request from a Jules session",
@@ -53,7 +53,7 @@ Supports different merge methods: merge, squash, or rebase.`,
 	RunE: runPRMerge,
 }
 
-// prDiffCmd represents the pr diff command
+// prDiffCmd represents the pr diff command.
 var prDiffCmd = &cobra.Command{
 	Use:   "diff <session-id>",
 	Short: "Show the diff of a pull request from a Jules session",
@@ -219,7 +219,7 @@ func runPRMerge(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Method: %s\n", mergeMethod)
 
 	if !confirmAction("Are you sure you want to merge this PR?") {
-		fmt.Println("Merge cancelled.")
+		fmt.Println("Merge canceled.")
 		return nil
 	}
 
@@ -300,7 +300,7 @@ func getPRStatus(pr *github.PullRequest) string {
 	return "🟢 Ready to merge"
 }
 
-// NewPRCommand creates the pr command
+// NewPRCommand creates the pr command.
 func NewPRCommand(cfg *config.Config) *cobra.Command {
 	return prCmd
 }

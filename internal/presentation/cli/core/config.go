@@ -8,7 +8,7 @@ import (
 	"github.com/SamyRai/juleson/internal/config"
 )
 
-// NewConfigCommand creates the config command
+// NewConfigCommand creates the config command.
 func NewConfigCommand(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",

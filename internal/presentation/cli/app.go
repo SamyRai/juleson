@@ -13,21 +13,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// App represents the CLI application
+// App represents the CLI application.
 type App struct {
 	container  *services.Container
 	formatters *Formatters
 	rootCmd    *cobra.Command
 }
 
-// Formatters holds all presentation formatters
+// Formatters holds all presentation formatters.
 type Formatters struct {
 	Template  *views.TemplateFormatter
 	Session   *views.SessionFormatter
 	ConfigGen *views.ConfigGenerator
 }
 
-// NewApp creates a new CLI application with dependency injection
+// NewApp creates a new CLI application with dependency injection.
 func NewApp(cfg *config.Config) *App {
 	app := &App{
 		container: services.NewContainer(cfg),
@@ -42,12 +42,12 @@ func NewApp(cfg *config.Config) *App {
 	return app
 }
 
-// Execute runs the CLI application
+// Execute runs the CLI application.
 func (a *App) Execute() error {
 	return a.rootCmd.Execute()
 }
 
-// setupCommands configures all CLI commands with proper dependency injection
+// setupCommands configures all CLI commands with proper dependency injection.
 func (a *App) setupCommands() {
 	a.rootCmd = &cobra.Command{
 		Use:     "juleson",

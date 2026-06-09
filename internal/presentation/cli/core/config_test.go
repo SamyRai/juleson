@@ -10,11 +10,11 @@ import (
 
 func TestConfigValidateCommand(t *testing.T) {
 	tests := []struct {
-		name          string
 		cfg           *config.Config
+		name          string
 		wantOutput    []string
-		wantErr       bool
 		notWantOutput []string
+		wantErr       bool
 	}{
 		{
 			name: "valid complete configuration",

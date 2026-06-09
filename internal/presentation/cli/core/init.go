@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewInitCommand creates the init command
+// NewInitCommand creates the init command.
 func NewInitCommand(generateConfig func(string) string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "init [project-path]",
@@ -27,7 +27,7 @@ func NewInitCommand(generateConfig func(string) string) *cobra.Command {
 			configPath := filepath.Join(projectPath, "juleson.yaml")
 			configContent := generateConfig(projectPath)
 
-			if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+			if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
 				return fmt.Errorf("failed to create project config: %w", err)
 			}
 

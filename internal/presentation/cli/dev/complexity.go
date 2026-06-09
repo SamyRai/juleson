@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newCheckComplexityCommand creates the check-complexity command
+// newCheckComplexityCommand creates the check-complexity command.
 func newCheckComplexityCommand() *cobra.Command {
 	var threshold int
 

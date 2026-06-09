@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newDepsCommand creates the deps command
+// newDepsCommand creates the deps command.
 func newDepsCommand() *cobra.Command {
 	var format string
 

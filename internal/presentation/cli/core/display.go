@@ -7,7 +7,7 @@ import (
 	"github.com/SamyRai/juleson/internal/templates"
 )
 
-// DisplayTemplates displays a list of templates
+// DisplayTemplates displays a list of templates.
 func DisplayTemplates(templates []templates.RegistryTemplate) {
 	fmt.Println("📋 Available Templates")
 	fmt.Println("=====================")
@@ -20,7 +20,7 @@ func DisplayTemplates(templates []templates.RegistryTemplate) {
 	}
 }
 
-// DisplayTemplateDetails displays detailed information about a template
+// DisplayTemplateDetails displays detailed information about a template.
 func DisplayTemplateDetails(template *templates.Template) {
 	fmt.Printf("📄 Template Details: %s\n", template.Metadata.Name)
 	fmt.Println("========================")
