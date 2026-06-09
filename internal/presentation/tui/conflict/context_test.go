@@ -13,7 +13,7 @@ import (
 func TestBuildContextPayload(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "conflict_test")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	filePath := "test.txt"
 	fullPath := filepath.Join(tmpDir, filePath)

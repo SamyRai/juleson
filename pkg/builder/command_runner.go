@@ -5,11 +5,6 @@ import (
 	"os/exec"
 )
 
-type commandRunner interface {
-	Run(ctx context.Context, name string, args ...string) error
-	CombinedOutput(ctx context.Context, name string, args ...string) (string, error)
-}
-
 type shellCommandRunner struct {
 	service *Service
 }

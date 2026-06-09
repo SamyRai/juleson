@@ -13,7 +13,7 @@ func TestAnalyzeComplexity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	// Write a test Go file with varying complexity
 	testCode := `

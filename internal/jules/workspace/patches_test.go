@@ -167,7 +167,7 @@ func (suite *PatchesTestSuite) TestApplyGitPatch() {
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "jules-patch-test-*")
 	assert.NoError(suite.T(), err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create a test file
 	testFile := filepath.Join(tmpDir, "test.txt")
@@ -237,7 +237,7 @@ index 1234567..abcdefg 100644
 func (suite *PatchesTestSuite) TestCopyFile() {
 	tmpDir, err := os.MkdirTemp("", "jules-copy-test-*")
 	assert.NoError(suite.T(), err)
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	srcFile := filepath.Join(tmpDir, "source.txt")
 	dstFile := filepath.Join(tmpDir, "dest.txt")

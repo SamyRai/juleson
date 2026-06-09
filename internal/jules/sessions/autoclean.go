@@ -26,7 +26,7 @@ func VerifySessionMerged(ctx context.Context, client *jules.Client, sessionID st
 	if err != nil {
 		return false, fmt.Errorf("failed to create tmpfs: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--depth=1", "--filter=blob:none", gitURL, ".")
 	cloneCmd.Dir = tmpDir

@@ -14,7 +14,7 @@ func TestAnalyzeDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	// Create a go.mod so packages.Load works properly
 	modCode := "module testdeps\ngo 1.25\n"

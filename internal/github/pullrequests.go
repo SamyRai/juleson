@@ -27,7 +27,7 @@ func NewPullRequestService(client *Client, julesClient *jules.Client) *PullReque
 // GetSessionPullRequest retrieves the PR created by a Jules session.
 func (s *PullRequestService) GetSessionPullRequest(ctx context.Context, sessionID string) (*github.PullRequest, error) {
 	if s.julesClient == nil {
-		return nil, fmt.Errorf("Jules client not available")
+		return nil, fmt.Errorf("Jules client not available") //nolint:staticcheck
 	}
 
 	session, err := s.julesClient.Sessions().Get(ctx, sessionID)
@@ -81,7 +81,7 @@ func (s *PullRequestService) MergePullRequest(ctx context.Context, prURL string,
 // GetPullRequestDiff retrieves the diff for a PR created by a Jules session.
 func (s *PullRequestService) GetPullRequestDiff(ctx context.Context, sessionID string) (string, error) {
 	if s.julesClient == nil {
-		return "", fmt.Errorf("Jules client not available")
+		return "", fmt.Errorf("Jules client not available") //nolint:staticcheck
 	}
 
 	session, err := s.julesClient.Sessions().Get(ctx, sessionID)

@@ -305,7 +305,7 @@ func installZshCompletion(cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create completion file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if err := cmd.Root().GenZshCompletion(file); err != nil {
 		return fmt.Errorf("failed to generate zsh completion: %w", err)
@@ -349,7 +349,7 @@ func installBashCompletion(cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create completion file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if err := cmd.Root().GenBashCompletion(file); err != nil {
 		return fmt.Errorf("failed to generate bash completion: %w", err)
@@ -384,7 +384,7 @@ func installFishCompletion(cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to create completion file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if err := cmd.Root().GenFishCompletion(file, true); err != nil {
 		return fmt.Errorf("failed to generate fish completion: %w", err)

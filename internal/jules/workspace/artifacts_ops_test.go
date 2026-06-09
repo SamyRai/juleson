@@ -37,7 +37,7 @@ func (suite *ArtifactsTestSuite) TestDownloadArtifactFromActivity() {
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "jules_test_*")
 	require.NoError(suite.T(), err)
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Mock activity endpoint
 	mockActivity := Activity{
@@ -77,7 +77,7 @@ func (suite *ArtifactsTestSuite) TestDownloadAllSessionArtifacts() {
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "jules_test_*")
 	require.NoError(suite.T(), err)
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Mock activities list
 	mockActivities := []Activity{
@@ -119,7 +119,7 @@ func (suite *ArtifactsTestSuite) TestDownloadAllSessionArtifacts() {
 func (suite *ArtifactsTestSuite) TestDownloadMediaFromEmbeddedBase64() {
 	tempDir, err := os.MkdirTemp("", "jules_test_*")
 	require.NoError(suite.T(), err)
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	mockActivity := Activity{
 		ID: "activity-1",

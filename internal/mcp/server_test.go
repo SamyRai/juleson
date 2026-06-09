@@ -29,12 +29,12 @@ func TestServerRegistersCoreToolsAndVersion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("server connect: %v", err)
 	}
-	defer serverSession.Close()
+	defer func() { _ = serverSession.Close() }()
 	clientSession, err := client.Connect(ctx, clientTransport, nil)
 	if err != nil {
 		t.Fatalf("client connect: %v", err)
 	}
-	defer clientSession.Close()
+	defer func() { _ = clientSession.Close() }()
 
 	tools := map[string]bool{}
 	for tool, err := range clientSession.Tools(ctx, nil) {

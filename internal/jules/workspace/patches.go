@@ -198,7 +198,7 @@ func (s *PatchService) applyGitPatch(ctx context.Context, patchContent string, o
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(patchContent); err != nil {
 		tmpFile.Close()

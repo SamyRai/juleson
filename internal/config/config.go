@@ -176,7 +176,7 @@ func setDefaults() {
 // validate validates the configuration.
 func validate(config *Config, requireJulesAPIKey bool) error {
 	if config.Jules.APIKey == "" && requireJulesAPIKey {
-		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
+		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable") //nolint:staticcheck
 	}
 
 	return nil

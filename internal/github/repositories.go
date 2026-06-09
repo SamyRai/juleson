@@ -49,7 +49,7 @@ func (s *RepositoryService) DiscoverCurrentRepo(ctx context.Context) (*Repositor
 // ListConnectedRepos fetches repositories connected to Jules.
 func (s *RepositoryService) ListConnectedRepos(ctx context.Context) ([]*Repository, error) {
 	if s.julesClient == nil {
-		return nil, fmt.Errorf("Jules client not available")
+		return nil, fmt.Errorf("Jules client not available") //nolint:staticcheck
 	}
 
 	response, err := s.julesClient.Sources().List(ctx, &jules.ListSourcesOptions{PageSize: 100})

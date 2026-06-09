@@ -24,7 +24,7 @@ func captureOutput(f func()) string {
 	if err != nil {
 		panic(err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	os.Stdout = w
 
 	f()
