@@ -6,22 +6,23 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/mattn/go-isatty"
 	"regexp"
 	"strings"
+
+	"github.com/mattn/go-isatty"
 )
 
-// LevelSuccess is a custom log level for success messages (higher than Info, lower than Warn)
+// LevelSuccess is a custom log level for success messages (higher than Info, lower than Warn).
 const LevelSuccess = slog.Level(2)
 
-// Config holds logger configuration
+// Config holds logger configuration.
 type Config struct {
+	Output     io.Writer
 	Debug      bool
 	FormatJSON bool
-	Output     io.Writer
 }
 
-// New creates a new context-aware, environment-adaptive logger
+// New creates a new context-aware, environment-adaptive logger.
 func New(cfg Config) *slog.Logger {
 	var handler slog.Handler
 	out := cfg.Output
@@ -56,17 +57,22 @@ func New(cfg Config) *slog.Logger {
 	return slog.New(handler)
 }
 
-// Success is a helper to log a success message since slog doesn't have it built-in
+// Success is a helper to log a success message since slog doesn't have it built-in.
 func Success(l *slog.Logger, msg string, args ...any) {
 	l.Log(context.Background(), LevelSuccess, msg, args...)
 }
 
-// SetupGlobal configures the global slog logger with default dev settings
+// SetupGlobal configures the global slog logger with default dev settings.
 func SetupGlobal(debug bool) {
+	SetupGlobalWithOutput(debug, os.Stdout)
+}
+
+// SetupGlobalWithOutput configures the global slog logger with a specific output.
+func SetupGlobalWithOutput(debug bool, out io.Writer) {
 	l := New(Config{
 		Debug:      debug,
 		FormatJSON: false,
-		Output:     os.Stdout,
+		Output:     out,
 	})
 	slog.SetDefault(l)
 }

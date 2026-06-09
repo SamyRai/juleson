@@ -10,12 +10,12 @@ import (
 
 func TestApplyCredentialFallbacks(t *testing.T) {
 	cases := []struct {
-		name          string
-		initial       Config
 		envVars       map[string]string
+		name          string
 		expectedJules string
 		expectedGH    string
 		expectedGem   string
+		initial       Config
 	}{
 		{
 			name:    "empty config with env vars",
@@ -61,10 +61,10 @@ func TestApplyCredentialFallbacks(t *testing.T) {
 func TestValidate(t *testing.T) {
 	cases := []struct {
 		name               string
+		errorContains      string
 		config             Config
 		requireJulesAPIKey bool
 		expectError        bool
-		errorContains      string
 	}{
 		{
 			name: "valid config",

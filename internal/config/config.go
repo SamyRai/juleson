@@ -9,15 +9,15 @@ import (
 	gotenv "github.com/subosito/gotenv"
 )
 
-// Config represents the application configuration
+// Config represents the application configuration.
 type Config struct {
-	Jules     JulesConfig     `mapstructure:"jules"`
-	GitHub    GitHubConfig    `mapstructure:"github"`
 	Templates TemplatesConfig `mapstructure:"templates"`
 	Diff      DiffConfig      `mapstructure:"diff"`
+	GitHub    GitHubConfig    `mapstructure:"github"`
+	Jules     JulesConfig     `mapstructure:"jules"`
 }
 
-// JulesConfig contains Jules API configuration
+// JulesConfig contains Jules API configuration.
 type JulesConfig struct {
 	APIKey        string        `mapstructure:"api_key"`
 	BaseURL       string        `mapstructure:"base_url"`
@@ -26,7 +26,7 @@ type JulesConfig struct {
 	DebugLog      bool          `mapstructure:"debug_log"`
 }
 
-// GitHubConfig contains GitHub API configuration
+// GitHubConfig contains GitHub API configuration.
 type GitHubConfig struct {
 	Token      string                `mapstructure:"token"`
 	DefaultOrg string                `mapstructure:"default_org"`
@@ -34,33 +34,33 @@ type GitHubConfig struct {
 	Discovery  GitHubDiscoveryConfig `mapstructure:"discovery"`
 }
 
-// GitHubPRConfig contains GitHub PR settings
+// GitHubPRConfig contains GitHub PR settings.
 type GitHubPRConfig struct {
 	DefaultMergeMethod string `mapstructure:"default_merge_method"`
 	AutoDeleteBranch   bool   `mapstructure:"auto_delete_branch"`
 }
 
-// GitHubDiscoveryConfig contains GitHub repository discovery settings
+// GitHubDiscoveryConfig contains GitHub repository discovery settings.
 type GitHubDiscoveryConfig struct {
 	Enabled      bool          `mapstructure:"enabled"`
 	UseGitRemote bool          `mapstructure:"use_git_remote"`
 	CacheTTL     time.Duration `mapstructure:"cache_ttl"`
 }
 
-// TemplatesConfig contains template settings
+// TemplatesConfig contains template settings.
 type TemplatesConfig struct {
 	BuiltinPath  string `mapstructure:"builtin_path"`
 	CustomPath   string `mapstructure:"custom_path"`
 	EnableCustom bool   `mapstructure:"enable_custom"`
 }
 
-// DiffConfig contains diff viewing settings
+// DiffConfig contains diff viewing settings.
 type DiffConfig struct {
 	Tool        string `mapstructure:"tool"`
 	ForceNative bool   `mapstructure:"force_native"`
 }
 
-// Load loads configuration from file and environment variables
+// Load loads configuration from file and environment variables.
 func Load() (*Config, error) {
 	return load(true, true)
 }
@@ -131,7 +131,7 @@ func applyCredentialFallbacks(config *Config) {
 	}
 }
 
-// loadEnvFiles loads .env files from multiple possible locations
+// loadEnvFiles loads .env files from multiple possible locations.
 func loadEnvFiles() {
 	// Possible locations for .env files (in order of priority)
 	envPaths := []string{
@@ -149,7 +149,7 @@ func loadEnvFiles() {
 	}
 }
 
-// setDefaults sets default configuration values
+// setDefaults sets default configuration values.
 func setDefaults() {
 	viper.SetDefault("jules.api_key", "")
 	viper.SetDefault("jules.base_url", "https://jules.googleapis.com/v1alpha")
@@ -173,7 +173,7 @@ func setDefaults() {
 	viper.SetDefault("diff.force_native", false)
 }
 
-// validate validates the configuration
+// validate validates the configuration.
 func validate(config *Config, requireJulesAPIKey bool) error {
 	if config.Jules.APIKey == "" && requireJulesAPIKey {
 		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
@@ -182,7 +182,7 @@ func validate(config *Config, requireJulesAPIKey bool) error {
 	return nil
 }
 
-// Save saves the configuration back to the config file
+// Save saves the configuration back to the config file.
 func (c *Config) Save() error {
 	// Set the values in viper
 	viper.Set("jules.api_key", c.Jules.APIKey)

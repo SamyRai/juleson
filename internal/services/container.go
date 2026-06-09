@@ -12,7 +12,7 @@ import (
 )
 
 // Container manages application dependencies and services
-// It follows the Dependency Injection pattern for lazy initialization
+// It follows the Dependency Injection pattern for lazy initialization.
 type Container struct {
 	config          *config.Config
 	julesClient     *jules.Client
@@ -22,7 +22,7 @@ type Container struct {
 }
 
 // NewContainer creates a new service container
-// Event coordination should be initialized separately by the application
+// Event coordination should be initialized separately by the application.
 func NewContainer(cfg *config.Config) *Container {
 	logger := slog.Default()
 
@@ -41,7 +41,7 @@ func (c *Container) JulesClient() *jules.Client {
 	return c.julesClientLocked()
 }
 
-// julesClientLocked returns the Jules API client without locking (internal use)
+// julesClientLocked returns the Jules API client without locking (internal use).
 func (c *Container) julesClientLocked() *jules.Client {
 	if c.julesClient == nil {
 		// Only create client if API key is available
@@ -55,7 +55,7 @@ func (c *Container) julesClientLocked() *jules.Client {
 	return c.julesClient
 }
 
-// TemplateManager returns the template manager (lazy initialization)
+// TemplateManager returns the template manager (lazy initialization).
 func (c *Container) TemplateManager() (*templates.Manager, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -63,7 +63,7 @@ func (c *Container) TemplateManager() (*templates.Manager, error) {
 	return c.templateManagerLocked()
 }
 
-// templateManagerLocked returns the template manager without locking (internal use)
+// templateManagerLocked returns the template manager without locking (internal use).
 func (c *Container) templateManagerLocked() (*templates.Manager, error) {
 	if c.templateManager == nil {
 		manager, err := templates.NewManager(
@@ -81,12 +81,12 @@ func (c *Container) templateManagerLocked() (*templates.Manager, error) {
 	return c.templateManager, nil
 }
 
-// Config returns the application configuration
+// Config returns the application configuration.
 func (c *Container) Config() *config.Config {
 	return c.config
 }
 
-// Close cleans up any resources held by the container
+// Close cleans up any resources held by the container.
 func (c *Container) Close() error {
 	// No resources to clean up currently
 	return nil

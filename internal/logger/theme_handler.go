@@ -10,7 +10,7 @@ import (
 	"github.com/SamyRai/juleson/internal/presentation/views/theme"
 )
 
-// ThemeHandler formats slog Records using the CLI lipgloss theme
+// ThemeHandler formats slog Records using the CLI lipgloss theme.
 type ThemeHandler struct {
 	out   io.Writer
 	opts  *slog.HandlerOptions
@@ -18,7 +18,7 @@ type ThemeHandler struct {
 	attrs []slog.Attr
 }
 
-// NewThemeHandler creates a new handler that writes themed output
+// NewThemeHandler creates a new handler that writes themed output.
 func NewThemeHandler(out io.Writer, opts *slog.HandlerOptions) *ThemeHandler {
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
@@ -29,7 +29,7 @@ func NewThemeHandler(out io.Writer, opts *slog.HandlerOptions) *ThemeHandler {
 	}
 }
 
-// Enabled checks if the given level is enabled
+// Enabled checks if the given level is enabled.
 func (h *ThemeHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	minLevel := slog.LevelInfo
 	if h.opts.Level != nil {
@@ -38,7 +38,7 @@ func (h *ThemeHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return level >= minLevel
 }
 
-// Handle formats the log record using the theme package
+// Handle formats the log record using the theme package.
 func (h *ThemeHandler) Handle(ctx context.Context, r slog.Record) error {
 	var builder strings.Builder
 
@@ -86,14 +86,14 @@ func formatAttr(a slog.Attr) string {
 	return fmt.Sprintf("%s=%s", a.Key, val)
 }
 
-// WithAttrs returns a new handler with the given attributes appended
+// WithAttrs returns a new handler with the given attributes appended.
 func (h *ThemeHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := *h
 	h2.attrs = append(h2.attrs, attrs...)
 	return &h2
 }
 
-// WithGroup returns a new handler with the given group appended
+// WithGroup returns a new handler with the given group appended.
 func (h *ThemeHandler) WithGroup(name string) slog.Handler {
 	h2 := *h
 	if h2.group != "" {
