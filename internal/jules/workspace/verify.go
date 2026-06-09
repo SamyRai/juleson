@@ -20,10 +20,10 @@ type VerificationOptions struct {
 // VerificationResult captures a verification command result.
 type VerificationResult struct {
 	WorkingDir string
-	Success    bool
 	Command    string
 	Output     string
 	Summary    string
+	Success    bool
 }
 
 // VerifyProjectChanges chooses a conservative repo-native verification command.

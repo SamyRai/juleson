@@ -63,7 +63,7 @@ func downloadSingleArtifact(artifactIndex int, artifact jules.Artifact, options 
 		return "", fmt.Errorf("failed to read embedded artifact content: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, content, 0644); err != nil {
+	if err := os.WriteFile(filePath, content, 0600); err != nil {
 		return "", fmt.Errorf("failed to write file: %w", err)
 	}
 

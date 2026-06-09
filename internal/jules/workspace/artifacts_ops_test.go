@@ -15,24 +15,24 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// ArtifactsTestSuite defines the test suite for artifact operations
+// ArtifactsTestSuite defines the test suite for artifact operations.
 type ArtifactsTestSuite struct {
 	suite.Suite
 	client *jules.Client
 }
 
-// SetupTest is called before each test
+// SetupTest is called before each test.
 func (suite *ArtifactsTestSuite) SetupTest() {
 	httpmock.Activate()
 	suite.client = jules.NewClient("test-api-key", jules.WithBaseURL("https://jules.googleapis.com/v1alpha"), jules.WithTimeout(30*time.Second), jules.WithRetryAttempts(3))
 }
 
-// TearDownTest is called after each test
+// TearDownTest is called after each test.
 func (suite *ArtifactsTestSuite) TearDownTest() {
 	httpmock.DeactivateAndReset()
 }
 
-// TestDownloadArtifactFromActivity tests downloading artifacts from an activity
+// TestDownloadArtifactFromActivity tests downloading artifacts from an activity.
 func (suite *ArtifactsTestSuite) TestDownloadArtifactFromActivity() {
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "jules_test_*")
@@ -72,7 +72,7 @@ func (suite *ArtifactsTestSuite) TestDownloadArtifactFromActivity() {
 	assert.Contains(suite.T(), string(content), "hello")
 }
 
-// TestDownloadAllSessionArtifacts tests downloading all artifacts from a session
+// TestDownloadAllSessionArtifacts tests downloading all artifacts from a session.
 func (suite *ArtifactsTestSuite) TestDownloadAllSessionArtifacts() {
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "jules_test_*")
@@ -150,7 +150,7 @@ func (suite *ArtifactsTestSuite) TestDownloadMediaFromEmbeddedBase64() {
 	}
 }
 
-// TestGetArtifactsFromActivity tests getting artifacts from an activity
+// TestGetArtifactsFromActivity tests getting artifacts from an activity.
 func (suite *ArtifactsTestSuite) TestGetArtifactsFromActivity() {
 	mockActivity := Activity{
 		ID: "activity-1",
@@ -173,7 +173,7 @@ func (suite *ArtifactsTestSuite) TestGetArtifactsFromActivity() {
 	assert.NotNil(suite.T(), artifacts[1].ChangeSet)
 }
 
-// TestGetAllSessionArtifacts tests getting all artifacts from a session
+// TestGetAllSessionArtifacts tests getting all artifacts from a session.
 func (suite *ArtifactsTestSuite) TestGetAllSessionArtifacts() {
 	mockActivities := []Activity{
 		{
@@ -205,13 +205,13 @@ func (suite *ArtifactsTestSuite) TestGetAllSessionArtifacts() {
 	assert.Equal(suite.T(), 0, artifacts[1].Index)
 }
 
-// TestGenerateArtifactFilename tests filename generation for different artifact types
+// TestGenerateArtifactFilename tests filename generation for different artifact types.
 func (suite *ArtifactsTestSuite) TestGenerateArtifactFilename() {
 	testCases := []struct {
-		name     string
 		artifact Artifact
-		index    int
+		name     string
 		expected string
+		index    int
 	}{
 		{
 			name: "bash output",
@@ -271,7 +271,7 @@ func (suite *ArtifactsTestSuite) TestGenerateArtifactFilename() {
 	}
 }
 
-// TestGetExtensionFromMimeType tests MIME type to extension conversion
+// TestGetExtensionFromMimeType tests MIME type to extension conversion.
 func (suite *ArtifactsTestSuite) TestGetExtensionFromMimeType() {
 	testCases := []struct {
 		mimeType string
@@ -391,7 +391,7 @@ func (suite *ArtifactsTestSuite) TestSessionHasDeliverablesFindsPatchOnLaterPage
 	assert.True(suite.T(), hasDeliverables)
 }
 
-// TestRunArtifactsTestSuite runs the test suite
+// TestRunArtifactsTestSuite runs the test suite.
 func TestArtifactsTestSuite(t *testing.T) {
 	suite.Run(t, new(ArtifactsTestSuite))
 }

@@ -11,19 +11,19 @@ import (
 // ArtifactManifest summarizes a documented Jules activity artifact without
 // embedding large payload content.
 type ArtifactManifest struct {
-	ActivityID             string       `json:"activity_id"`
-	ActivityName           string       `json:"activity_name,omitempty"`
 	ActivityCreateTime     time.Time    `json:"activity_create_time,omitempty"`
-	Index                  int          `json:"index"`
+	BashExitCode           *int         `json:"bash_exit_code,omitempty"`
+	MediaMIMEType          string       `json:"media_mime_type,omitempty"`
+	ActivityName           string       `json:"activity_name,omitempty"`
+	ActivityID             string       `json:"activity_id"`
 	Type                   string       `json:"type"`
-	Empty                  bool         `json:"empty,omitempty"`
-	FileCount              int          `json:"file_count,omitempty"`
-	Files                  []FileChange `json:"files,omitempty"`
+	BashCommand            string       `json:"bash_command,omitempty"`
 	BaseCommitID           string       `json:"base_commit_id,omitempty"`
 	SuggestedCommitMessage string       `json:"suggested_commit_message,omitempty"`
-	MediaMIMEType          string       `json:"media_mime_type,omitempty"`
-	BashCommand            string       `json:"bash_command,omitempty"`
-	BashExitCode           *int         `json:"bash_exit_code,omitempty"`
+	Files                  []FileChange `json:"files,omitempty"`
+	Index                  int          `json:"index"`
+	FileCount              int          `json:"file_count,omitempty"`
+	Empty                  bool         `json:"empty,omitempty"`
 }
 
 // ListSessionArtifactManifests returns manifests for all artifacts in a session.

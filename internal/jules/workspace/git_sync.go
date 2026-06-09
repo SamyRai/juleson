@@ -10,13 +10,13 @@ import (
 )
 
 type GitSyncOptions struct {
+	Stdout      io.Writer
+	Stderr      io.Writer
 	ProjectPath string
 	Remote      string
 	Branch      string
 	Pull        bool
 	Push        bool
-	Stdout      io.Writer
-	Stderr      io.Writer
 }
 
 func SyncGitRepository(ctx context.Context, options GitSyncOptions) error {

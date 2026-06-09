@@ -171,7 +171,7 @@ func (suite *PatchesTestSuite) TestApplyGitPatch() {
 
 	// Create a test file
 	testFile := filepath.Join(tmpDir, "test.txt")
-	err = os.WriteFile(testFile, []byte("line 1\nline 2\nline 3\n"), 0644)
+	err = os.WriteFile(testFile, []byte("line 1\nline 2\nline 3\n"), 0600)
 	assert.NoError(suite.T(), err)
 
 	cmd := exec.Command("git", "init")
@@ -188,10 +188,11 @@ func (suite *PatchesTestSuite) TestApplyGitPatch() {
  line 3
 `
 
-	files, err := applyGitPatch(context.Background(), patch, &PatchApplicationOptions{
+	svc := NewPatchService(suite.client)
+	files, err := svc.applyGitPatch(context.Background(), patch, &PatchApplicationOptions{
 		WorkingDir:      tmpDir,
 		StripComponents: 1,
-	})
+	}, NewGitClient(tmpDir))
 
 	require.NoError(suite.T(), err)
 	assert.Contains(suite.T(), files, "test.txt")
@@ -243,7 +244,7 @@ func (suite *PatchesTestSuite) TestCopyFile() {
 
 	// Create source file
 	content := []byte("test content")
-	err = os.WriteFile(srcFile, content, 0644)
+	err = os.WriteFile(srcFile, content, 0600)
 	assert.NoError(suite.T(), err)
 
 	// Copy file
