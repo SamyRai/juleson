@@ -73,8 +73,8 @@ func TestEvaluateWatchDecision(t *testing.T) {
 func TestWatchUpdateTypeForDecision(t *testing.T) {
 	tests := []struct {
 		name     string
-		decision WatchDecision
 		want     WatchUpdateType
+		decision WatchDecision
 	}{
 		{name: "progress", decision: WatchDecision{Kind: WatchDecisionContinue}, want: WatchUpdateProgress},
 		{name: "needs user action", decision: WatchDecision{Kind: WatchDecisionNeedsUserAction}, want: WatchUpdateNeedsUserAction},
@@ -97,9 +97,9 @@ func TestEvaluateWatchWake(t *testing.T) {
 		name         string
 		policy       WakePolicy
 		updateType   WatchUpdateType
+		wantReason   string
 		stateChanged bool
 		wantWake     bool
-		wantReason   string
 	}{
 		{name: "actionable progress does not wake", policy: WakePolicyActionable, updateType: WatchUpdateProgress},
 		{name: "actionable user action wakes", policy: WakePolicyActionable, updateType: WatchUpdateNeedsUserAction, wantWake: true, wantReason: "user_action"},

@@ -11,11 +11,11 @@ var ErrStartingBranchRequiresSource = errors.New("starting branch requires sourc
 type CreateSessionRequestOptions struct {
 	Prompt              string
 	Source              string
-	NoSource            bool
 	Title               string
 	StartingBranch      string
-	RequirePlanApproval bool
 	AutomationMode      string
+	NoSource            bool
+	RequirePlanApproval bool
 }
 
 func NormalizeSourceID(sourceID string) string {

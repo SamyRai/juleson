@@ -7,12 +7,12 @@ import (
 )
 
 type StatusSummary struct {
-	TotalSessions      int
 	StateBreakdown     map[string]int
+	Summary            string
+	RecentSessions     []jules.Session
+	TotalSessions      int
 	ActiveSessions     int
 	UserActionSessions int
-	RecentSessions     []jules.Session
-	Summary            string
 }
 
 func SummarizeSessions(sessions []jules.Session, recentLimit int) StatusSummary {

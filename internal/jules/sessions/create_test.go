@@ -9,9 +9,9 @@ import (
 
 func TestBuildCreateSessionRequest(t *testing.T) {
 	tests := []struct {
-		name    string
-		options CreateSessionRequestOptions
 		assert  func(t *testing.T, req *jules.CreateSessionRequest)
+		options CreateSessionRequestOptions
+		name    string
 	}{
 		{
 			name: "repoless",

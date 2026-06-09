@@ -48,8 +48,8 @@ type WatchDecision struct {
 
 type WatchWake struct {
 	UpdateType WatchUpdateType
-	ShouldWake bool
 	WakeReason string
+	ShouldWake bool
 }
 
 type CurrentWatchOptions struct {
@@ -57,15 +57,15 @@ type CurrentWatchOptions struct {
 }
 
 type WatchSnapshot struct {
-	Session              *jules.Session
-	Activities           []jules.Activity
+	NextCursor           time.Time
 	ActivityError        error
 	DeliverablesError    error
-	NextCursor           time.Time
-	HasJulesAgentMessage bool
-	Decision             WatchDecision
+	Session              *jules.Session
 	WakeReason           string
 	NextAction           string
+	Activities           []jules.Activity
+	Decision             WatchDecision
+	HasJulesAgentMessage bool
 }
 
 func CurrentWatchSnapshot(ctx context.Context, client *jules.Client, sessionID string, cursor time.Time, options CurrentWatchOptions) (WatchSnapshot, error) {

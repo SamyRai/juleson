@@ -9,22 +9,22 @@ import (
 
 type PatchRequest struct {
 	WorkingDir        string
+	ActivityID        string
+	ArtifactIndex     int
 	DryRun            bool
 	Confirm           bool
 	AllowDirty        bool
 	Force             bool
 	CreateBackup      bool
-	ActivityID        string
-	ArtifactIndex     int
 	HasArtifactIndex  bool
 	AllowBaseMismatch bool
 }
 
 type PatchPreparation struct {
-	DryRun         bool
 	Options        *workspace.PatchApplicationOptions
 	Blocker        string
 	WorktreeStatus string
+	DryRun         bool
 }
 
 func PreparePatchApplication(ctx context.Context, request PatchRequest) (*PatchPreparation, error) {

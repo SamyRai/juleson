@@ -57,7 +57,7 @@ func VerifySessionMerged(ctx context.Context, client *jules.Client, sessionID st
 
 	// Write patch to tmpfs
 	patchFile := filepath.Join(tmpDir, "session.patch")
-	if err := os.WriteFile(patchFile, []byte(rawPatch), 0644); err != nil {
+	if err := os.WriteFile(patchFile, []byte(rawPatch), 0600); err != nil {
 		return false, fmt.Errorf("failed to write patch to tmpfs: %w", err)
 	}
 

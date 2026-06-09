@@ -29,7 +29,7 @@ func TestPreparePatchApplicationBlocksDirtyMutation(t *testing.T) {
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("git init: %v", err)
 	}
-	if err := os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0644); err != nil {
+	if err := os.WriteFile(tmpDir+"/dirty.txt", []byte("dirty"), 0600); err != nil {
 		t.Fatalf("write dirty file: %v", err)
 	}
 
