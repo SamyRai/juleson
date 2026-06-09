@@ -7,14 +7,14 @@ import (
 	"github.com/SamyRai/go-jules"
 )
 
-// SessionService handles Jules session operations with GitHub integration
+// SessionService handles Jules session operations with GitHub integration.
 type SessionService struct {
 	client      *Client
 	julesClient *jules.Client
 	repoService *RepositoryService
 }
 
-// NewSessionService creates a new session service
+// NewSessionService creates a new session service.
 func NewSessionService(client *Client, julesClient *jules.Client, repoService *RepositoryService) *SessionService {
 	return &SessionService{
 		client:      client,
@@ -23,7 +23,7 @@ func NewSessionService(client *Client, julesClient *jules.Client, repoService *R
 	}
 }
 
-// CreateSessionFromRepo creates a Jules session for a specific GitHub repository
+// CreateSessionFromRepo creates a Jules session for a specific GitHub repository.
 func (s *SessionService) CreateSessionFromRepo(ctx context.Context, prompt, owner, repo, branch string) (*jules.Session, error) {
 	if s.julesClient == nil {
 		return nil, fmt.Errorf("Jules client not available")
@@ -63,7 +63,7 @@ func (s *SessionService) CreateSessionFromRepo(ctx context.Context, prompt, owne
 	return session, nil
 }
 
-// CreateSessionFromCurrentRepo creates a Jules session using git context
+// CreateSessionFromCurrentRepo creates a Jules session using git context.
 func (s *SessionService) CreateSessionFromCurrentRepo(ctx context.Context, prompt string, branch string) (*jules.Session, error) {
 	if s.julesClient == nil {
 		return nil, fmt.Errorf("Jules client not available")

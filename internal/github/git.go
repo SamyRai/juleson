@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-// GitRemoteParser handles parsing of Git remote URLs and repository detection
+// GitRemoteParser handles parsing of Git remote URLs and repository detection.
 type GitRemoteParser struct{}
 
-// NewGitRemoteParser creates a new git remote parser
+// NewGitRemoteParser creates a new git remote parser.
 func NewGitRemoteParser() *GitRemoteParser {
 	return &GitRemoteParser{}
 }
 
-// GetRepoFromGitRemote detects the GitHub repository from the current directory's git remote
+// GetRepoFromGitRemote detects the GitHub repository from the current directory's git remote.
 func (p *GitRemoteParser) GetRepoFromGitRemote() (*Repository, error) {
 	// Run git remote -v to get remote URLs
 	cmd := exec.Command("git", "remote", "-v")
@@ -49,7 +49,7 @@ func (p *GitRemoteParser) GetRepoFromGitRemote() (*Repository, error) {
 // ParseGitHubURL parses a GitHub URL and extracts owner and repository name
 // Supports both HTTPS and SSH URL formats:
 // - https://github.com/owner/repo.git
-// - git@github.com:owner/repo.git
+// - git@github.com:owner/repo.git.
 func (p *GitRemoteParser) ParseGitHubURL(remoteURL string) (*Repository, error) {
 	// Remove .git suffix if present
 	remoteURL = strings.TrimSuffix(remoteURL, ".git")

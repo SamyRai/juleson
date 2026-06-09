@@ -13,9 +13,9 @@ func TestParseGitHubURL(t *testing.T) {
 	cases := []struct {
 		name        string
 		url         string
-		expectError bool
 		owner       string
 		repo        string
+		expectError bool
 	}{
 		{
 			name:        "https valid",

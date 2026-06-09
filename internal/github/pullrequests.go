@@ -10,13 +10,13 @@ import (
 	"github.com/google/go-github/v76/github"
 )
 
-// PullRequestService handles pull request operations
+// PullRequestService handles pull request operations.
 type PullRequestService struct {
 	client      *Client
 	julesClient *jules.Client
 }
 
-// NewPullRequestService creates a new pull request service
+// NewPullRequestService creates a new pull request service.
 func NewPullRequestService(client *Client, julesClient *jules.Client) *PullRequestService {
 	return &PullRequestService{
 		client:      client,
@@ -24,7 +24,7 @@ func NewPullRequestService(client *Client, julesClient *jules.Client) *PullReque
 	}
 }
 
-// GetSessionPullRequest retrieves the PR created by a Jules session
+// GetSessionPullRequest retrieves the PR created by a Jules session.
 func (s *PullRequestService) GetSessionPullRequest(ctx context.Context, sessionID string) (*github.PullRequest, error) {
 	if s.julesClient == nil {
 		return nil, fmt.Errorf("Jules client not available")
@@ -54,7 +54,7 @@ func (s *PullRequestService) GetSessionPullRequest(ctx context.Context, sessionI
 	return pr, nil
 }
 
-// MergePullRequest merges a PR created by Jules
+// MergePullRequest merges a PR created by Jules.
 func (s *PullRequestService) MergePullRequest(ctx context.Context, prURL string, mergeMethod string) error {
 	// Parse PR URL to extract owner, repo, and PR number
 	owner, repo, prNumber, err := s.parsePRURL(prURL)
@@ -78,7 +78,7 @@ func (s *PullRequestService) MergePullRequest(ctx context.Context, prURL string,
 	return nil
 }
 
-// GetPullRequestDiff retrieves the diff for a PR created by a Jules session
+// GetPullRequestDiff retrieves the diff for a PR created by a Jules session.
 func (s *PullRequestService) GetPullRequestDiff(ctx context.Context, sessionID string) (string, error) {
 	if s.julesClient == nil {
 		return "", fmt.Errorf("Jules client not available")

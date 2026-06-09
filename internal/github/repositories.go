@@ -9,14 +9,14 @@ import (
 	"github.com/google/go-github/v76/github"
 )
 
-// RepositoryService handles repository-related operations
+// RepositoryService handles repository-related operations.
 type RepositoryService struct {
 	client      *Client
 	julesClient *jules.Client
 	gitParser   *GitRemoteParser
 }
 
-// NewRepositoryService creates a new repository service
+// NewRepositoryService creates a new repository service.
 func NewRepositoryService(client *Client, julesClient *jules.Client) *RepositoryService {
 	return &RepositoryService{
 		client:      client,
@@ -25,7 +25,7 @@ func NewRepositoryService(client *Client, julesClient *jules.Client) *Repository
 	}
 }
 
-// DiscoverCurrentRepo detects the GitHub repository from the current git remote
+// DiscoverCurrentRepo detects the GitHub repository from the current git remote.
 func (s *RepositoryService) DiscoverCurrentRepo(ctx context.Context) (*Repository, error) {
 	if s.client == nil {
 		return nil, fmt.Errorf("GitHub client not configured")
@@ -46,7 +46,7 @@ func (s *RepositoryService) DiscoverCurrentRepo(ctx context.Context) (*Repositor
 	return s.mapGitHubRepo(ghRepo), nil
 }
 
-// ListConnectedRepos fetches repositories connected to Jules
+// ListConnectedRepos fetches repositories connected to Jules.
 func (s *RepositoryService) ListConnectedRepos(ctx context.Context) ([]*Repository, error) {
 	if s.julesClient == nil {
 		return nil, fmt.Errorf("Jules client not available")
@@ -81,13 +81,13 @@ func (s *RepositoryService) ListConnectedRepos(ctx context.Context) ([]*Reposito
 	return repos, nil
 }
 
-// ListAccessibleRepos lists repositories the user can access
+// ListAccessibleRepos lists repositories the user can access.
 func (s *RepositoryService) ListAccessibleRepos(ctx context.Context) ([]*Repository, error) {
 	if s.client == nil {
 		return nil, fmt.Errorf("GitHub client not configured")
 	}
 
-	opts := &github.RepositoryListOptions{
+	opts := &github.RepositoryListByAuthenticatedUserOptions{
 		Sort:        "updated",
 		Affiliation: "owner,collaborator,organization_member",
 		ListOptions: github.ListOptions{PerPage: 100},
@@ -95,7 +95,7 @@ func (s *RepositoryService) ListAccessibleRepos(ctx context.Context) ([]*Reposit
 
 	var allRepos []*Repository
 	for {
-		repos, resp, err := s.client.Client.Repositories.List(ctx, "", opts)
+		repos, resp, err := s.client.Client.Repositories.ListByAuthenticatedUser(ctx, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list repositories: %w", err)
 		}
@@ -113,7 +113,7 @@ func (s *RepositoryService) ListAccessibleRepos(ctx context.Context) ([]*Reposit
 	return allRepos, nil
 }
 
-// SyncRepoWithJules ensures a repository is connected to Jules
+// SyncRepoWithJules ensures a repository is connected to Jules.
 func (s *RepositoryService) SyncRepoWithJules(ctx context.Context, owner, repo string) error {
 	if s.julesClient == nil {
 		return fmt.Errorf("Jules client not available")
@@ -139,7 +139,7 @@ func (s *RepositoryService) SyncRepoWithJules(ctx context.Context, owner, repo s
 	return fmt.Errorf("source %s not found - please connect this repository via the Jules web UI first", sourceID)
 }
 
-// SearchRepositories searches for GitHub repositories using the GitHub Search API
+// SearchRepositories searches for GitHub repositories using the GitHub Search API.
 func (s *RepositoryService) SearchRepositories(ctx context.Context, query string, opts *github.SearchOptions) ([]*Repository, error) {
 	if s.client == nil {
 		return nil, fmt.Errorf("GitHub client not configured")
@@ -157,7 +157,7 @@ func (s *RepositoryService) SearchRepositories(ctx context.Context, query string
 		opts.PerPage = 100 // GitHub's maximum
 	}
 
-	result, _, err := s.client.Client.Search.Repositories(ctx, query, opts)
+	result, _, err := s.client.Search.Repositories(ctx, query, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search repositories: %w", err)
 	}
@@ -170,7 +170,7 @@ func (s *RepositoryService) SearchRepositories(ctx context.Context, query string
 	return repos, nil
 }
 
-// mapGitHubRepo converts a github.Repository to our Repository type
+// mapGitHubRepo converts a github.Repository to our Repository type.
 func (s *RepositoryService) mapGitHubRepo(ghRepo *github.Repository) *Repository {
 	return &Repository{
 		Owner:         ghRepo.GetOwner().GetLogin(),

@@ -14,19 +14,17 @@ import (
 // - Open/Closed: New services can be added without modifying existing code
 // - Liskov Substitution: Services can be mocked for testing
 // - Interface Segregation: Each service exposes only relevant methods
-// - Dependency Inversion: Services depend on abstractions (interfaces)
+// - Dependency Inversion: Services depend on abstractions (interfaces).
 type Client struct {
 	*github.Client
-	token string
-
-	// Specialized services - each responsible for a specific domain
 	Repositories *RepositoryService
 	PullRequests *PullRequestService
 	Sessions     *SessionService
+	token        string
 }
 
 // NewClient creates a new GitHub client with authentication and initializes all services
-// This is the main entry point for GitHub operations
+// This is the main entry point for GitHub operations.
 func NewClient(token string, julesClient *jules.Client) *Client {
 	if token == "" {
 		return nil
