@@ -43,14 +43,14 @@ func (t *MyType) Method() {
 
 type MyType struct{}
 `
-	err = os.WriteFile(filepath.Join(dir, "main.go"), []byte(testCode), 0644)
+	err = os.WriteFile(filepath.Join(dir, "main.go"), []byte(testCode), 0600)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Create a go.mod so packages.Load works properly
 	modCode := "module testpkg\ngo 1.25\n"
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte(modCode), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte(modCode), 0600)
 
 	results, err := AnalyzeComplexity(context.Background(), dir)
 	if err != nil {

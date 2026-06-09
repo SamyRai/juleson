@@ -18,18 +18,18 @@ func TestAnalyzeDependencies(t *testing.T) {
 
 	// Create a go.mod so packages.Load works properly
 	modCode := "module testdeps\ngo 1.25\n"
-	os.WriteFile(filepath.Join(dir, "go.mod"), []byte(modCode), 0644)
+	os.WriteFile(filepath.Join(dir, "go.mod"), []byte(modCode), 0600)
 
 	// pkg a
 	os.MkdirAll(filepath.Join(dir, "a"), 0755)
-	os.WriteFile(filepath.Join(dir, "a", "a.go"), []byte("package a\nimport \"testdeps/b\"\nfunc A() { b.B() }"), 0644)
+	os.WriteFile(filepath.Join(dir, "a", "a.go"), []byte("package a\nimport \"testdeps/b\"\nfunc A() { b.B() }"), 0600)
 
 	// pkg b
 	os.MkdirAll(filepath.Join(dir, "b"), 0755)
-	os.WriteFile(filepath.Join(dir, "b", "b.go"), []byte("package b\nfunc B() {}"), 0644)
+	os.WriteFile(filepath.Join(dir, "b", "b.go"), []byte("package b\nfunc B() {}"), 0600)
 
 	// main pkg
-	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"testdeps/a\"\nfunc main() { a.A() }"), 0644)
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nimport \"testdeps/a\"\nfunc main() { a.A() }"), 0600)
 
 	graph, err := AnalyzeDependencies(context.Background(), dir)
 	if err != nil {

@@ -10,8 +10,8 @@ import (
 
 // DependencyGraph represents the package-level dependency relationships.
 type DependencyGraph struct {
+	Edges map[string][]string
 	Nodes []string
-	Edges map[string][]string // Maps a package to the list of packages it imports
 }
 
 // AnalyzeDependencies parses the module and builds a graph of internal package dependencies.
@@ -81,7 +81,7 @@ func RenderMermaid(graph *DependencyGraph) string {
 			continue // Skip packages with no internal dependencies to keep graph clean
 		}
 		for _, imp := range imports {
-			b.WriteString(fmt.Sprintf("    \"%s\" --> \"%s\"\n", pkg, imp))
+			fmt.Fprintf(&b, "    \"%s\" --> \"%s\"\n", pkg, imp)
 		}
 	}
 
