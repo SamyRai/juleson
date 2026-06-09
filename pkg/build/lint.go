@@ -9,18 +9,18 @@ import (
 )
 
 type LintConfig struct {
+	Timeout  string
 	Packages []string
 	FixMode  bool
 	Verbose  bool
 	Fast     bool
-	Timeout  string
 }
 
 type LintResult struct {
-	Duration time.Duration
-	Success  bool
 	Error    error
 	Output   string
+	Duration time.Duration
+	Success  bool
 }
 
 func (r *LintResult) String() string {

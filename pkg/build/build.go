@@ -18,23 +18,23 @@ type Config struct {
 	Version       string
 	GOOS          string
 	GOARCH        string
-	Race          bool
+	Tags          []string
 	LDFlags       []string
 	BuildFlags    []string
-	Tags          []string
+	Race          bool
 	TrimPath      bool
 	CGOEnabled    bool
 	CGOConfigured bool
 }
 
 type BuildResult struct {
+	Error      error
 	Name       string
 	OutputPath string
+	Output     string
 	OutputSize int64
 	Duration   time.Duration
 	Success    bool
-	Error      error
-	Output     string
 }
 
 func (r *BuildResult) String() string {

@@ -7,7 +7,7 @@ import (
 	"github.com/SamyRai/juleson/pkg/build"
 )
 
-// Test runs tests with the given options
+// Test runs tests with the given options.
 func (s *Service) Test(ctx context.Context, options TestOptions) error {
 	config := build.DefaultTestConfig()
 	config.Verbose = options.Verbose
@@ -22,7 +22,7 @@ func (s *Service) Test(ctx context.Context, options TestOptions) error {
 	return result.Error
 }
 
-// Coverage generates test coverage report
+// Coverage generates test coverage report.
 func (s *Service) Coverage(ctx context.Context) error {
 	// Run tests with coverage
 	if err := s.Test(ctx, TestOptions{

@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 )
 
-// Install installs binaries to the target path (defaults to GOPATH/bin)
+// Install installs binaries to the target path (defaults to GOPATH/bin).
 func (s *Service) Install(ctx context.Context, targetPath string) error {
 	_, err := s.InstallWithResult(ctx, InstallOptions{Path: targetPath})
 	return err
 }
 
-// RunCLI runs the CLI binary with the given arguments
+// RunCLI runs the CLI binary with the given arguments.
 func (s *Service) RunCLI(ctx context.Context, args []string) error {
 	if err := s.BuildCLI(ctx); err != nil {
 		return fmt.Errorf("failed to build CLI: %w", err)
@@ -29,7 +29,7 @@ func (s *Service) RunCLI(ctx context.Context, args []string) error {
 	return nil
 }
 
-// StartDev starts development mode with live reload (requires air)
+// StartDev starts development mode with live reload (requires air).
 func (s *Service) StartDev(ctx context.Context) error {
 	// Check if air is installed
 	if _, err := exec.LookPath("air"); err != nil {

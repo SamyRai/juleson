@@ -9,9 +9,9 @@ import (
 type BuildOptions struct {
 	Target  string
 	Version string
-	Race    bool
 	GOOS    string
 	GOARCH  string
+	Race    bool
 }
 
 type BuildSummary struct {

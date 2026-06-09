@@ -230,7 +230,7 @@ func TestCleanerRemovesArtifactsWithoutCacheCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, path := range []string{filepath.Join(binDir, "juleson"), coverageFile, coverageHTML} {
-		if err := os.WriteFile(path, []byte("artifact"), 0644); err != nil {
+		if err := os.WriteFile(path, []byte("artifact"), 0600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -261,7 +261,7 @@ exit 0
 	if err := manager.Tidy(context.Background()); err != nil {
 		t.Fatalf("tidy failed: %v", err)
 	}
-	if args := readFakeArgs(t, argsFile); strings.Join(args, "\x00") != strings.Join([]string{"mod", "tidy"}, "\x00") {
+	if args := readFakeArgs(t, argsFile); strings.Join(args, "\x00") != "mod"+"\x00"+"tidy" {
 		t.Fatalf("unexpected tidy args: %#v", args)
 	}
 

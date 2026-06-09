@@ -21,7 +21,7 @@ type Config struct {
 	GitCommit    string
 }
 
-// DefaultConfig returns default configuration for Juleson project
+// DefaultConfig returns default configuration for Juleson project.
 func DefaultConfig(version, buildDate, gitCommit string) *Config {
 	return &Config{
 		BinaryCLI:    "juleson",
@@ -37,16 +37,16 @@ func DefaultConfig(version, buildDate, gitCommit string) *Config {
 	}
 }
 
-// TestOptions holds options for running tests
+// TestOptions holds options for running tests.
 type TestOptions struct {
+	Packages []string
 	Verbose  bool
 	Race     bool
 	Cover    bool
 	Short    bool
-	Packages []string
 }
 
-// VersionInfo holds version information
+// VersionInfo holds version information.
 type VersionInfo struct {
 	Version   string
 	BuildDate string
@@ -69,14 +69,14 @@ func NewService(config *Config) *Service {
 	}
 }
 
-// WithOutput sets custom output writers for stdout and stderr
+// WithOutput sets custom output writers for stdout and stderr.
 func (s *Service) WithOutput(stdout, stderr io.Writer) *Service {
 	s.stdout = stdout
 	s.stderr = stderr
 	return s
 }
 
-// runCommand executes a command with the given arguments
+// runCommand executes a command with the given arguments.
 func (s *Service) runCommand(ctx context.Context, name string, args ...string) error {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Stdout = s.stdout
@@ -84,7 +84,7 @@ func (s *Service) runCommand(ctx context.Context, name string, args ...string) e
 	return cmd.Run()
 }
 
-// GetVersion returns version information
+// GetVersion returns version information.
 func (s *Service) GetVersion() VersionInfo {
 	return VersionInfo{
 		Version:   s.config.Version,

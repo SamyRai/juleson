@@ -32,7 +32,7 @@ func RunDiffTool(ctx context.Context, diffTool, diffText string) error {
 	return cmd.Wait()
 }
 
-// LookPath wraps exec.LookPath
+// LookPath wraps exec.LookPath.
 func LookPath(file string) (string, error) {
 	return exec.LookPath(file)
 }

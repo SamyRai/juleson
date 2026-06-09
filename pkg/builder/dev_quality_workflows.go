@@ -8,22 +8,22 @@ import (
 )
 
 type QualityOptions struct {
+	TestConfig   build.TestConfig
+	BuildOptions BuildOptions
+	LintConfig   build.LintConfig
+	FormatPaths  []string
 	Format       bool
 	UseGofumpt   bool
-	FormatPaths  []string
 	Lint         bool
-	LintConfig   build.LintConfig
 	Test         bool
-	TestConfig   build.TestConfig
 	Build        bool
-	BuildOptions BuildOptions
 }
 
 type QualitySummary struct {
-	Checks       []string
 	LintResult   *build.LintResult
 	TestResult   *build.TestResult
 	BuildSummary *BuildSummary
+	Checks       []string
 }
 
 func (s *Service) RunTestsWithResult(ctx context.Context, config build.TestConfig) *build.TestResult {

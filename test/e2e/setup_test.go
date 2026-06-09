@@ -67,7 +67,3 @@ func writeTarGz(path, name string, contents []byte) error {
 }
 
 // getInstallerPlatform simulates the platform resolution matching the script.
-func getInstallerPlatform() (string, string) {
-	// We are compiling targeting linux amd64 for the containers
-	return "linux", "amd64"
-}

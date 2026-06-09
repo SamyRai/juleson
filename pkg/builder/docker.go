@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// DockerBuild builds the Docker image
+// DockerBuild builds the Docker image.
 func (s *Service) DockerBuild(ctx context.Context) error {
 	if err := s.runCommand(ctx, "docker", "build", "-t", s.config.DockerImage, "."); err != nil {
 		return fmt.Errorf("docker build failed: %w", err)
@@ -15,7 +15,7 @@ func (s *Service) DockerBuild(ctx context.Context) error {
 	return nil
 }
 
-// DockerRun runs a Docker container with the given arguments
+// DockerRun runs a Docker container with the given arguments.
 func (s *Service) DockerRun(ctx context.Context, args []string) error {
 	// Build first
 	if err := s.DockerBuild(ctx); err != nil {
@@ -43,7 +43,7 @@ func (s *Service) DockerRun(ctx context.Context, args []string) error {
 	return nil
 }
 
-// DockerRunCLI runs the CLI in a Docker container
+// DockerRunCLI runs the CLI in a Docker container.
 func (s *Service) DockerRunCLI(ctx context.Context, args []string) error {
 	// Build first
 	if err := s.DockerBuild(ctx); err != nil {
@@ -72,7 +72,7 @@ func (s *Service) DockerRunCLI(ctx context.Context, args []string) error {
 	return nil
 }
 
-// DockerPush pushes the Docker image to the registry
+// DockerPush pushes the Docker image to the registry.
 func (s *Service) DockerPush(ctx context.Context) error {
 	// Build first
 	if err := s.DockerBuild(ctx); err != nil {
@@ -86,7 +86,7 @@ func (s *Service) DockerPush(ctx context.Context) error {
 	return nil
 }
 
-// DockerComposeUp starts services with docker-compose
+// DockerComposeUp starts services with docker-compose.
 func (s *Service) DockerComposeUp(ctx context.Context) error {
 	if err := s.runCommand(ctx, "docker-compose", "up", "--build"); err != nil {
 		return fmt.Errorf("docker-compose up failed: %w", err)
@@ -95,7 +95,7 @@ func (s *Service) DockerComposeUp(ctx context.Context) error {
 	return nil
 }
 
-// DockerComposeDown stops services with docker-compose
+// DockerComposeDown stops services with docker-compose.
 func (s *Service) DockerComposeDown(ctx context.Context) error {
 	if err := s.runCommand(ctx, "docker-compose", "down"); err != nil {
 		return fmt.Errorf("docker-compose down failed: %w", err)
@@ -104,7 +104,7 @@ func (s *Service) DockerComposeDown(ctx context.Context) error {
 	return nil
 }
 
-// DockerClean cleans Docker artifacts
+// DockerClean cleans Docker artifacts.
 func (s *Service) DockerClean(ctx context.Context) error {
 	if err := s.runCommand(ctx, "docker", "system", "prune", "-f"); err != nil {
 		return fmt.Errorf("docker system prune failed: %w", err)

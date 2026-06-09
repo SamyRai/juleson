@@ -9,26 +9,26 @@ import (
 )
 
 type TestConfig struct {
-	WorkingDir   string
-	Packages     []string
-	Verbose      bool
-	Race         bool
-	Cover        bool
-	CoverProfile string
-	Short        bool
-	Timeout      time.Duration
-	Parallel     int
-	RunPattern   string
-	SkipPattern  string
-	FailFast     bool
 	Shuffle      string
+	WorkingDir   string
+	SkipPattern  string
+	CoverProfile string
+	RunPattern   string
+	Packages     []string
+	Parallel     int
+	Timeout      time.Duration
+	Race         bool
+	Short        bool
+	Cover        bool
+	FailFast     bool
+	Verbose      bool
 }
 
 type TestResult struct {
-	Duration time.Duration
-	Success  bool
 	Error    error
 	Output   string
+	Duration time.Duration
+	Success  bool
 }
 
 func (r *TestResult) String() string {

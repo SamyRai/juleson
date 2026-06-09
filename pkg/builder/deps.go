@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// DownloadDeps downloads Go module dependencies
+// DownloadDeps downloads Go module dependencies.
 func (s *Service) DownloadDeps(ctx context.Context) error {
 	if err := s.RunModuleMaintenance(ctx, "download"); err != nil {
 		return fmt.Errorf("go mod download failed: %w", err)
@@ -18,7 +18,7 @@ func (s *Service) DownloadDeps(ctx context.Context) error {
 	return nil
 }
 
-// TidyDeps tidies Go module dependencies
+// TidyDeps tidies Go module dependencies.
 func (s *Service) TidyDeps(ctx context.Context) error {
 	if err := s.RunModuleMaintenance(ctx, "tidy"); err != nil {
 		return fmt.Errorf("go mod tidy failed: %w", err)

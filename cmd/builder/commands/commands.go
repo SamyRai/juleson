@@ -9,7 +9,7 @@ var (
 	svc *builder.Service
 )
 
-// AddCommands adds all commands to the root command
+// AddCommands adds all commands to the root command.
 func AddCommands(rootCmd *cobra.Command, ver, build, commit string) {
 	// Initialize the builder service.
 	config := builder.DefaultConfig(ver, build, commit)
