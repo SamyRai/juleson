@@ -144,7 +144,7 @@ func loadEnvFiles() {
 	for _, path := range envPaths {
 		if _, err := os.Stat(path); err == nil {
 			// File exists, load it
-			gotenv.Load(path)
+			_ = gotenv.Load(path)
 		}
 	}
 }

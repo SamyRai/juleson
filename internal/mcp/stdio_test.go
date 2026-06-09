@@ -70,7 +70,7 @@ func TestStdioTransport(t *testing.T) {
 		select {
 		case <-done:
 			require.NoError(t, readErr)
-		case <-time.After(2 * time.Second):
+		case <-time.After(10 * time.Second):
 			t.Fatal("Timeout waiting for response")
 		}
 

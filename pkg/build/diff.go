@@ -26,8 +26,8 @@ func RunDiffTool(ctx context.Context, diffTool, diffText string) error {
 		return err
 	}
 
-	io.WriteString(stdin, diffText)
-	stdin.Close()
+	_, _ = io.WriteString(stdin, diffText)
+	_ = stdin.Close()
 
 	return cmd.Wait()
 }
