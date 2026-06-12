@@ -198,7 +198,7 @@ jobs:
           fi
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=10m --verbose --new-from-rev=${{ steps.lint-base.outputs.base }}
