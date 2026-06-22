@@ -4,7 +4,7 @@ go 1.25.11
 
 require (
 	github.com/SamyRai/go-jules v0.2.0
-	github.com/alecthomas/chroma/v2 v2.26.1
+	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/bluekeyes/go-gitdiff v0.8.1
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
@@ -48,7 +48,7 @@ require (
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/dlclark/regexp2/v2 v2.1.1 // indirect
+	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
