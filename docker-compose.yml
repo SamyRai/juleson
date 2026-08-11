@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   juleson:
     build:
@@ -15,11 +13,11 @@ services:
       - ./configs:/home/juleson/configs
     working_dir: /workspace
     entrypoint: ["juleson"]
-    command: ["analyze", "/workspace"]
+    command: ["--help"]
     networks:
       - juleson-network
 
-  juleson-mcp:
+  mcp:
     build:
       context: .
       dockerfile: Dockerfile
@@ -28,12 +26,10 @@ services:
       - JULES_API_KEY=${JULES_API_KEY}
       - JULES_BASE_URL=https://jules.googleapis.com/v1alpha
       - JULES_LOG_LEVEL=info
-    ports:
-      - "8080:8080"
     volumes:
       - ./configs:/home/juleson/configs
-    entrypoint: ["jules-mcp"]
-    command: []
+    entrypoint: ["juleson"]
+    command: ["mcp", "serve"]
     networks:
       - juleson-network
     restart: unless-stopped

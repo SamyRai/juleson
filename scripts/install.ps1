@@ -57,7 +57,7 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 try {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 
-    foreach ($binary in @("juleson", "jules-mcp")) {
+    foreach ($binary in @("juleson", "jsn")) {
         $asset = "$binary-windows-$arch.zip"
         $archive = Join-Path $tempDir $asset
         $extractDir = Join-Path $tempDir $binary
@@ -84,7 +84,7 @@ try {
         }
     }
 
-    Write-Host "Installed juleson and jules-mcp to $InstallDir"
+    Write-Host "Installed juleson and jsn to $InstallDir"
 } finally {
     Remove-Item -Recurse -Force $tempDir -ErrorAction SilentlyContinue
 }

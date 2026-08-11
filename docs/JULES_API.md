@@ -7,11 +7,12 @@ https://jules.googleapis.com/v1alpha
 ```
 
 The public Go SDK is published as `github.com/SamyRai/go-jules`. Local
-filesystem and `git apply` operations live in Juleson's `internal/julesops` so
+filesystem and `git apply` operations live in Juleson's internal workspace code so
 the SDK remains reusable without app side effects.
 
 Official references:
 
+- [Jules API overview](https://jules.google/docs/api/)
 - [Sessions](https://jules.google/docs/api/reference/sessions/)
 - [Activities](https://jules.google/docs/api/reference/activities/)
 - [Sources](https://jules.google/docs/api/reference/sources/)
@@ -46,7 +47,11 @@ client := jules.NewClient(
 )
 ```
 
-Debug logging for HTTP requests can be enabled via `jules.WithDebugLog(true)` and requires setting `jules.WithLogger`. When enabled, it logs HTTP method, URL, duration, status code, and errors at the `Debug` level, while redacting any values resembling keys or tokens in query parameters to ensure secrets are not exposed.
+Debug logging for HTTP requests can be enabled via `jules.WithDebugLog(true)`
+and requires setting `jules.WithLogger`. When enabled, it logs HTTP method,
+URL, duration, status code, and errors at the `Debug` level, while redacting any
+values resembling keys or tokens in query parameters to ensure secrets are not
+exposed.
 
 The SDK uses typed session states, automation modes, activity originators, and
 `time.Time` values for documented RFC3339 timestamps. Methods accepting resource
@@ -58,7 +63,7 @@ The SDK exposes documented Jules API resources plus pure helpers for embedded
 artifact payloads. It does not call undocumented artifact `/content`,
 `/download`, `/analyze`, or activity `/search` endpoints. Juleson CLI and MCP
 commands layer local download, preview, backup, and patch application behavior on
-top of the SDK through `internal/julesops`.
+top of the SDK through `internal/jules/workspace`.
 
 ## Authentication
 
@@ -114,14 +119,20 @@ endpoint. Use the Jules web UI to cancel a running session.
 
 ## Activity Filtering
 
-The activity list endpoint supports pagination. Although some Jules docs show a
-`createTime` query parameter, live API responses can reject it as an unknown
-field. Juleson therefore performs `createTime`, type, status, plan, and artifact
-filtering client-side after fetching activities.
+The activity list endpoint supports pagination. Current Jules docs show a
+`createTime` query parameter, but live API responses have rejected it as an
+unknown field. Juleson therefore performs `createTime`, type, status, plan, and
+artifact filtering client-side after fetching activities.
 
 For immutable activity streams, SDK callers can use `ListActivitiesSince` with a
 stored `createTime` cursor and `ActivityCursor` to compute the next cursor from a
 batch.
+
+Plan inspection is built from documented activity payloads. `sessions plans` and
+the MCP `get_session_plans` tool read activities with `planGenerated` and
+`planApproved`, then summarize plan IDs, activity IDs/resource names, creation
+times, approval state, and every step title and description. The MCP response
+keeps the existing raw `activities` field and adds a structured `plans` field.
 
 Full file outputs are mentioned in the upstream changelog, but the public
 reference does not document a stable typed response shape in the pages above.
@@ -132,14 +143,23 @@ Juleson does not model a file output type until that schema is confirmed.
 Juleson can preview and apply patches from session artifacts:
 
 ```bash
+juleson sessions plans SESSION_ID
+juleson sessions review SESSION_ID ./repo
 juleson sessions artifacts list SESSION_ID
 juleson sessions apply SESSION_ID ./repo --activity-id ACTIVITY_ID --artifact-index 0
 juleson sessions apply SESSION_ID ./repo --confirm
 juleson sessions download SESSION_ID ./artifacts
 ```
 
-MCP tools also expose `preview_session_changes`, `list_session_artifacts`, and
-`apply_session_patches`.
+MCP tools also expose `review_session`, `list_session_artifacts`, and
+`get_session_outputs`.
+
+`sessions review` and MCP `review_session` are read-only operator snapshots.
+They combine session state, latest plan, documented outputs, artifact manifests,
+patch dry-run preview, base commit mismatch warnings, dirty-worktree blockers,
+verification suggestions, and safe next actions. They do not approve plans,
+send messages, mutate worktrees, or apply patches; when safe they only
+recommend the exact `sessions apply ... --confirm` command.
 
 Preview and apply can be scoped to one activity and artifact index. `git apply
 --check` remains the source of truth for whether a patch can apply. Juleson
@@ -153,11 +173,11 @@ sets `--allow-base-mismatch` or `allow_base_mismatch=true`.
 `verify_session_changes` detects Go (`go test`), Node/Yarn (`yarn test`),
 Python/uv (`uv run pytest`), and Rust (`cargo test`) from project files. The
 explicit command escape hatch is opt-in and only runs when supplied by the user
-or MCP caller.
+or caller.
 
 `sessions outputs` and `get_session_outputs` surface documented pull request
-outputs. Juleson reports PR URLs and leaves CI remediation to the existing
-GitHub/Actions integration instead of duplicating Jules CI auto-fix logic.
+outputs. Juleson reports PR URLs and leaves general GitHub and Actions handling
+to `gh`, GitHub's CLI, or the official GitHub MCP server.
 
 ## Unsupported Or Deferred Jules Features
 

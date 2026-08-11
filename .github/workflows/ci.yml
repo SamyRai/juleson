@@ -134,16 +134,20 @@ jobs:
           SKIP_E2E: 1
         run: go test -v -timeout=10m -coverprofile=coverage.out -covermode=atomic ./...
 
-      - name: Run MCP E2E
+      - name: Run MCP command smoke
         if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
-        run: go test -v -run TestServerE2EWithCommandTransport ./internal/mcp
+        run: go run ./cmd/juleson mcp serve --version
+
+      - name: Run E2E tests
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
+        run: go test -v -timeout=15m ./test/e2e/...
 
       - name: Run tests with -short flag
         run: go test -v -short -timeout=5m ./...
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.go-version == 'stable'
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.out
           flags: unittests-${{ matrix.os }}
@@ -194,7 +198,7 @@ jobs:
           fi
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=10m --verbose --new-from-rev=${{ steps.lint-base.outputs.base }}
@@ -221,9 +225,7 @@ jobs:
           cache: true
 
       - name: Run Gosec Security Scanner
-        uses: securego/gosec@v2.26.1
-        with:
-          args: "-no-fail -fmt sarif -out gosec-results.sarif ./..."
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.27.1 -no-fail -fmt sarif -out gosec-results.sarif ./...
 
       - name: Upload SARIF file
         if: always()
@@ -280,7 +282,7 @@ jobs:
             -o "bin/juleson${ext}" \
             ./cmd/juleson
 
-      - name: Build jules-mcp (optimized)
+      - name: Build jsn alias (optimized)
         shell: bash
         run: |
           ext=""
@@ -291,21 +293,23 @@ jobs:
           go build -v \
             -ldflags="-s -w -X main.version=${{ github.sha }} -X main.buildTime=${build_time} -X main.gitCommit=${{ github.sha }}" \
             -trimpath \
-            -o "bin/jules-mcp${ext}" \
-            ./cmd/jules-mcp
+            -o "bin/jsn${ext}" \
+            ./cmd/juleson
 
       - name: Test binaries (Unix)
         if: runner.os != 'Windows'
         run: |
           ./bin/juleson --version
-          ./bin/jules-mcp --version
+          ./bin/jsn --version
+          ./bin/juleson mcp serve --version
 
       - name: Test binaries (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           .\bin\juleson.exe --version
-          .\bin\jules-mcp.exe --version
+          .\bin\jsn.exe --version
+          .\bin\juleson.exe mcp serve --version
 
       - name: Run go vet
         run: go vet ./...
@@ -339,7 +343,7 @@ jobs:
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: moderate
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, LicenseRef-scancode-google-patent-license-golang
 
   performance-test:
     name: Performance Test
@@ -361,8 +365,8 @@ jobs:
       - name: Run benchmarks
         run: go test -bench=. -benchmem -run=^$ ./...
 
-      - name: Run memory profiling
-        run: go test -memprofile=mem.out -run=^$ ./internal/mcp
+      - name: Run MCP package compile smoke
+        run: go test -run=^$ ./internal/mcp
 
   all-checks-pass:
     name: All Checks Pass

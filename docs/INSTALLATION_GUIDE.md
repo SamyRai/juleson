@@ -1,6 +1,12 @@
 # Installation Guide
 
-Juleson ships two user binaries: `juleson` and `jules-mcp`.
+Juleson ships two executable names:
+
+- `juleson`: the primary CLI.
+- `jsn`: a short alias that runs the same CLI.
+
+MCP is served by `juleson mcp serve` or `jsn mcp serve`; there is no separate
+`jules-mcp` binary.
 
 ## Quick Install
 
@@ -19,9 +25,9 @@ irm https://github.com/SamyRai/juleson/releases/latest/download/install.ps1 | ie
 The installers download release assets named:
 
 - `juleson-<os>-<arch>.tar.gz`
-- `jules-mcp-<os>-<arch>.tar.gz`
+- `jsn-<os>-<arch>.tar.gz`
 - `juleson-windows-<arch>.zip`
-- `jules-mcp-windows-<arch>.zip`
+- `jsn-windows-<arch>.zip`
 
 Supported OS values are `linux`, `darwin`, and `windows`. Supported architecture
 values are `amd64` and `arm64`.
@@ -48,10 +54,10 @@ Windows:
 
 ```bash
 go install github.com/SamyRai/juleson/cmd/juleson@latest
-go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
 
-Make sure `$(go env GOPATH)/bin` is on `PATH`.
+Make sure `$(go env GOPATH)/bin` is on `PATH`. `go install` installs only the
+`juleson` executable; release installers provide the `jsn` alias.
 
 ## Build From Source
 
@@ -59,42 +65,40 @@ Make sure `$(go env GOPATH)/bin` is on `PATH`.
 git clone https://github.com/SamyRai/juleson.git
 cd juleson
 go mod download
-go build -o bin/orchestrator ./cmd/orchestrator
-./bin/orchestrator build
+go build -o bin/builder ./cmd/builder
+./bin/builder build
 ```
 
-Or build individual binaries:
+Or build individual executable names:
 
 ```bash
 go build -o bin/juleson ./cmd/juleson
-go build -o bin/jules-mcp ./cmd/jules-mcp
+go build -o bin/jsn ./cmd/juleson
 ```
 
 ## Verify
 
 ```bash
 juleson --help
+jsn --help
 juleson version
-go build ./cmd/jules-mcp
+juleson mcp serve --version
 ```
-
-`jules-mcp` uses stdio transport and does not expose a separate help command.
-Running it directly starts the server and waits for MCP protocol messages.
 
 ## Uninstall
 
-Remove the installed binaries from the directory where they were installed:
+Remove the installed executables from the directory where they were installed:
 
 ```bash
 rm /usr/local/bin/juleson
-rm /usr/local/bin/jules-mcp
+rm /usr/local/bin/jsn
 ```
 
 Windows:
 
 ```powershell
 Remove-Item "$env:USERPROFILE\.juleson\bin\juleson.exe"
-Remove-Item "$env:USERPROFILE\.juleson\bin\jules-mcp.exe"
+Remove-Item "$env:USERPROFILE\.juleson\bin\jsn.exe"
 ```
 
 Remove config files only if you no longer need local settings.

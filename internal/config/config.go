@@ -9,18 +9,15 @@ import (
 	gotenv "github.com/subosito/gotenv"
 )
 
-// Config represents the application configuration
+// Config represents the application configuration.
 type Config struct {
-	Jules      JulesConfig      `mapstructure:"jules"`
-	GitHub     GitHubConfig     `mapstructure:"github"`
-	Gemini     GeminiConfig     `mapstructure:"gemini"`
-	MCP        MCPConfig        `mapstructure:"mcp"`
-	Automation AutomationConfig `mapstructure:"automation"`
-	Projects   ProjectsConfig   `mapstructure:"projects"`
-	Templates  TemplatesConfig  `mapstructure:"templates"`
+	Templates TemplatesConfig `mapstructure:"templates"`
+	Diff      DiffConfig      `mapstructure:"diff"`
+	GitHub    GitHubConfig    `mapstructure:"github"`
+	Jules     JulesConfig     `mapstructure:"jules"`
 }
 
-// JulesConfig contains Jules API configuration
+// JulesConfig contains Jules API configuration.
 type JulesConfig struct {
 	APIKey        string        `mapstructure:"api_key"`
 	BaseURL       string        `mapstructure:"base_url"`
@@ -29,7 +26,7 @@ type JulesConfig struct {
 	DebugLog      bool          `mapstructure:"debug_log"`
 }
 
-// GitHubConfig contains GitHub API configuration
+// GitHubConfig contains GitHub API configuration.
 type GitHubConfig struct {
 	Token      string                `mapstructure:"token"`
 	DefaultOrg string                `mapstructure:"default_org"`
@@ -37,70 +34,33 @@ type GitHubConfig struct {
 	Discovery  GitHubDiscoveryConfig `mapstructure:"discovery"`
 }
 
-// GitHubPRConfig contains GitHub PR settings
+// GitHubPRConfig contains GitHub PR settings.
 type GitHubPRConfig struct {
 	DefaultMergeMethod string `mapstructure:"default_merge_method"`
 	AutoDeleteBranch   bool   `mapstructure:"auto_delete_branch"`
 }
 
-// GitHubDiscoveryConfig contains GitHub repository discovery settings
+// GitHubDiscoveryConfig contains GitHub repository discovery settings.
 type GitHubDiscoveryConfig struct {
 	Enabled      bool          `mapstructure:"enabled"`
 	UseGitRemote bool          `mapstructure:"use_git_remote"`
 	CacheTTL     time.Duration `mapstructure:"cache_ttl"`
 }
 
-// GeminiConfig contains Google Gemini AI configuration
-type GeminiConfig struct {
-	APIKey    string        `mapstructure:"api_key"`
-	Backend   string        `mapstructure:"backend"`  // "gemini-api" or "vertex-ai"
-	Project   string        `mapstructure:"project"`  // GCP project for Vertex AI
-	Location  string        `mapstructure:"location"` // GCP location for Vertex AI
-	Model     string        `mapstructure:"model"`    // Default model (e.g., "gemini-2.0-flash")
-	Timeout   time.Duration `mapstructure:"timeout"`
-	MaxTokens int           `mapstructure:"max_tokens"`
-}
-
-// MCPConfig contains MCP server configuration
-type MCPConfig struct {
-	Server MCPServerConfig `mapstructure:"server"`
-	Client MCPClientConfig `mapstructure:"client"`
-}
-
-// MCPServerConfig contains MCP server settings
-type MCPServerConfig struct {
-	Port int    `mapstructure:"port"`
-	Host string `mapstructure:"host"`
-}
-
-// MCPClientConfig contains MCP client settings
-type MCPClientConfig struct {
-	Timeout time.Duration `mapstructure:"timeout"`
-}
-
-// AutomationConfig contains automation settings
-type AutomationConfig struct {
-	Strategies         []string      `mapstructure:"strategies"`
-	MaxConcurrentTasks int           `mapstructure:"max_concurrent_tasks"`
-	TaskTimeout        time.Duration `mapstructure:"task_timeout"`
-	CheckpointPath     string        `mapstructure:"checkpoint_path"`
-}
-
-// ProjectsConfig contains project management settings
-type ProjectsConfig struct {
-	DefaultPath    string `mapstructure:"default_path"`
-	BackupEnabled  bool   `mapstructure:"backup_enabled"`
-	GitIntegration bool   `mapstructure:"git_integration"`
-}
-
-// TemplatesConfig contains template settings
+// TemplatesConfig contains template settings.
 type TemplatesConfig struct {
 	BuiltinPath  string `mapstructure:"builtin_path"`
 	CustomPath   string `mapstructure:"custom_path"`
 	EnableCustom bool   `mapstructure:"enable_custom"`
 }
 
-// Load loads configuration from file and environment variables
+// DiffConfig contains diff viewing settings.
+type DiffConfig struct {
+	Tool        string `mapstructure:"tool"`
+	ForceNative bool   `mapstructure:"force_native"`
+}
+
+// Load loads configuration from file and environment variables.
 func Load() (*Config, error) {
 	return load(true, true)
 }
@@ -150,7 +110,6 @@ func load(requireJulesAPIKey bool, validateConfig bool) (*Config, error) {
 	// Expand environment variables in paths
 	config.Templates.CustomPath = os.ExpandEnv(config.Templates.CustomPath)
 	config.Templates.BuiltinPath = os.ExpandEnv(config.Templates.BuiltinPath)
-	config.Automation.CheckpointPath = os.ExpandEnv(config.Automation.CheckpointPath)
 	applyCredentialFallbacks(&config)
 
 	// Validate configuration
@@ -170,12 +129,9 @@ func applyCredentialFallbacks(config *Config) {
 	if config.GitHub.Token == "" {
 		config.GitHub.Token = os.Getenv("GITHUB_TOKEN")
 	}
-	if config.Gemini.APIKey == "" {
-		config.Gemini.APIKey = os.Getenv("GEMINI_API_KEY")
-	}
 }
 
-// loadEnvFiles loads .env files from multiple possible locations
+// loadEnvFiles loads .env files from multiple possible locations.
 func loadEnvFiles() {
 	// Possible locations for .env files (in order of priority)
 	envPaths := []string{
@@ -188,12 +144,12 @@ func loadEnvFiles() {
 	for _, path := range envPaths {
 		if _, err := os.Stat(path); err == nil {
 			// File exists, load it
-			gotenv.Load(path)
+			_ = gotenv.Load(path)
 		}
 	}
 }
 
-// setDefaults sets default configuration values
+// setDefaults sets default configuration values.
 func setDefaults() {
 	viper.SetDefault("jules.api_key", "")
 	viper.SetDefault("jules.base_url", "https://jules.googleapis.com/v1alpha")
@@ -209,50 +165,24 @@ func setDefaults() {
 	viper.SetDefault("github.discovery.use_git_remote", true)
 	viper.SetDefault("github.discovery.cache_ttl", "5m")
 
-	viper.SetDefault("gemini.api_key", "")
-	viper.SetDefault("gemini.backend", "gemini-api")
-	viper.SetDefault("gemini.project", "")
-	viper.SetDefault("gemini.location", "us-central1")
-	viper.SetDefault("gemini.model", "gemini-2.0-flash")
-	viper.SetDefault("gemini.timeout", "30s")
-	viper.SetDefault("gemini.max_tokens", 8192)
-
-	viper.SetDefault("mcp.server.port", 8080)
-	viper.SetDefault("mcp.server.host", "localhost")
-	viper.SetDefault("mcp.client.timeout", "10s")
-
-	viper.SetDefault("automation.strategies", []string{"modular", "layered", "microservices"})
-	viper.SetDefault("automation.max_concurrent_tasks", 5)
-	viper.SetDefault("automation.task_timeout", "300s")
-	viper.SetDefault("automation.checkpoint_path", "./data/checkpoints")
-
-	viper.SetDefault("projects.default_path", "./projects")
-	viper.SetDefault("projects.backup_enabled", true)
-	viper.SetDefault("projects.git_integration", true)
-
 	viper.SetDefault("templates.builtin_path", "./templates/builtin")
 	viper.SetDefault("templates.custom_path", "${JULES_TEMPLATES_CUSTOM_PATH:-./templates/custom}")
 	viper.SetDefault("templates.enable_custom", true)
+
+	viper.SetDefault("diff.tool", "")
+	viper.SetDefault("diff.force_native", false)
 }
 
-// validate validates the configuration
+// validate validates the configuration.
 func validate(config *Config, requireJulesAPIKey bool) error {
 	if config.Jules.APIKey == "" && requireJulesAPIKey {
-		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable")
-	}
-
-	if config.MCP.Server.Port <= 0 || config.MCP.Server.Port > 65535 {
-		return fmt.Errorf("invalid MCP server port: %d", config.MCP.Server.Port)
-	}
-
-	if config.Automation.MaxConcurrentTasks <= 0 {
-		return fmt.Errorf("max concurrent tasks must be greater than 0")
+		return fmt.Errorf("Jules API key is required - set it in juleson.yaml or JULES_API_KEY environment variable") //nolint:staticcheck
 	}
 
 	return nil
 }
 
-// Save saves the configuration back to the config file
+// Save saves the configuration back to the config file.
 func (c *Config) Save() error {
 	// Set the values in viper
 	viper.Set("jules.api_key", c.Jules.APIKey)
@@ -269,30 +199,12 @@ func (c *Config) Save() error {
 	viper.Set("github.discovery.use_git_remote", c.GitHub.Discovery.UseGitRemote)
 	viper.Set("github.discovery.cache_ttl", c.GitHub.Discovery.CacheTTL.String())
 
-	viper.Set("gemini.api_key", c.Gemini.APIKey)
-	viper.Set("gemini.backend", c.Gemini.Backend)
-	viper.Set("gemini.project", c.Gemini.Project)
-	viper.Set("gemini.location", c.Gemini.Location)
-	viper.Set("gemini.model", c.Gemini.Model)
-	viper.Set("gemini.timeout", c.Gemini.Timeout.String())
-	viper.Set("gemini.max_tokens", c.Gemini.MaxTokens)
-
-	viper.Set("mcp.server.port", c.MCP.Server.Port)
-	viper.Set("mcp.server.host", c.MCP.Server.Host)
-	viper.Set("mcp.client.timeout", c.MCP.Client.Timeout.String())
-
-	viper.Set("automation.strategies", c.Automation.Strategies)
-	viper.Set("automation.max_concurrent_tasks", c.Automation.MaxConcurrentTasks)
-	viper.Set("automation.task_timeout", c.Automation.TaskTimeout.String())
-	viper.Set("automation.checkpoint_path", c.Automation.CheckpointPath)
-
-	viper.Set("projects.default_path", c.Projects.DefaultPath)
-	viper.Set("projects.backup_enabled", c.Projects.BackupEnabled)
-	viper.Set("projects.git_integration", c.Projects.GitIntegration)
-
 	viper.Set("templates.builtin_path", c.Templates.BuiltinPath)
 	viper.Set("templates.custom_path", c.Templates.CustomPath)
 	viper.Set("templates.enable_custom", c.Templates.EnableCustom)
+
+	viper.Set("diff.tool", c.Diff.Tool)
+	viper.Set("diff.force_native", c.Diff.ForceNative)
 
 	// Try to write to the config file
 	if err := viper.WriteConfig(); err != nil {

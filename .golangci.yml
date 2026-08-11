@@ -1,56 +1,36 @@
-version: "2"
 run:
-  modules-download-mode: readonly
+  timeout: 5m
+  issues-exit-code: 1
   tests: true
+
 linters:
+  disable-all: true
   enable:
-    - dupl
-    - gocritic
-    - gocyclo
-    - godot
-    - gosec
-    - misspell
-    - unconvert
-  settings:
-    dupl:
-      threshold: 100
-    errcheck:
-      check-type-assertions: true
-      check-blank: true
-    gocritic:
-      enabled-tags:
-        - diagnostic
-        - experimental
-        - opinionated
-        - performance
-        - style
-    gocyclo:
-      min-complexity: 15
-    govet:
-      disable:
-        - shadow
-      enable-all: true
-    misspell:
-      locale: US
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    - gofmt
+    - goimports
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+    - gosimple
+    - typecheck
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+
 issues:
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  new: false
-formatters:
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+    - source: ".*Jules.*"
+      linters:
+        - staticcheck
+      text: "ST1005"

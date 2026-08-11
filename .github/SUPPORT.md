@@ -37,10 +37,10 @@ Do not report security issues in public issues. See [Security Policy](../SECURIT
 ```bash
 juleson --help
 juleson version
-juleson github status
 juleson sources list
+juleson mcp serve --version
 ```
 
-For MCP setup, verify the configured command is an absolute path to `jules-mcp`.
-Also verify `juleson.yaml` contains any GitHub or Gemini credentials needed by
-the tools you are using, and that `JULES_API_KEY` is available for Jules tools.
+For MCP setup, verify the configured command is an absolute path to `juleson`
+with `mcp serve` as arguments. Also verify `JULES_API_KEY` is available for
+Jules tools.

@@ -1,0 +1,3 @@
+env HOME=$WORK/home
+exec juleson --help
+stdout 'A CLI and MCP server for operating Google''s Jules coding-agent sessions'

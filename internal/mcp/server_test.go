@@ -1,55 +1,67 @@
-package mcp
+package jmcp
 
 import (
+	"context"
+	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/SamyRai/juleson/internal/config"
-
-	"github.com/stretchr/testify/require"
+	"github.com/SamyRai/juleson/internal/presentation/cli/core"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func TestNewServer(t *testing.T) {
-	cfg := &config.Config{
-		Jules: config.JulesConfig{
-			APIKey:        "test-key",
-			BaseURL:       "https://test.googleapis.com/v1alpha",
-			Timeout:       30 * time.Second,
-			RetryAttempts: 3,
-		},
-		Templates: config.TemplatesConfig{
-			BuiltinPath:  "../../templates/builtin",
-			CustomPath:   "../../templates/custom",
-			EnableCustom: false,
-		},
+func TestServerRegistersCoreToolsAndVersion(t *testing.T) {
+	oldVersion := core.Version
+	core.Version = "test-version"
+	t.Cleanup(func() {
+		core.Version = oldVersion
+	})
+
+	server, err := NewServer(ServerOptions{Config: &config.Config{}})
+	if err != nil {
+		t.Fatalf("NewServer: %v", err)
 	}
 
-	server := NewServer(cfg)
-	require.NotNil(t, server)
-}
+	ctx := context.Background()
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.0.1"}, nil)
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	serverSession, err := server.Connect(ctx, serverTransport, nil)
+	if err != nil {
+		t.Fatalf("server connect: %v", err)
+	}
+	defer func() { _ = serverSession.Close() }()
+	clientSession, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	defer func() { _ = clientSession.Close() }()
 
-func TestServerInitialization(t *testing.T) {
-	cfg := &config.Config{
-		Jules: config.JulesConfig{
-			APIKey:        "test-key",
-			BaseURL:       "https://test.googleapis.com/v1alpha",
-			Timeout:       30 * time.Second,
-			RetryAttempts: 3,
-		},
-		Templates: config.TemplatesConfig{
-			BuiltinPath:  "../../templates/builtin",
-			CustomPath:   "../../templates/custom",
-			EnableCustom: false,
-		},
+	tools := map[string]bool{}
+	for tool, err := range clientSession.Tools(ctx, nil) {
+		if err != nil {
+			t.Fatalf("list tools: %v", err)
+		}
+		tools[tool.Name] = true
+	}
+	for _, name := range []string{"version", "list_sources", "get_session_plans", "review_session", "dev_build"} {
+		if !tools[name] {
+			t.Fatalf("expected tool %q to be registered; got %#v", name, tools)
+		}
 	}
 
-	server := NewServer(cfg)
-	require.NotNil(t, server)
-
-	// Check that managers are initialized
-	_, err := server.container.TemplateManager()
-	require.NoError(t, err)
-
-	_, err = server.container.AutomationEngine()
-	require.NoError(t, err)
+	result, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "version"})
+	if err != nil {
+		t.Fatalf("call version: %v", err)
+	}
+	raw, err := json.Marshal(result.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal structured content: %v", err)
+	}
+	var output core.VersionInfo
+	if err := json.Unmarshal(raw, &output); err != nil {
+		t.Fatalf("decode version output: %v", err)
+	}
+	if output.Version != "test-version" {
+		t.Fatalf("version = %q, want test-version", output.Version)
+	}
 }

@@ -1,0 +1,25 @@
+package builder
+
+import (
+	"context"
+	"os/exec"
+)
+
+type shellCommandRunner struct {
+	service *Service
+}
+
+func CommandAvailable(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
+func (r shellCommandRunner) Run(ctx context.Context, name string, args ...string) error {
+	return r.service.runCommand(ctx, name, args...)
+}
+
+func (r shellCommandRunner) CombinedOutput(ctx context.Context, name string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}

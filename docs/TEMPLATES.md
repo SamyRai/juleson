@@ -1,7 +1,7 @@
 # Templates
 
 Templates describe repeatable automation tasks that can be listed, inspected,
-searched, created, and executed through the CLI or MCP server.
+searched, and created through the CLI.
 
 ## Built-In Templates
 
@@ -23,8 +23,6 @@ juleson template list
 juleson template list testing
 juleson template show test-generation
 juleson template search coverage
-juleson execute template test-generation ./path/to/project
-juleson execute template-with-params api-documentation ./path/to/project format=markdown
 ```
 
 ## Custom Templates

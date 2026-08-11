@@ -53,8 +53,8 @@ github:
 ```
 
 Then set `JULES_API_KEY` through the environment or fill `jules.api_key` in the
-config file. Put GitHub and Gemini credentials in `juleson.yaml` for commands
-and MCP tools that need them:
+config file. Put `github.token` in `juleson.yaml` only if you use
+Jules-created pull request commands:
 
 ```bash
 export JULES_API_KEY="..."
@@ -85,11 +85,11 @@ juleson completion fish > ~/.config/fish/completions/juleson.fish
 
 ```bash
 juleson version
-juleson github status
+juleson mcp serve --version
 juleson sources list
 ```
 
-Commands that call Jules require a Jules API key. GitHub commands require
+Commands that call Jules require a Jules API key. Pull request commands require
 `github.token` in config.
 
 See [Configuration](CONFIGURATION.md) for all config paths and defaults.

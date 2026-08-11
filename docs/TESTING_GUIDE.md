@@ -19,7 +19,7 @@ Useful variants:
 ```bash
 juleson dev test --short
 juleson dev test --cover --coverprofile coverage.out
-juleson dev test --run TestServerE2EWithCommandTransport
+juleson dev test --run TestMCP
 juleson dev test --race --timeout 10m
 ```
 
@@ -37,7 +37,7 @@ The pre-push hook runs `go test ./...`.
 - Unit tests live beside the package code as `*_test.go`.
 - Integration-style tests use local fakes or test servers and should not require
   real credentials by default.
-- MCP command-transport tests build a temporary `jules-mcp` and exercise JSON-RPC over stdio.
+- MCP tests exercise `juleson mcp serve` and the internal MCP server package.
 - Installer tests validate shell and PowerShell installer behavior without
   publishing release assets.
 
@@ -50,7 +50,7 @@ The GitHub Actions workflow runs:
 - `go mod tidy && git diff --exit-code go.mod go.sum`
 - `go test -v -race -timeout=10m ./...` with `SKIP_E2E=1`
 - coverage on Ubuntu stable Go
-- MCP command-transport E2E on Ubuntu stable Go
+- MCP command smoke on Ubuntu stable Go
 - `go test -v -short -timeout=5m ./...`
 - `golangci-lint`
 - Gosec and Trivy scans

@@ -3,19 +3,20 @@ package github
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/SamyRai/go-jules"
 	"github.com/google/go-github/v76/github"
 )
 
-// PullRequestService handles pull request operations
+// PullRequestService handles pull request operations.
 type PullRequestService struct {
 	client      *Client
 	julesClient *jules.Client
 }
 
-// NewPullRequestService creates a new pull request service
+// NewPullRequestService creates a new pull request service.
 func NewPullRequestService(client *Client, julesClient *jules.Client) *PullRequestService {
 	return &PullRequestService{
 		client:      client,
@@ -23,10 +24,10 @@ func NewPullRequestService(client *Client, julesClient *jules.Client) *PullReque
 	}
 }
 
-// GetSessionPullRequest retrieves the PR created by a Jules session
+// GetSessionPullRequest retrieves the PR created by a Jules session.
 func (s *PullRequestService) GetSessionPullRequest(ctx context.Context, sessionID string) (*github.PullRequest, error) {
 	if s.julesClient == nil {
-		return nil, fmt.Errorf("Jules client not available")
+		return nil, fmt.Errorf("Jules client not available") //nolint:staticcheck
 	}
 
 	session, err := s.julesClient.Sessions().Get(ctx, sessionID)
@@ -53,7 +54,7 @@ func (s *PullRequestService) GetSessionPullRequest(ctx context.Context, sessionI
 	return pr, nil
 }
 
-// MergePullRequest merges a PR created by Jules
+// MergePullRequest merges a PR created by Jules.
 func (s *PullRequestService) MergePullRequest(ctx context.Context, prURL string, mergeMethod string) error {
 	// Parse PR URL to extract owner, repo, and PR number
 	owner, repo, prNumber, err := s.parsePRURL(prURL)
@@ -77,10 +78,10 @@ func (s *PullRequestService) MergePullRequest(ctx context.Context, prURL string,
 	return nil
 }
 
-// GetPullRequestDiff retrieves the diff for a PR created by a Jules session
+// GetPullRequestDiff retrieves the diff for a PR created by a Jules session.
 func (s *PullRequestService) GetPullRequestDiff(ctx context.Context, sessionID string) (string, error) {
 	if s.julesClient == nil {
-		return "", fmt.Errorf("Jules client not available")
+		return "", fmt.Errorf("Jules client not available") //nolint:staticcheck
 	}
 
 	session, err := s.julesClient.Sessions().Get(ctx, sessionID)
@@ -118,7 +119,11 @@ func (s *PullRequestService) parsePRURL(prURL string) (owner, repo string, prNum
 
 	owner = parts[3]
 	repo = parts[4]
-	prNumber = parseInt(parts[6])
+
+	prNumber, err = strconv.Atoi(parts[6])
+	if err != nil {
+		return "", "", 0, fmt.Errorf("invalid PR number: %s", parts[6])
+	}
 
 	return owner, repo, prNumber, nil
 }

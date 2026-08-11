@@ -1,22 +1,25 @@
 # Juleson
 
-Juleson is a Go command-line tool and MCP server for working with Google's Jules
-coding agent. It provides local commands for session management, source discovery,
-GitHub integration, template execution, project analysis, and development tasks.
-The reusable Jules REST API client is available as `github.com/SamyRai/go-jules`.
+Juleson is a Go command-line tool and MCP server for operating Google's Jules
+coding-agent sessions. It provides local commands for source discovery, session
+management, Jules-created pull request review, template management, and
+development tasks. The reusable Jules REST API client is available as
+`github.com/SamyRai/go-jules`.
 
-The repository contains three binaries:
+Release assets install two executable names:
 
 - `juleson`: user-facing CLI.
-- `jules-mcp`: Model Context Protocol server over stdio.
-- `orchestrator`: internal build/test/release helper used by development workflows.
+- `jsn`: short alias for the same CLI.
+
+The repository also contains `builder`, an internal build/test/release helper.
+Juleson keeps the Jules API, operator workflow, and MCP server in this module;
+general AI orchestration belongs outside this repository.
 
 ## Requirements
 
-- Go 1.25 or newer for source builds.
+- Go 1.25.11 or newer for source builds. Release builds use Go 1.26.4.
 - A Jules API key for commands that call the Jules API.
-- A GitHub token for GitHub and Actions commands.
-- A Gemini API key for Gemini-backed orchestration commands.
+- A GitHub token only when inspecting or merging Jules-created pull requests.
 
 ## Install
 
@@ -36,14 +39,13 @@ Install from source:
 
 ```bash
 go install github.com/SamyRai/juleson/cmd/juleson@latest
-go install github.com/SamyRai/juleson/cmd/jules-mcp@latest
 ```
 
 Build locally:
 
 ```bash
-go build -o bin/orchestrator ./cmd/orchestrator
-./bin/orchestrator build
+go build -o bin/builder ./cmd/builder
+./bin/builder build
 ```
 
 See [Installation](docs/INSTALLATION_GUIDE.md) for platform-specific options.
@@ -53,7 +55,7 @@ See [Installation](docs/INSTALLATION_GUIDE.md) for platform-specific options.
 Run the setup wizard:
 
 ```bash
-juleson setup
+jsn setup
 ```
 
 For non-interactive setup, set environment variables first. The setup command
@@ -62,71 +64,70 @@ reads them and writes the resulting values to `configs/juleson.yaml`:
 ```bash
 export JULES_API_KEY="..."
 export GITHUB_TOKEN="..."
-juleson setup --non-interactive
+jsn setup --non-interactive
 ```
 
 Juleson looks for `juleson.yaml` in `./configs`, the current directory, `$HOME`,
 and `/etc/juleson`. It also loads `.env`, `$HOME/.env`, `$HOME/.juleson.env`,
 and `/etc/juleson/.env`. `JULES_API_KEY` is accepted directly from the
-environment. GitHub and Gemini commands read their saved config values, except
-where a command documents a flag or setup-specific environment fallback.
+environment. GitHub configuration is used only for Jules-created pull request
+context.
 
 See [Configuration](docs/CONFIGURATION.md) and [Setup](docs/SETUP_GUIDE.md).
 
 ## Common Commands
 
+The examples below use `jsn` for brevity, but `juleson` works identically.
+
 ```bash
 # Inspect available commands
-juleson --help
+jsn --help
 
 # Work with Jules sources and sessions
-juleson sources list
-juleson sessions list
-juleson sessions create sources/github/owner/repo "Fix failing tests"
-juleson sessions create . --prompt-file task.md
-juleson sessions create --no-source "Draft a migration plan"
-juleson sessions batch sources/github/owner/repo task.md --parallel 3 --group-title "Fix CI"
-juleson sessions watch SESSION_ID --follow-activities --cursor-output .juleson.cursor
-juleson sessions approve SESSION_ID
-juleson sessions artifacts list SESSION_ID
-juleson sessions outputs SESSION_ID
-juleson sessions preview SESSION_ID
-juleson sessions apply SESSION_ID ./path/to/project --activity-id ACTIVITY_ID --artifact-index 0
-juleson sessions apply SESSION_ID ./path/to/project --confirm
-juleson official remote pull SESSION_ID
+jsn sources list
+jsn sessions list
+jsn sessions create sources/github/owner/repo "Fix failing tests"
+jsn sessions create . --prompt-file task.md
+jsn sessions create --no-source "Draft a migration plan"
+jsn sessions batch sources/github/owner/repo task.md --parallel 3 --group-title "Fix CI"
+jsn sessions watch SESSION_ID --follow-activities --cursor-output .juleson.cursor
+jsn sessions approve SESSION_ID
+jsn sessions artifacts list SESSION_ID
+jsn sessions outputs SESSION_ID
+jsn sessions preview SESSION_ID
+jsn sessions apply SESSION_ID ./path/to/project --activity-id ACTIVITY_ID --artifact-index 0
+jsn sessions apply SESSION_ID ./path/to/project --confirm
+jsn official remote pull SESSION_ID
 
 # Manage templates
-juleson template list
-juleson template show test-generation
-juleson execute template test-generation ./path/to/project
+jsn template list
+jsn template show test-generation
 
-# GitHub integration
-juleson github status
-juleson github current
-juleson github repos
-juleson pr list
+# Jules-created pull request context
+jsn pr list
+
+# MCP server
+jsn mcp serve --version
+jsn mcp serve
 
 # Development workflow for this repository
-juleson dev build --all
-juleson dev test --short
-juleson dev check
+jsn dev build --all
+jsn dev test --short
+jsn dev check
 ```
 
 See [CLI Reference](docs/CLI_REFERENCE.md) for the command map and flags.
 
 ## MCP Server
 
-Start the MCP server:
+Juleson serves MCP over stdio:
 
 ```bash
-jules-mcp
+jsn mcp serve
 ```
 
-The server uses stdio transport. Configure clients with the absolute path to the
-`jules-mcp` binary. Put credentials in `juleson.yaml`; `JULES_API_KEY` may also
-be supplied through the client environment.
-
-See [MCP Server Usage](docs/MCP_SERVER_USAGE.md).
+Use `gh`, GitHub's CLI, or the official GitHub MCP server for general GitHub and
+Actions operations.
 
 ## Documentation
 
@@ -135,7 +136,6 @@ See [MCP Server Usage](docs/MCP_SERVER_USAGE.md).
 - [Installation](docs/INSTALLATION_GUIDE.md)
 - [Setup](docs/SETUP_GUIDE.md)
 - [Configuration](docs/CONFIGURATION.md)
-- [MCP Server Usage](docs/MCP_SERVER_USAGE.md)
 - [Jules API Notes](docs/JULES_API.md)
 - [Templates](docs/TEMPLATES.md)
 - [GitHub Integration](docs/GITHUB_INTEGRATION.md)
@@ -143,6 +143,9 @@ See [MCP Server Usage](docs/MCP_SERVER_USAGE.md).
 - [Testing](docs/TESTING_GUIDE.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Changelog](docs/CHANGELOG.md)
+
+The same documentation set is published to the project Wiki for GitHub-native
+navigation. The repository `docs/` directory remains the source of truth.
 
 ## Development
 
@@ -170,7 +173,8 @@ application in internal app code.
 
 The CI workflow runs formatting, module consistency, tests, linting, security
 scans, and builds on Linux, macOS, and Windows. Markdown-only changes are ignored
-by CI.
+by CI, so documentation-only changes should be checked locally with
+`markdownlint '**/*.md'`.
 
 ## License
 

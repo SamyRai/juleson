@@ -3,39 +3,39 @@ package main
 import (
 	"testing"
 
-	"github.com/SamyRai/juleson/internal/cli/commands"
+	"github.com/SamyRai/juleson/internal/presentation/cli/core"
 )
 
 func TestApplyBuildMetadata(t *testing.T) {
-	oldVersion := commands.Version
-	oldBuildDate := commands.BuildDate
-	oldGitCommit := commands.GitCommit
+	oldVersion := core.Version
+	oldBuildDate := core.BuildDate
+	oldGitCommit := core.GitCommit
 	oldMainVersion := version
 	oldBuildTime := buildTime
 	oldMainGitCommit := gitCommit
 	t.Cleanup(func() {
-		commands.Version = oldVersion
-		commands.BuildDate = oldBuildDate
-		commands.GitCommit = oldGitCommit
+		core.Version = oldVersion
+		core.BuildDate = oldBuildDate
+		core.GitCommit = oldGitCommit
 		version = oldMainVersion
 		buildTime = oldBuildTime
 		gitCommit = oldMainGitCommit
 	})
 
-	version = "v0.1.0"
-	buildTime = "2026-05-26T07:00:00Z"
-	gitCommit = "abc123"
+	version = "test-version"
+	buildTime = "2023-10-27"
+	gitCommit = "abcdef1"
 
 	applyBuildMetadata()
 
-	if commands.Version != version {
-		t.Fatalf("Version = %q, want %q", commands.Version, version)
+	if core.Version != "test-version" {
+		t.Errorf("expected Version to be 'test-version', got %s", core.Version)
 	}
-	if commands.BuildDate != buildTime {
-		t.Fatalf("BuildDate = %q, want %q", commands.BuildDate, buildTime)
+	if core.BuildDate != "2023-10-27" {
+		t.Errorf("expected BuildDate to be '2023-10-27', got %s", core.BuildDate)
 	}
-	if commands.GitCommit != gitCommit {
-		t.Fatalf("GitCommit = %q, want %q", commands.GitCommit, gitCommit)
+	if core.GitCommit != "abcdef1" {
+		t.Errorf("expected GitCommit to be 'abcdef1', got %s", core.GitCommit)
 	}
 }
 

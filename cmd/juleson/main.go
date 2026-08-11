@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/SamyRai/juleson/internal/cli"
-	"github.com/SamyRai/juleson/internal/cli/commands"
 	"github.com/SamyRai/juleson/internal/config"
+	"github.com/SamyRai/juleson/internal/logger"
+	"github.com/SamyRai/juleson/internal/presentation/cli"
+	"github.com/SamyRai/juleson/internal/presentation/cli/core"
 )
 
 var (
@@ -30,6 +31,9 @@ func main() {
 	// Create CLI application
 	app := cli.NewApp(cfg)
 
+	// Setup global logger
+	logger.SetupGlobal(cfg.Jules.DebugLog)
+
 	// Execute CLI
 	if err := app.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -38,9 +42,9 @@ func main() {
 }
 
 func applyBuildMetadata() {
-	commands.Version = version
-	commands.BuildDate = buildTime
-	commands.GitCommit = gitCommit
+	core.Version = version
+	core.BuildDate = buildTime
+	core.GitCommit = gitCommit
 }
 
 func loadConfig(args []string) (*config.Config, error) {

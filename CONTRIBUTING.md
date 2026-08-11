@@ -4,10 +4,10 @@
 
 Requirements:
 
-- Go 1.25 or newer
+- Go 1.25.11 or newer for source builds
 - Git
 - Jules API access for integration flows that call Jules
-- GitHub token for GitHub command testing
+- GitHub token for Jules-created pull request command testing
 
 Clone and prepare:
 
@@ -21,8 +21,8 @@ Build:
 
 ```bash
 go build -o bin/juleson ./cmd/juleson
-go build -o bin/jules-mcp ./cmd/jules-mcp
-go build -o bin/orchestrator ./cmd/orchestrator
+go build -o bin/jsn ./cmd/juleson
+go build -o bin/builder ./cmd/builder
 ```
 
 Run tests:
@@ -89,3 +89,5 @@ markdownlint '**/*.md'
 ## Release Notes
 
 Update [docs/CHANGELOG.md](docs/CHANGELOG.md) for user-visible changes.
+After tagged releases, move entries out of `Unreleased` into a dated release
+section.

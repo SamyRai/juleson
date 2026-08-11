@@ -4,7 +4,44 @@ The project is pre-1.0. Changes are tracked here between tagged releases.
 
 ## Unreleased
 
-No unreleased changes.
+- Documentation and metadata updates for the `v0.2.0` release.
+
+## v0.2.0 - 2026-06-04
+
+### Added in v0.2.0
+
+- MCP server support is restored through the official Go MCP SDK and served by
+  `juleson mcp serve`.
+- Release builds now include `jsn`, a short alias for the same CLI.
+- MCP tools cover Jules source/session/activity operations, read-only review
+  helpers, and repository developer build/test/check commands.
+
+### Changed in v0.2.0
+
+- General GitHub and Actions operations are no longer owned by Juleson. Use
+  `gh`, GitHub's CLI, or the official GitHub MCP server for that scope.
+- Juleson keeps only Jules-created pull request context through `juleson pr`.
+- Release, install, Docker, CI, and docs flows now use `juleson` plus `jsn`
+  instead of a separate `jules-mcp` binary.
+
+## v0.1.1 - 2026-05-27
+
+### Added in v0.1.1
+
+- Native session plan inspection through `juleson sessions plans`, including
+  full plan steps, approval state, latest-plan filtering, and JSON output.
+- Read-only session review through `juleson sessions review`, combining session
+  state, plans, outputs, artifact manifests, patch dry-run results, worktree
+  blockers, and safe next-action suggestions.
+- MCP `review_session` and structured `plans` output on `get_session_plans` for
+  parity with the native CLI workflow.
+
+### Changed in v0.1.1
+
+- `activities list` now prints activity IDs and resource names for direct reuse
+  with `activities get`, scoped review, and scoped patch apply commands.
+- `sessions get` now points operators to `sessions plans` for complete plan
+  details while keeping its concise preview behavior.
 
 ## v0.1.0 - 2026-05-26
 
