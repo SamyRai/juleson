@@ -5,7 +5,7 @@ go 1.25.11
 require (
 	github.com/SamyRai/go-jules v0.2.0
 	github.com/alecthomas/chroma/v2 v2.26.1
-	github.com/bluekeyes/go-gitdiff v0.8.1
+	github.com/bluekeyes/go-gitdiff v0.9.0
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/huh v1.0.0
